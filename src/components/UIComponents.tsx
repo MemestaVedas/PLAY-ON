@@ -6,6 +6,8 @@
  */
 
 import React from 'react';
+import colors from '../styles/colors';
+import Counter from './Counter';
 
 // Card Component - Base building block
 interface CardProps {
@@ -20,11 +22,11 @@ export const Card: React.FC<CardProps> = ({ children, onClick, hover = false, gr
         <div
             onClick={onClick}
             style={{
-                background: gradient || 'rgba(255, 255, 255, 0.95)',
+                background: gradient || colors.backgroundCard,
                 borderRadius: '16px',
                 padding: '1.5rem',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-                border: '1px solid rgba(200, 200, 220, 0.2)',
+                border: '1px solid rgba(255, 181, 197, 0.1)',
                 cursor: onClick ? 'pointer' : 'default',
                 transition: 'all 0.3s ease',
             }}
@@ -50,7 +52,7 @@ export const Card: React.FC<CardProps> = ({ children, onClick, hover = false, gr
 interface StatCardProps {
     icon: string;
     label: string;
-    value: string | number;
+    value: number;
     color: string;
 }
 
@@ -65,12 +67,20 @@ export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color })
                     {icon}
                 </div>
                 <div style={{
-                    fontSize: '2rem',
-                    fontWeight: '700',
-                    color: color,
-                    marginBottom: '0.25rem',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    justifyContent: 'center',
                 }}>
-                    {value}
+                    <Counter
+                        value={value}
+                        places={value >= 100 ? [100, 10, 1] : [10, 1]}
+                        fontSize={48}
+                        padding={5}
+                        gap={4}
+                        textColor={color}
+                        fontWeight={700}
+                        gradientHeight={0}
+                    />
                 </div>
                 <div style={{
                     fontSize: '0.9rem',
@@ -109,7 +119,7 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
             <div style={{
                 width: '100%',
                 height: '200px',
-                background: image || 'linear-gradient(135deg, #E0BBE4 0%, #C7B8EA 100%)',
+                background: image || colors.pastelLavender,
                 borderRadius: '12px',
                 marginBottom: '1rem',
                 display: 'flex',
@@ -141,15 +151,15 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
                 alignItems: 'center',
                 marginBottom: '0.75rem',
             }}>
-                <span style={{ fontSize: '0.9rem', color: '#6B7280' }}>
+                <span style={{ fontSize: '0.9rem', color: colors.mediumGray }}>
                     {episodes} episodes
                 </span>
                 <span style={{
                     fontSize: '0.8rem',
                     padding: '0.25rem 0.75rem',
                     borderRadius: '12px',
-                    background: status === 'Watching' ? 'rgba(134, 239, 172, 0.3)' : 'rgba(199, 184, 234, 0.3)',
-                    color: status === 'Watching' ? '#15803D' : '#6B21A8',
+                    background: status === 'Watching' ? colors.pastelGreen : colors.pastelPurple,
+                    color: status === 'Watching' ? colors.greenDark : colors.purpleDark,
                     fontWeight: '600',
                 }}>
                     {status}
@@ -168,7 +178,7 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
                     <div style={{
                         width: `${progress}%`,
                         height: '100%',
-                        background: 'linear-gradient(90deg, #C7B8EA 0%, #B8A4E8 100%)',
+                        background: colors.pastelPurple,
                         transition: 'width 0.3s ease',
                     }} />
                 </div>

@@ -42,10 +42,10 @@ function Home() {
                     gap: '1.5rem',
                     marginBottom: '2rem',
                 }}>
-                    <StatCard icon="📺" label="Total Anime" value="24" color="#C7B8EA" />
-                    <StatCard icon="✅" label="Completed" value="12" color="#86EFAC" />
-                    <StatCard icon="▶️" label="Watching" value="8" color="#FFB5C5" />
-                    <StatCard icon="⏸️" label="On Hold" value="4" color="#FFE5B4" />
+                    <StatCard icon="📺" label="Total Anime" value={24} color="#C7B8EA" />
+                    <StatCard icon="✅" label="Completed" value={12} color="#86EFAC" />
+                    <StatCard icon="▶️" label="Watching" value={8} color="#FFB5C5" />
+                    <StatCard icon="⏸️" label="On Hold" value={4} color="#FFE5B4" />
                 </div>
 
                 {/* Currently Playing Section */}

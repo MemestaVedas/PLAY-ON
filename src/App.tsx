@@ -8,6 +8,7 @@ import Statistics from './pages/Statistics';
 import Seasons from './pages/Seasons';
 import NowPlaying from './pages/NowPlaying';
 import AnimeDetails from './pages/AnimeDetails';
+import CounterDemo from './pages/CounterDemo';
 import "./App.css";
 
 /**
@@ -162,6 +163,7 @@ function App() {
 
         {/* Dynamic route for anime details - :id is a parameter */}
         <Route path="/anime/:id" element={<AnimeDetails />} />
+        <Route path="/counter-demo" element={<CounterDemo />} />
       </Routes>
     </BrowserRouter>
   );
