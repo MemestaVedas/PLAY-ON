@@ -56,3 +56,132 @@ export interface AniListError {
         column: number;
     }>;
 }
+
+/**
+ * Anime title in different languages
+ */
+export interface AniListAnimeTitle {
+    /** Romanized title */
+    romaji: string;
+    /** English title (may be null) */
+    english: string | null;
+}
+
+/**
+ * Anime cover image at different sizes
+ */
+export interface AniListAnimeCoverImage {
+    /** Extra large cover image URL */
+    extraLarge: string;
+    /** Large cover image URL */
+    large: string;
+    /** Medium cover image URL */
+    medium: string;
+    /** Dominant color of the cover (hex code) */
+    color: string | null;
+}
+
+/**
+ * Anime media data from AniList
+ */
+export interface AniListAnime {
+    /** Unique anime ID */
+    id: number;
+    /** Anime titles */
+    title: AniListAnimeTitle;
+    /** Cover image URLs */
+    coverImage: AniListAnimeCoverImage;
+}
+
+/**
+ * GraphQL response for anime search
+ */
+export interface AniListAnimeResponse {
+    data: {
+        /** The Media object returned by the query */
+        Media: AniListAnime;
+    };
+}
+
+/**
+ * Media list status enum
+ */
+export type MediaListStatus =
+    | 'CURRENT'      // Currently watching
+    | 'PLANNING'     // Plan to watch
+    | 'COMPLETED'    // Finished
+    | 'DROPPED'      // Dropped
+    | 'PAUSED'       // On hold
+    | 'REPEATING';   // Rewatching
+
+/**
+ * User's anime list entry
+ */
+export interface MediaListEntry {
+    /** Entry ID */
+    id: number;
+    /** Current status */
+    status: MediaListStatus;
+    /** User's score (0-100) */
+    score: number;
+    /** Current episode progress */
+    progress: number;
+    /** Total episodes (null if unknown) */
+    progressVolumes: number | null;
+    /** When started watching */
+    startedAt: {
+        year: number | null;
+        month: number | null;
+        day: number | null;
+    };
+    /** When completed */
+    completedAt: {
+        year: number | null;
+        month: number | null;
+        day: number | null;
+    };
+    /** The anime data */
+    media: {
+        id: number;
+        title: AniListAnimeTitle;
+        coverImage: AniListAnimeCoverImage;
+        episodes: number | null;
+        status: string;
+        season: string | null;
+        seasonYear: number | null;
+    };
+}
+
+/**
+ * Response from user's anime list query
+ */
+export interface MediaListCollectionResponse {
+    data: {
+        MediaListCollection: {
+            lists: Array<{
+                name: string;
+                isCustomList: boolean;
+                entries: MediaListEntry[];
+            }>;
+        };
+    };
+}
+
+/**
+ * Update anime entry mutation variables
+ */
+export interface UpdateMediaListVariables {
+    mediaId: number;
+    status?: MediaListStatus;
+    score?: number;
+    progress?: number;
+}
+
+/**
+ * Response from update mutation
+ */
+export interface UpdateMediaListResponse {
+    data: {
+        SaveMediaListEntry: MediaListEntry;
+    };
+}

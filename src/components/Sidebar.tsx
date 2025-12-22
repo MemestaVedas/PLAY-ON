@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import colors from '../styles/colors';
-import { useAniListUser } from '../hooks/useAniListUser';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * Sidebar Component - Discord-style left navigation
@@ -26,8 +26,8 @@ function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Fetch AniList user data
-    const { user, loading, error } = useAniListUser();
+    // Fetch authenticated user's AniList data
+    const { user, loading, error } = useAuth();
 
     const handleNavClick = (path: string) => {
         navigate(path);
@@ -178,7 +178,7 @@ function Sidebar() {
                             <div style={{
                                 width: '100%',
                                 height: '100%',
-                                background: 'linear-gradient(90deg, #404249 0%, #4f5258 50%, #404249 100%)',
+                                backgroundImage: 'linear-gradient(90deg, #404249 0%, #4f5159 50%, #404249 100%)',
                                 backgroundSize: '200% 100%',
                                 animation: 'pulse 1.5s ease-in-out infinite',
                             }} />

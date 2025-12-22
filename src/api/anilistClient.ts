@@ -27,7 +27,15 @@
  * - Strongly typed responses match our TypeScript interfaces
  */
 
-import type { AniListUserResponse } from '../types/anilist.types';
+import type {
+    AniListUserResponse,
+    AniListAnimeResponse,
+    MediaListCollectionResponse,
+    UpdateMediaListResponse,
+    UpdateMediaListVariables,
+} from '../types/anilist.types';
+import type { ViewerResponse } from '../types/auth.types';
+import { getAccessToken } from '../services/authService';
 
 /** AniList's public GraphQL endpoint - no authentication required for public data */
 const ANILIST_API_URL = 'https://graphql.anilist.co';
@@ -59,6 +67,138 @@ query ($name: String) {
     }
     siteUrl
     bannerImage
+}
+`;
+
+const ANIME_QUERY = `
+query ($animeName: String) {
+  Media(search: $animeName, type: ANIME) {
+    id
+    title {
+      romaji
+      english
+    }
+    coverImage {
+      extraLarge
+      large
+      medium
+      color
+    }
+  }
+}
+`;
+
+/**
+ * Query to get authenticated user's info
+ */
+const VIEWER_QUERY = `
+query {
+  Viewer {
+    id
+    name
+    avatar {
+      large
+      medium
+    }
+  }
+}
+`;
+
+/**
+ * Query to get user's anime list
+ * Fetches all anime with a specific status (CURRENT, COMPLETED, etc.)
+ */
+const USER_ANIME_LIST_QUERY = `
+query ($userId: Int, $status: MediaListStatus) {
+  MediaListCollection(userId: $userId, type: ANIME, status: $status) {
+    lists {
+      name
+      isCustomList
+      entries {
+        id
+        status
+        score(format: POINT_100)
+        progress
+        progressVolumes
+        startedAt {
+          year
+          month
+          day
+        }
+        completedAt {
+          year
+          month
+          day
+        }
+        media {
+          id
+          title {
+            romaji
+            english
+          }
+          coverImage {
+            extraLarge
+            large
+            medium
+            color
+          }
+          episodes
+          status
+          season
+          seasonYear
+        }
+      }
+    }
+  }
+}
+`;
+
+/**
+ * Mutation to update anime entry
+ * Can update progress, status, score, etc.
+ */
+const UPDATE_ANIME_MUTATION = `
+mutation ($mediaId: Int, $status: MediaListStatus, $score: Int, $progress: Int) {
+  SaveMediaListEntry(mediaId: $mediaId, status: $status, scoreRaw: $score, progress: $progress) {
+    id
+    status
+    score(format: POINT_100)
+    progress
+    media {
+      id
+      title {
+        romaji
+        english
+      }
+      episodes
+    }
+  }
+}
+`;
+
+/**
+ * Query to get user's favorite anime
+ */
+const FAVORITES_QUERY = `
+query {
+  Viewer {
+    favourites {
+      anime(page: 1, perPage: 5) {
+        nodes {
+          id
+          title {
+            romaji
+            english
+          }
+          coverImage {
+            extraLarge
+            large
+            medium
+            color
+          }
+        }
+      }
+    }
   }
 }
 `;
@@ -141,6 +281,194 @@ export async function fetchAniListUser(username: string): Promise<AniListUserRes
 }
 
 /**
+ * Fetches anime data from AniList GraphQL API
+ * 
+ * This function searches for an anime by name and returns its cover image and metadata.
+ * 
+ * @param animeName - Name of the anime to search for
+ * @returns Promise with anime data including cover images
+ * @throws Error if anime not found or network fails
+ */
+export async function fetchAniListAnime(animeName: string): Promise<AniListAnimeResponse> {
+    try {
+        const response = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                query: ANIME_QUERY,
+                variables: {
+                    animeName: animeName,
+                },
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: AniListAnimeResponse = await response.json();
+
+        if (!data.data?.Media) {
+            throw new Error(`Anime "${animeName}" not found on AniList`);
+        }
+
+        return data;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to fetch anime: ${error.message}`);
+        }
+        throw new Error('Failed to fetch anime: Unknown error');
+    }
+}
+
+/**
+ * Fetches authenticated user's info (Viewer)
+ * Requires authentication token
+ */
+export async function fetchViewer(): Promise<ViewerResponse> {
+    const token = getAccessToken();
+
+    if (!token) {
+        throw new Error('Not authenticated. Please login first.');
+    }
+
+    try {
+        const response = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                query: VIEWER_QUERY,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: ViewerResponse = await response.json();
+
+        if (!data.data?.Viewer) {
+            throw new Error('Failed to fetch viewer data');
+        }
+
+        return data;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to fetch viewer: ${error.message}`);
+        }
+        throw new Error('Failed to fetch viewer: Unknown error');
+    }
+}
+
+/**
+ * Fetches user's anime list
+ * 
+ * @param userId - User ID (optional, uses authenticated user if not provided)
+ * @param status - Filter by status (CURRENT, COMPLETED, etc.)
+ * @returns Promise with user's anime list
+ */
+export async function fetchUserAnimeList(
+    userId?: number,
+    status?: string
+): Promise<MediaListCollectionResponse> {
+    const token = getAccessToken();
+
+    if (!token) {
+        throw new Error('Not authenticated. Please login first.');
+    }
+
+    try {
+        const response = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                query: USER_ANIME_LIST_QUERY,
+                variables: {
+                    userId,
+                    status,
+                },
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: MediaListCollectionResponse = await response.json();
+
+        if (!data.data?.MediaListCollection) {
+            throw new Error('Failed to fetch anime list');
+        }
+
+        return data;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to fetch anime list: ${error.message}`);
+        }
+        throw new Error('Failed to fetch anime list: Unknown error');
+    }
+}
+
+/**
+ * Updates an anime entry in user's list
+ * 
+ * @param variables - Update variables (mediaId, status, score, progress)
+ * @returns Promise with updated entry
+ */
+export async function updateAnimeEntry(
+    variables: UpdateMediaListVariables
+): Promise<UpdateMediaListResponse> {
+    const token = getAccessToken();
+
+    if (!token) {
+        throw new Error('Not authenticated. Please login first.');
+    }
+
+    try {
+        const response = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                query: UPDATE_ANIME_MUTATION,
+                variables,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: UpdateMediaListResponse = await response.json();
+
+        if (!data.data?.SaveMediaListEntry) {
+            throw new Error('Failed to update anime entry');
+        }
+
+        return data;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to update anime: ${error.message}`);
+        }
+        throw new Error('Failed to update anime: Unknown error');
+    }
+}
+
+/**
  * INTERVIEW TALKING POINTS:
  * =========================
  * 
@@ -165,4 +493,53 @@ export async function fetchAniListUser(username: string): Promise<AniListUserRes
  *    - No extra dependencies = smaller bundle size
  *    - Full control over request/response handling
  *    - For complex apps, libraries like Apollo Client are better
+ * 
+ * 5. Authentication:
+ *    - Token stored in localStorage via authService
+ *    - Included in Authorization header for authenticated requests
+ *    - Supports both OAuth and Personal Access Token
+ *    - Token validation happens in authService
  */
+
+/**
+ * Fetches user's favorite anime
+ * Requires authentication token
+ */
+export async function fetchUserFavorites(): Promise<any> {
+    const token = getAccessToken();
+
+    if (!token) {
+        throw new Error('Not authenticated. Please login first.');
+    }
+
+    try {
+        const response = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                query: FAVORITES_QUERY,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.data?.Viewer?.favourites?.anime) {
+            throw new Error('Failed to fetch favorites');
+        }
+
+        return data;
+    } catch (error) {
+        if (error instanceof Error) {
+            throw new Error(`Failed to fetch favorites: ${error.message}`);
+        }
+        throw new Error('Failed to fetch favorites: Unknown error');
+    }
+}

@@ -2,10 +2,23 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import Layout from '../components/Layout';
 import { Card, StatCard, SectionHeader } from '../components/UIComponents';
+import BounceCards from '../components/BounceCards';
+import { useFavoriteAnime } from '../hooks/useFavoriteAnime';
 
 function Home() {
     const [mediaWindow, setMediaWindow] = useState<string>('Loading...');
     const [error, setError] = useState<string | null>(null);
+
+    // Fetch user's favorite anime from AniList
+    const { coverImages, loading: animeLoading } = useFavoriteAnime();
+
+    const transformStyles = [
+        "rotate(5deg) translate(-150px)",
+        "rotate(0deg) translate(-70px)",
+        "rotate(-5deg)",
+        "rotate(5deg) translate(70px)",
+        "rotate(-5deg) translate(150px)"
+    ];
 
     useEffect(() => {
         const fetchMediaWindow = async () => {
@@ -46,6 +59,35 @@ function Home() {
                     <StatCard icon="✅" label="Completed" value={12} color="#86EFAC" />
                     <StatCard icon="▶️" label="Watching" value={8} color="#FFB5C5" />
                     <StatCard icon="⏸️" label="On Hold" value={4} color="#FFE5B4" />
+                </div>
+
+                {/* BounceCards Section */}
+                <div style={{
+                    marginBottom: '2rem',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '250px',
+                }}>
+                    {animeLoading ? (
+                        <p style={{ color: '#9CA3AF' }}>Loading your favorite anime...</p>
+                    ) : coverImages.length > 0 ? (
+                        <BounceCards
+                            className="custom-bounceCards"
+                            images={coverImages}
+                            containerWidth={500}
+                            containerHeight={250}
+                            animationDelay={1}
+                            animationStagger={0.08}
+                            easeType="elastic.out(1, 0.5)"
+                            transformStyles={transformStyles}
+                            enableHover={true}
+                        />
+                    ) : (
+                        <p style={{ color: '#9CA3AF' }}>
+                            No favorite anime found. Add some favorites on AniList!
+                        </p>
+                    )}
                 </div>
 
                 {/* Currently Playing Section */}

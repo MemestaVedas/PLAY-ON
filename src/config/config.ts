@@ -15,6 +15,36 @@ export const config = {
     anilist: {
         username: 'MemestaVedas',
     },
+
+    /**
+     * OAuth Configuration for AniList Authentication
+     * 
+     * To use OAuth (recommended for production):
+     * 1. Go to https://anilist.co/settings/developer
+     * 2. Create a new client
+     * 3. Set redirect URI to: http://localhost:1420/auth/callback
+     * 4. Copy the Client ID and paste below
+     * 
+     * For development/testing, you can use a Personal Access Token instead:
+     * 1. Go to https://anilist.co/settings/developer
+     * 2. Generate a Personal Access Token
+     * 3. Paste it in the personalAccessToken field below
+     */
+    oauth: {
+        clientId: '33523', // Replace with your OAuth Client ID
+        redirectUri: 'http://localhost:1420/auth/callback',
+        authUrl: 'https://anilist.co/api/v2/oauth/authorize',
+        tokenUrl: 'https://anilist.co/api/v2/oauth/token',
+    },
+
+    /**
+     * Personal Access Token (Alternative to OAuth)
+     * Use this for quick testing without OAuth setup
+     * Generate at: https://anilist.co/settings/developer
+     */
+    auth: {
+        personalAccessToken: 'spCWPTMapryGIQwRZ3djJGSKtzCMXB8udNRyDwxX' // Set to your PAT or leave null to use OAuth
+    },
 } as const;
 
 /**
