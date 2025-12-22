@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import colors from '../styles/colors';
+import { useAniListUser } from '../hooks/useAniListUser';
 
 /**
  * Sidebar Component - Discord-style left navigation
@@ -24,6 +25,9 @@ const sidebarItems: SidebarItem[] = [
 function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Fetch AniList user data
+    const { user, loading, error } = useAniListUser();
 
     const handleNavClick = (path: string) => {
         navigate(path);
@@ -160,14 +164,43 @@ function Sidebar() {
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: colors.pastelPink,
+                        background: loading ? '#404249' : (error || !user?.avatar?.large) ? colors.pastelPink : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '1.25rem',
                         flexShrink: 0,
+                        overflow: 'hidden',
+                        position: 'relative',
                     }}>
-                        👤
+                        {loading ? (
+                            // Loading state: Show pulsing animation
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(90deg, #404249 0%, #4f5258 50%, #404249 100%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'pulse 1.5s ease-in-out infinite',
+                            }} />
+                        ) : error || !user?.avatar?.large ? (
+                            // Error state or no avatar: Show fallback emoji
+                            '👤'
+                        ) : (
+                            // Success state: Show AniList profile picture
+                            <img
+                                src={user.avatar.large}
+                                alt={`${user.name}'s avatar`}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                }}
+                                onError={(e) => {
+                                    // Fallback if image fails to load
+                                    e.currentTarget.style.display = 'none';
+                                }}
+                            />
+                        )}
                     </div>
 
                     {/* User Info */}
@@ -180,7 +213,7 @@ function Sidebar() {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                         }}>
-                            Anime Fan
+                            {loading ? 'Loading...' : error ? 'Anime Fan' : user?.name || 'Anime Fan'}
                         </div>
                         <div style={{
                             fontSize: '0.75rem',
@@ -189,7 +222,7 @@ function Sidebar() {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                         }}>
-                            Online
+                            {loading ? '...' : error ? 'Offline' : 'AniList User'}
                         </div>
                     </div>
 
@@ -207,6 +240,18 @@ function Sidebar() {
                     </div>
                 </div>
             </div>
+
+            {/* CSS Animation for loading state */}
+            <style>{`
+                @keyframes pulse {
+                    0% {
+                        background-position: 200% 0;
+                    }
+                    100% {
+                        background-position: -200% 0;
+                    }
+                }
+            `}</style>
         </div>
     );
 }

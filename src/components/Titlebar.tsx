@@ -11,16 +11,16 @@ import colors from '../styles/colors';
 function Titlebar() {
     const appWindow = getCurrentWindow();
 
-    const handleMinimize = () => {
-        appWindow.minimize();
+    const handleMinimize = async () => {
+        await appWindow.minimize();
     };
 
-    const handleMaximize = () => {
-        appWindow.toggleMaximize();
+    const handleMaximize = async () => {
+        await appWindow.toggleMaximize();
     };
 
-    const handleClose = () => {
-        appWindow.close();
+    const handleClose = async () => {
+        await appWindow.close();
     };
 
     return (
@@ -40,7 +40,8 @@ function Titlebar() {
                 right: 0,
                 zIndex: 9999,
                 borderBottom: `1px solid rgba(255, 181, 197, 0.1)`,
-            }}
+                WebkitAppRegion: 'drag',
+            } as React.CSSProperties}
         >
             {/* App Title */}
             <div style={{
@@ -50,13 +51,18 @@ function Titlebar() {
                 fontSize: '0.85rem',
                 fontWeight: '600',
                 color: colors.pastelPink,
+                pointerEvents: 'none',
             }}>
                 <span style={{ fontSize: '1rem' }}>🎬</span>
                 PLAY-ON!
             </div>
 
             {/* Window Controls */}
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                WebkitAppRegion: 'no-drag',
+            } as React.CSSProperties}>
                 {/* Minimize */}
                 <button
                     onClick={handleMinimize}
