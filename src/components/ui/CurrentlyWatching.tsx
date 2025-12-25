@@ -1,18 +1,44 @@
 /**
- * Example Component: Currently Watching Anime
+ * Sidebar Component - Discord-style left navigation
  * 
- * Demonstrates how to use the AniList integration to display
- * and update user's currently watching anime
+ * Contains:
+ * - Main navigation items (Media List, History, Statistics)
+ * - Profile section at bottom
  */
 
-import { useAuth } from '../hooks/useAuth';
-import { useUserAnimeList } from '../hooks/useUserAnimeList';
-import { useUpdateAnime } from '../hooks/useUpdateAnime';
+import { useAuth } from '../../hooks/useAuth';
+import { useState } from 'react';
+
+/**
+ * Mock data for the generic shell
+ */
+const MOCK_ANIME_LIST = [
+    {
+        id: 1,
+        progress: 9,
+        media: {
+            id: 1,
+            title: { romaji: 'Solo Leveling', english: 'Solo Leveling' },
+            coverImage: { medium: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_3_1766682294612.png' },
+            episodes: 12,
+        }
+    },
+    {
+        id: 2,
+        progress: 24,
+        media: {
+            id: 2,
+            title: { romaji: 'Sousou no Frieren', english: 'Frieren: Beyond Journey\'s End' },
+            coverImage: { medium: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_4_1766682324192.png' },
+            episodes: 28,
+        }
+    }
+];
 
 function CurrentlyWatching() {
     const { isAuthenticated, user, login, loading: authLoading } = useAuth();
-    const { animeList, loading, error, refresh } = useUserAnimeList('CURRENT');
-    const { updateAnime, updating } = useUpdateAnime();
+    const [animeList, setAnimeList] = useState(MOCK_ANIME_LIST);
+    const [updating, setUpdating] = useState(false);
 
     // Show login button if not authenticated
     if (!isAuthenticated) {
@@ -31,32 +57,31 @@ function CurrentlyWatching() {
                         cursor: 'pointer',
                     }}
                 >
-                    Login with AniList
+                    Login to Tracker
                 </button>
             </div>
         );
     }
 
     // Show loading state
-    if (authLoading || loading) {
+    if (authLoading) {
         return <div style={{ padding: '2rem' }}>Loading...</div>;
     }
 
-    // Show error state
-    if (error) {
-        return <div style={{ padding: '2rem', color: 'red' }}>Error: {error}</div>;
-    }
+    // Handle progress increment (Mocked)
+    async function incrementProgress(mediaId: number) {
+        setUpdating(true);
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Handle progress increment
-    async function incrementProgress(mediaId: number, currentProgress: number) {
-        const result = await updateAnime({
-            mediaId,
-            progress: currentProgress + 1,
-        });
+        setAnimeList(prev => prev.map(entry => {
+            if (entry.media.id === mediaId) {
+                return { ...entry, progress: entry.progress + 1 };
+            }
+            return entry;
+        }));
 
-        if (result) {
-            refresh(); // Refresh the list after update
-        }
+        setUpdating(false);
     }
 
     return (
@@ -64,7 +89,7 @@ function CurrentlyWatching() {
             <h2>Currently Watching - {user?.name}</h2>
 
             {animeList.length === 0 ? (
-                <p>No anime currently watching</p>
+                <p>No titles currently watching</p>
             ) : (
                 <div style={{ display: 'grid', gap: '1rem' }}>
                     {animeList.map((entry) => (
@@ -78,7 +103,7 @@ function CurrentlyWatching() {
                                 borderRadius: '8px',
                             }}
                         >
-                            {/* Cover Image */}
+                            {/* Placeholder Cover Image */}
                             <img
                                 src={entry.media.coverImage.medium}
                                 alt={entry.media.title.romaji}
@@ -100,13 +125,9 @@ function CurrentlyWatching() {
                                     Progress: {entry.progress} / {entry.media.episodes || '?'}
                                 </p>
 
-                                <p style={{ margin: '0.25rem 0' }}>
-                                    Score: {entry.score > 0 ? entry.score : 'Not rated'}
-                                </p>
-
                                 {/* Update Button */}
                                 <button
-                                    onClick={() => incrementProgress(entry.media.id, entry.progress)}
+                                    onClick={() => incrementProgress(entry.media.id)}
                                     disabled={updating}
                                     style={{
                                         marginTop: '0.5rem',
@@ -119,7 +140,7 @@ function CurrentlyWatching() {
                                         opacity: updating ? 0.6 : 1,
                                     }}
                                 >
-                                    {updating ? 'Updating...' : '+1 Episode'}
+                                    {updating ? 'Updating...' : '+1 Unit'}
                                 </button>
                             </div>
                         </div>

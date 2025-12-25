@@ -1,5 +1,5 @@
-import MagicBento from '../components/MagicBento';
-import { SectionHeader } from '../components/UIComponents';
+import MagicBento from '../components/ui/MagicBento';
+import { SectionHeader } from '../components/ui/UIComponents';
 
 function Statistics() {
     return (

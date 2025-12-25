@@ -1,5 +1,5 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import colors from '../styles/colors';
+import colors from '../../styles/colors';
 
 /**
  * Custom Titlebar Component
@@ -28,39 +28,24 @@ function Titlebar() {
             data-tauri-drag-region
             style={{
                 height: '32px',
-                background: colors.discordDarker,
+                background: 'transparent',
                 display: 'flex',
-                justifyContent: 'space-between',
+                justifyContent: 'flex-end', // Only window controls on the right
                 alignItems: 'center',
-                padding: '0 1rem',
+                padding: '0 0.5rem',
                 userSelect: 'none',
                 position: 'fixed',
                 top: 0,
                 left: 0,
                 right: 0,
                 zIndex: 9999,
-                borderBottom: `1px solid rgba(255, 181, 197, 0.1)`,
                 WebkitAppRegion: 'drag',
             } as React.CSSProperties}
         >
-            {/* App Title */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                color: colors.pastelPink,
-                pointerEvents: 'none',
-            }}>
-                <span style={{ fontSize: '1rem' }}>🎬</span>
-                PLAY-ON!
-            </div>
-
             {/* Window Controls */}
             <div style={{
                 display: 'flex',
-                gap: '0.5rem',
+                gap: '2px',
                 WebkitAppRegion: 'no-drag',
             } as React.CSSProperties}>
                 {/* Minimize */}

@@ -1,4 +1,4 @@
-import { Card, SectionHeader, EmptyState } from '../components/UIComponents';
+import { Card, SectionHeader, EmptyState } from '../components/ui/UIComponents';
 
 function History() {
     // Sample history data

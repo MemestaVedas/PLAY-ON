@@ -1,20 +1,17 @@
 import { useNavigate } from 'react-router-dom';
-import { AnimeCard, SectionHeader } from '../components/UIComponents';
-
+import { AnimeCard, SectionHeader } from '../components/ui/UIComponents';
+import CurrentlyWatching from '../components/ui/CurrentlyWatching';
 // Sample anime data with more details
 const animeData = [
-    { id: 1, title: 'Attack on Titan', episodes: 75, status: 'Watching', progress: 67 },
-    { id: 2, title: 'Demon Slayer', episodes: 44, status: 'Watching', progress: 82 },
-    { id: 3, title: 'My Hero Academia', episodes: 113, status: 'Watching', progress: 45 },
-    { id: 4, title: 'Jujutsu Kaisen', episodes: 24, status: 'Completed', progress: 100 },
-    { id: 5, title: 'One Piece', episodes: 1000, status: 'Watching', progress: 12 },
-    { id: 6, title: 'Naruto Shippuden', episodes: 500, status: 'Completed', progress: 100 },
+    { id: 1, title: 'Attack on Titan', episodes: 75, status: 'Watching', progress: 67, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_5_1766682347429.png' },
+    { id: 2, title: 'Demon Slayer', episodes: 44, status: 'Watching', progress: 82, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_1_1766681754438.png' },
+    { id: 3, title: 'My Hero Academia', episodes: 113, status: 'Watching', progress: 45, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_3_1766682294612.png' },
+    { id: 4, title: 'Jujutsu Kaisen', episodes: 24, status: 'Completed', progress: 100, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_2_1766682269853.png' },
+    { id: 5, title: 'One Piece', episodes: 1000, status: 'Watching', progress: 12, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_4_1766682324192.png' },
+    { id: 6, title: 'Naruto Shippuden', episodes: 500, status: 'Completed', progress: 100, image: '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_1_1766681754438.png' },
+    // ... rest can use defaults or recycled
     { id: 7, title: 'Death Note', episodes: 37, status: 'Completed', progress: 100 },
     { id: 8, title: 'Steins;Gate', episodes: 24, status: 'Watching', progress: 58 },
-    { id: 9, title: 'Fullmetal Alchemist', episodes: 64, status: 'Completed', progress: 100 },
-    { id: 10, title: 'Tokyo Ghoul', episodes: 48, status: 'On Hold', progress: 33 },
-    { id: 11, title: 'Sword Art Online', episodes: 96, status: 'Watching', progress: 71 },
-    { id: 12, title: 'Code Geass', episodes: 50, status: 'Completed', progress: 100 },
 ];
 
 function AnimeList() {
@@ -73,6 +70,11 @@ function AnimeList() {
                 </select>
             </div>
 
+            {/* Currently Watching Section */}
+            <div style={{ marginBottom: '2.5rem' }}>
+                <CurrentlyWatching />
+            </div>
+
             {/* Watching Section */}
             {watching.length > 0 && (
                 <div style={{ marginBottom: '3rem' }}>
@@ -99,6 +101,7 @@ function AnimeList() {
                                 episodes={anime.episodes}
                                 status={anime.status}
                                 progress={anime.progress}
+                                image={anime.image}
                                 onClick={() => handleAnimeClick(anime.id)}
                             />
                         ))}
@@ -132,6 +135,7 @@ function AnimeList() {
                                 episodes={anime.episodes}
                                 status={anime.status}
                                 progress={anime.progress}
+                                image={anime.image}
                                 onClick={() => handleAnimeClick(anime.id)}
                             />
                         ))}
@@ -165,6 +169,7 @@ function AnimeList() {
                                 episodes={anime.episodes}
                                 status={anime.status}
                                 progress={anime.progress}
+                                image={anime.image}
                                 onClick={() => handleAnimeClick(anime.id)}
                             />
                         ))}

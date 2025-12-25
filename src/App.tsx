@@ -9,9 +9,8 @@ import Seasons from './pages/Seasons';
 import NowPlaying from './pages/NowPlaying';
 import AnimeDetails from './pages/AnimeDetails';
 import CounterDemo from './pages/CounterDemo';
-import MainLayout from './components/MainLayout';
+import MainLayout from './layouts/MainLayout';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
-import { handleDeepLink } from './services/authService';
 import "./App.css";
 
 /**
@@ -152,13 +151,10 @@ function ProtectedRoute() {
 function App() {
   useEffect(() => {
     const initDeepLink = async () => {
-      // Setup deep link listener
+      // Setup deep link listener (Currently used only for logging)
       // @ts-ignore - Types might vary depending on plugin version
       await onOpenUrl((urls) => {
         console.log('Deep link received:', urls);
-        for (const url of urls) {
-          handleDeepLink(url);
-        }
       });
     };
 

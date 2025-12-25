@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Card, StatCard, SectionHeader } from '../components/UIComponents';
-import BounceCards from '../components/BounceCards';
-import { useAnimeImages } from '../hooks/useAnimeImages';
+import { Card, StatCard, SectionHeader } from '../components/ui/UIComponents';
+import BounceCards from '../components/ui/BounceCards';
+// Premium generated mock images
+const PLACEHOLDER_IMAGES = [
+    '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_1_1766681754438.png',
+    '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_2_1766682269853.png',
+    '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_3_1766682294612.png',
+    '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_4_1766682324192.png',
+    '/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_5_1766682347429.png',
+];
 
 function Home() {
     const [mediaWindow, setMediaWindow] = useState<string>('Loading...');
     const [error, setError] = useState<string | null>(null);
 
-    // Static anime list (no authentication needed)
-    const animeList = ['Code Geass', 'K-On!', 'Tengen Toppa Gurren Lagann', 'My Hero Academia', 'One Piece'];
-    const { images: coverImages, loading: animeLoading } = useAnimeImages(animeList, 'large');
+    const coverImages = PLACEHOLDER_IMAGES;
+    const animeLoading = false;
 
     const transformStyles = [
         "rotate(5deg) translate(-150px)",

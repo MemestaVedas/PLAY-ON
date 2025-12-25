@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import Counter from '../components/Counter';
-import { Card, SectionHeader } from '../components/UIComponents';
+import Counter from '../components/ui/Counter';
+import { Card, SectionHeader } from '../components/ui/UIComponents';
 import colors from '../styles/colors';
 
 function CounterDemo() {

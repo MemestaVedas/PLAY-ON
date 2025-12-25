@@ -1,12 +1,11 @@
 /**
- * AniList Authentication Service
+ * Authentication Service
  * 
- * Handles OAuth authentication flow and token management for AniList API
- * Supports both OAuth flow and Personal Access Token
+ * Handles local authentication flow and token management. Supports both OAuth flow and Personal Access Token
  */
 
 import { config } from '../config/config';
-import type { AuthState, OAuthCallbackParams } from '../types/auth.types';
+import type { AuthState } from '../types/auth.types';
 
 const TOKEN_STORAGE_KEY = 'anilist_access_token';
 const AUTH_STATE_KEY = 'anilist_auth_state';
@@ -88,75 +87,71 @@ export function clearAuth(): void {
 }
 
 /**
- * Initiate OAuth flow
- * Opens AniList authorization page in browser
+ * Initiate OAuth flow (Skeleton)
+ * 
+ * Structure for a real OAuth flow:
+ * 1. Generate state/code verifier (PKCE)
+ * 2. Store them in session storage
+ * 3. Redirect user to authorization URL
  */
 export function initiateOAuth(): void {
-    const { clientId, authUrl, redirectUri } = config.oauth;
+    console.log('Initiating OAuth flow...');
 
-    if (clientId === 'YOUR_CLIENT_ID') {
-        alert('Please configure your OAuth Client ID in config.ts\n\nGo to https://anilist.co/settings/developer to create one.');
-        return;
-    }
+    // 1. Generate a random state to prevent CSRF
+    const state = Math.random().toString(36).substring(2, 15);
+    sessionStorage.setItem('auth_state', state);
 
-    // Generate random state for security
-    const state = generateRandomString(32);
-    sessionStorage.setItem('oauth_state', state);
+    // 2. Placeholder for Client ID and Redirect URI
+    const clientId = 'YOUR_CLIENT_ID';
+    const redirectUri = encodeURIComponent('http://localhost:1420/auth/callback');
 
-    // Build authorization URL
-    const params = new URLSearchParams({
-        client_id: clientId,
-        redirect_uri: 'play-on://auth/callback',
-        response_type: 'token',
-        state: state,
-    });
+    // 3. Construct Authorization URL (Generic pattern)
+    const authUrl = `https://example-auth-server.com/authorize?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${redirectUri}&` +
+        `state=${state}&` +
+        `response_type=code&` +
+        `scope=read_write`;
 
-    const authorizationUrl = `${authUrl}?${params.toString()}`;
+    // For now, since we are a shell, we mock the result
+    console.log('Would redirect to:', authUrl);
 
-    // Open in browser
-    window.open(authorizationUrl, '_blank');
+    // MOCK LOGIN for Shell functionality
+    const mockState: AuthState = {
+        isAuthenticated: true,
+        accessToken: 'mock_access_token_12345',
+        expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        userId: 12345,
+    };
+    saveAuthState(mockState);
+    localStorage.setItem('onboardingCompleted', 'true');
+    window.location.reload();
 }
 
-export function handleDeepLink(url: string): boolean {
-    // URL format: play-on://auth/callback#access_token=...&...
-    // Note: The fragment starts with #, but in some deep link scenarios it might be ? or just appended.
-    // AniList returns a hash #access_token=...
+/**
+ * Handle OAuth Callback (Skeleton)
+ * 
+ * Structure for handling the redirect back from the provider:
+ * 1. Extract 'code' and 'state' from URL
+ * 2. Verify 'state' against stored session
+ * 3. Exchange 'code' for 'access_token' via backend/fetch
+ */
+export async function handleOAuthCallback(query: URLSearchParams): Promise<boolean> {
+    const code = query.get('code');
+    const state = query.get('state');
+    const storedState = sessionStorage.getItem('auth_state');
 
-    try {
-        const hashIndex = url.indexOf('#');
-        if (hashIndex === -1) return false;
-
-        const hash = url.substring(hashIndex + 1);
-        const params = new URLSearchParams(hash);
-
-        const accessToken = params.get('access_token');
-        const expiresIn = params.get('expires_in');
-
-        if (accessToken) {
-            const expiresAt = expiresIn
-                ? Date.now() + parseInt(expiresIn) * 1000
-                : Date.now() + 365 * 24 * 60 * 60 * 1000; // 1 year default
-
-            const authState: AuthState = {
-                isAuthenticated: true,
-                accessToken,
-                expiresAt,
-                userId: null, // Will be fetched separately
-            };
-
-            saveAuthState(authState);
-
-            // Clear hash from URL
-            window.history.replaceState(null, '', window.location.pathname);
-
-            return true;
-        }
-
-        return false;
-    } catch (e) {
-        console.error('Error parsing deep link:', e);
+    if (!code || state !== storedState) {
+        console.error('OAuth state mismatch or missing code');
         return false;
     }
+
+    console.log('Exchanging code for token:', code);
+
+    // Placeholder for token exchange
+    // const response = await fetch('https://example-auth-server.com/token', { method: 'POST', ... });
+
+    return true;
 }
 
 /**
@@ -166,11 +161,12 @@ export function setPersonalAccessToken(token: string): void {
     const authState: AuthState = {
         isAuthenticated: true,
         accessToken: token,
-        expiresAt: null, // PATs don't expire
-        userId: null,
+        expiresAt: null,
+        userId: 12345,
     };
 
     saveAuthState(authState);
+    localStorage.setItem('onboardingCompleted', 'true');
 }
 
 /**
@@ -178,19 +174,8 @@ export function setPersonalAccessToken(token: string): void {
  */
 export function logout(): void {
     clearAuth();
+    localStorage.removeItem('onboardingCompleted');
     window.location.reload();
-}
-
-/**
- * Generate random string for OAuth state
- */
-function generateRandomString(length: number): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
 }
 
 /**

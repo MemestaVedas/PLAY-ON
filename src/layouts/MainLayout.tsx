@@ -1,8 +1,8 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import PillNav from './PillNav';
-import Squares from './Squares';
-import Titlebar from './Titlebar';
+import Sidebar from '../components/sidebar/Sidebar';
+import PillNav from '../components/ui/PillNav';
+import Squares from '../components/ui/Squares';
+import Titlebar from '../components/titlebar/Titlebar';
 import logo from '/logo.svg';
 
 /**
@@ -47,8 +47,7 @@ function MainLayout() {
             </div>
 
             {/* Sidebar */}
-            {/* Added 32px top margin for titlebar */}
-            <div style={{ position: 'relative', zIndex: 10, marginTop: '32px' }}>
+            <div style={{ position: 'relative', zIndex: 10 }}>
                 <Sidebar />
             </div>
 
@@ -64,7 +63,6 @@ function MainLayout() {
                 background: 'rgba(10, 10, 15, 0.5)', // Subtle overlay
                 borderTopLeftRadius: '20px', // Soft rounded corner
                 borderLeft: '1px solid rgba(255, 255, 255, 0.05)', // Soft divider
-                marginTop: '32px', // Align with sidebar below titlebar
                 overflow: 'hidden', // Contain scrolling
             }}>
                 {/* PillNav */}
@@ -72,7 +70,7 @@ function MainLayout() {
                     position: 'sticky',
                     top: 0,
                     zIndex: 50,
-                    padding: '1rem 2rem 0', // Spacing around nav
+                    padding: '32px 2rem 0', // Account for titlebar + normal padding
                 }}>
                     <PillNav
                         logo={logo}

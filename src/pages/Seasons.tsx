@@ -1,4 +1,4 @@
-import { Card, AnimeCard, SectionHeader } from '../components/UIComponents';
+import { Card, AnimeCard, SectionHeader } from '../components/ui/UIComponents';
 
 function Seasons() {
     const seasons = [

@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import colors from '../styles/colors';
+import colors from '../../styles/colors';
 import Counter from './Counter';
 
 // Card Component - Base building block
@@ -115,11 +115,13 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
 }) => {
     return (
         <Card onClick={onClick} hover>
-            {/* Image placeholder */}
+            {/* Image container */}
             <div style={{
                 width: '100%',
-                height: '200px',
-                background: image || colors.pastelLavender,
+                height: '240px',
+                background: image ? `url(${image})` : colors.pastelLavender,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 borderRadius: '12px',
                 marginBottom: '1rem',
                 display: 'flex',
@@ -127,8 +129,21 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
                 justifyContent: 'center',
                 color: 'white',
                 fontSize: '3rem',
+                position: 'relative',
+                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.2)',
             }}>
-                🎬
+                {!image && '🎬'}
+
+                {/* Subtle glass overlay at bottom */}
+                <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '40%',
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
+                    borderRadius: '0 0 12px 12px',
+                }} />
             </div>
 
             {/* Title */}

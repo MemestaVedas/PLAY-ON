@@ -1,33 +1,27 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import colors from '../styles/colors';
-import { useAuth } from '../hooks/useAuth';
+import colors from '../../styles/colors';
+import { useAuth } from '../../hooks/useAuth';
+import SidebarItem from './SidebarItem';
+import { ListIcon, HistoryIcon, StatsIcon } from '../ui/Icons';
 
-/**
- * Sidebar Component - Discord-style left navigation
- * 
- * Contains:
- * - Main navigation items (Anime List, History, Statistics)
- * - Profile section at bottom
- */
-
-interface SidebarItem {
+interface SidebarNavItem {
     label: string;
     path: string;
-    icon: string;
+    icon: React.ReactNode;
 }
-
-const sidebarItems: SidebarItem[] = [
-    { label: 'Anime List', path: '/anime-list', icon: '📚' },
-    { label: 'History', path: '/history', icon: '🕒' },
-    { label: 'Statistics', path: '/statistics', icon: '📊' },
-];
 
 function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Fetch authenticated user data
+    // Fetch authenticated user data from global context
     const { user, loading, error, isAuthenticated } = useAuth();
+
+    const sidebarItems: SidebarNavItem[] = [
+        { label: 'Media List', path: '/anime-list', icon: <ListIcon /> },
+        { label: 'History', path: '/history', icon: <HistoryIcon /> },
+        { label: 'Statistics', path: '/statistics', icon: <StatsIcon /> },
+    ];
 
     const handleNavClick = (path: string) => {
         navigate(path);
@@ -44,6 +38,7 @@ function Sidebar() {
             left: 0,
             top: 0,
             zIndex: 100,
+            paddingTop: '32px', // Space for transparent titlebar
         }}>
             {/* App Logo/Title */}
             <div style={{
@@ -80,7 +75,7 @@ function Sidebar() {
                             fontSize: '0.75rem',
                             color: '#B5BAC1',
                         }}>
-                            Anime Tracker
+                            Media Tracker
                         </div>
                     </div>
                 </div>
@@ -97,42 +92,13 @@ function Sidebar() {
                         (item.path === '/anime-list' && location.pathname.startsWith('/anime/'));
 
                     return (
-                        <button
+                        <SidebarItem
                             key={item.path}
+                            label={item.label}
+                            icon={item.icon}
+                            isActive={isActive}
                             onClick={() => handleNavClick(item.path)}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem 1rem',
-                                marginBottom: '0.25rem',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: isActive ? '#404249' : 'transparent',
-                                color: isActive ? '#FFFFFF' : '#B5BAC1',
-                                fontSize: '1rem',
-                                fontWeight: isActive ? '600' : '500',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                textAlign: 'left',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!isActive) {
-                                    e.currentTarget.style.background = '#35373C';
-                                    e.currentTarget.style.color = '#DBDEE1';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isActive) {
-                                    e.currentTarget.style.background = 'transparent';
-                                    e.currentTarget.style.color = '#B5BAC1';
-                                }
-                            }}
-                        >
-                            <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
-                            <span>{item.label}</span>
-                        </button>
+                        />
                     );
                 })}
             </div>
@@ -222,7 +188,7 @@ function Sidebar() {
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                         }}>
-                            {loading ? '...' : error ? 'Offline' : 'AniList User'}
+                            {loading ? '...' : error ? 'Offline' : 'Local User'}
                         </div>
                     </div>
 

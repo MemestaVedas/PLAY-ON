@@ -1,4 +1,4 @@
-import { Card, SectionHeader, EmptyState } from '../components/UIComponents';
+import { Card, SectionHeader, EmptyState } from '../components/ui/UIComponents';
 
 function NowPlaying() {
     // Sample currently airing anime

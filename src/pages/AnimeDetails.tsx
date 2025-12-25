@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, SectionHeader } from '../components/UIComponents';
+import { Card, SectionHeader } from '../components/ui/UIComponents';
 
 function AnimeDetails() {
     const { id } = useParams<{ id: string }>();
@@ -61,14 +61,23 @@ function AnimeDetails() {
                     width: '100%',
                     height: '420px',
                     borderRadius: '16px',
-                    background: 'linear-gradient(135deg, #E0BBE4 0%, #C7B8EA 100%)',
+                    background: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url('/brain/d4275da3-9954-484c-802f-296cee8f613a/anime_mock_5_1766682347429.png')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '5rem',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden',
                 }}>
-                    🎬
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '16px',
+                        pointerEvents: 'none',
+                    }} />
                 </div>
 
                 {/* Info */}
