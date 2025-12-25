@@ -36,6 +36,7 @@ import type {
 } from '../types/anilist.types';
 import type { ViewerResponse } from '../types/auth.types';
 import { getAccessToken } from '../services/authService';
+import { fetch } from '@tauri-apps/plugin-http';
 
 /** AniList's public GraphQL endpoint - no authentication required for public data */
 const ANILIST_API_URL = 'https://graphql.anilist.co';
@@ -178,23 +179,26 @@ mutation ($mediaId: Int, $status: MediaListStatus, $score: Int, $progress: Int) 
 
 /**
  * Query to get user's favorite anime
+ * Note: Favorites use edges/node structure, not direct nodes
  */
 const FAVORITES_QUERY = `
 query {
   Viewer {
     favourites {
-      anime(page: 1, perPage: 5) {
-        nodes {
-          id
-          title {
-            romaji
-            english
-          }
-          coverImage {
-            extraLarge
-            large
-            medium
-            color
+      anime {
+        edges {
+          node {
+            id
+            title {
+              romaji
+              english
+            }
+            coverImage {
+              extraLarge
+              large
+              medium
+              color
+            }
           }
         }
       }

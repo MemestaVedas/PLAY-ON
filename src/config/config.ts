@@ -31,7 +31,7 @@ export const config = {
      * 3. Paste it in the personalAccessToken field below
      */
     oauth: {
-        clientId: '33523', // Replace with your OAuth Client ID
+        clientId: '33523',
         redirectUri: 'http://localhost:1420/auth/callback',
         authUrl: 'https://anilist.co/api/v2/oauth/authorize',
         tokenUrl: 'https://anilist.co/api/v2/oauth/token',
@@ -43,7 +43,7 @@ export const config = {
      * Generate at: https://anilist.co/settings/developer
      */
     auth: {
-        personalAccessToken: 'spCWPTMapryGIQwRZ3djJGSKtzCMXB8udNRyDwxX' // Set to your PAT or leave null to use OAuth
+        personalAccessToken: 'spCWPTMapryGIQwRZ3djJGSKtzCMXB8udNRyDwxX',
     },
 } as const;
 

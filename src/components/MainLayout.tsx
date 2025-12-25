@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PillNav from './PillNav';
 import Squares from './Squares';
@@ -6,21 +6,17 @@ import Titlebar from './Titlebar';
 import logo from '/logo.svg';
 
 /**
- * Layout Component - Discord-style layout with animated background
+ * MainLayout Component
  * 
- * Structure:
- * - Custom titlebar
- * - Animated Squares background
- * - Left sidebar (240px) with navigation and profile
- * - Main content area with PillNav at top
- * - Dark mode theme
+ * Provides the persistent shell for the application.
+ * - Sidebar stays mounted.
+ * - Titlebar stays mounted.
+ * - Background stays mounted.
+ * - Main content changes via <Outlet />.
  */
+function MainLayout() {
+    const location = useLocation();
 
-interface LayoutProps {
-    children: ReactNode;
-}
-
-function Layout({ children }: LayoutProps) {
     return (
         <div style={{
             display: 'flex',
@@ -51,6 +47,7 @@ function Layout({ children }: LayoutProps) {
             </div>
 
             {/* Sidebar */}
+            {/* Added 32px top margin for titlebar */}
             <div style={{ position: 'relative', zIndex: 10, marginTop: '32px' }}>
                 <Sidebar />
             </div>
@@ -61,14 +58,21 @@ function Layout({ children }: LayoutProps) {
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                minHeight: '100vh',
+                height: '100vh', // Fixed height for scrolling content
                 position: 'relative',
                 zIndex: 1,
+                background: 'rgba(10, 10, 15, 0.5)', // Subtle overlay
+                borderTopLeftRadius: '20px', // Soft rounded corner
+                borderLeft: '1px solid rgba(255, 255, 255, 0.05)', // Soft divider
+                marginTop: '32px', // Align with sidebar below titlebar
+                overflow: 'hidden', // Contain scrolling
             }}>
                 {/* PillNav */}
                 <div style={{
-                    position: 'relative',
+                    position: 'sticky',
+                    top: 0,
                     zIndex: 50,
+                    padding: '1rem 2rem 0', // Spacing around nav
                 }}>
                     <PillNav
                         logo={logo}
@@ -78,7 +82,7 @@ function Layout({ children }: LayoutProps) {
                             { label: 'Seasons', href: '/seasons' },
                             { label: 'Now Playing', href: '/now-playing' },
                         ]}
-                        activeHref={window.location.pathname}
+                        activeHref={location.pathname}
                         ease="power3.easeOut"
                         baseColor="#1a1a24"
                         pillColor="#FFB5C5"
@@ -88,18 +92,17 @@ function Layout({ children }: LayoutProps) {
                     />
                 </div>
 
-                {/* Page Content */}
+                {/* Page Content Outlet */}
                 <div style={{
                     flex: 1,
                     padding: '2rem',
-                    paddingTop: '5rem',
-                    marginTop: '32px',
+                    overflowY: 'auto', // Scrollable content area
                 }}>
-                    {children}
+                    <Outlet />
                 </div>
             </div>
         </div>
     );
 }
 
-export default Layout;
+export default MainLayout;

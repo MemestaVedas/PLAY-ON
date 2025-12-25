@@ -10,7 +10,6 @@ import {
     isAuthenticated as checkAuth,
     initiateOAuth,
     logout as performLogout,
-    handleTokenFromHash,
 } from '../services/authService';
 import { fetchViewer } from '../api/anilistClient';
 import type { Viewer } from '../types/auth.types';
@@ -53,9 +52,6 @@ export function useAuth(): UseAuthReturn {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Check for token in URL hash (OAuth callback)
-        handleTokenFromHash();
-
         // Check if already authenticated
         const authenticated = checkAuth();
         setIsAuthenticated(authenticated);

@@ -57,7 +57,11 @@ export function useFavoriteAnime(): UseFavoriteAnimeReturn {
                 setError(null);
 
                 const response = await fetchUserFavorites();
-                const favoriteAnime = response.data.Viewer.favourites.anime.nodes;
+
+                // Extract favorites from edges structure
+                const favoriteAnime = response.data.Viewer.favourites.anime.edges.map(
+                    (edge: any) => edge.node
+                );
 
                 setFavorites(favoriteAnime);
             } catch (err) {

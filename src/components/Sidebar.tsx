@@ -26,8 +26,8 @@ function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Fetch authenticated user's AniList data
-    const { user, loading, error } = useAuth();
+    // Fetch authenticated user data
+    const { user, loading, error, isAuthenticated } = useAuth();
 
     const handleNavClick = (path: string) => {
         navigate(path);
@@ -164,7 +164,7 @@ function Sidebar() {
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: loading ? '#404249' : (error || !user?.avatar?.large) ? colors.pastelPink : 'transparent',
+                        background: loading ? '#404249' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.pastelPink : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -182,7 +182,7 @@ function Sidebar() {
                                 backgroundSize: '200% 100%',
                                 animation: 'pulse 1.5s ease-in-out infinite',
                             }} />
-                        ) : error || !user?.avatar?.large ? (
+                        ) : !isAuthenticated || error || !user?.avatar?.large ? (
                             // Error state or no avatar: Show fallback emoji
                             '👤'
                         ) : (

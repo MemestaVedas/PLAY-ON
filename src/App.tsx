@@ -9,6 +9,9 @@ import Seasons from './pages/Seasons';
 import NowPlaying from './pages/NowPlaying';
 import AnimeDetails from './pages/AnimeDetails';
 import CounterDemo from './pages/CounterDemo';
+import MainLayout from './components/MainLayout';
+import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
+import { handleDeepLink } from './services/authService';
 import "./App.css";
 
 /**
@@ -147,23 +150,40 @@ function ProtectedRoute() {
  * - Tauri window stays open, content inside changes
  */
 function App() {
+  useEffect(() => {
+    const initDeepLink = async () => {
+      // Setup deep link listener
+      // @ts-ignore - Types might vary depending on plugin version
+      await onOpenUrl((urls) => {
+        console.log('Deep link received:', urls);
+        for (const url of urls) {
+          handleDeepLink(url);
+        }
+      });
+    };
+
+    initDeepLink();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
         {/* Root route - checks if onboarding needed */}
         <Route path="/" element={<ProtectedRoute />} />
 
-        {/* Main pages with PillNav (via Layout component) */}
-        <Route path="/home" element={<Home />} />
-        <Route path="/anime-list" element={<AnimeList />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/statistics" element={<Statistics />} />
-        <Route path="/seasons" element={<Seasons />} />
-        <Route path="/now-playing" element={<NowPlaying />} />
+        {/* Main App Layout */}
+        <Route element={<MainLayout />}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/anime-list" element={<AnimeList />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/seasons" element={<Seasons />} />
+          <Route path="/now-playing" element={<NowPlaying />} />
 
-        {/* Dynamic route for anime details - :id is a parameter */}
-        <Route path="/anime/:id" element={<AnimeDetails />} />
-        <Route path="/counter-demo" element={<CounterDemo />} />
+          {/* Dynamic route for anime details */}
+          <Route path="/anime/:id" element={<AnimeDetails />} />
+          <Route path="/counter-demo" element={<CounterDemo />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

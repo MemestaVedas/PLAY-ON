@@ -1,4 +1,3 @@
-import Layout from '../components/Layout';
 import { Card, SectionHeader, EmptyState } from '../components/UIComponents';
 
 function History() {
@@ -24,106 +23,104 @@ function History() {
     ];
 
     return (
-        <Layout>
-            <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-                <SectionHeader
-                    title="Watch History"
-                    subtitle="Your recent anime viewing activity"
-                    icon="🕒"
-                />
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+            <SectionHeader
+                title="Watch History"
+                subtitle="Your recent anime viewing activity"
+                icon="🕒"
+            />
 
-                {historyData.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                        {historyData.map((day, i) => (
-                            <div key={i}>
-                                <h3 style={{
-                                    fontSize: '1.2rem',
-                                    fontWeight: '600',
-                                    color: '#6B7280',
-                                    marginBottom: '1rem',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.5px',
-                                }}>
-                                    {day.date}
-                                </h3>
+            {historyData.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {historyData.map((day, i) => (
+                        <div key={i}>
+                            <h3 style={{
+                                fontSize: '1.2rem',
+                                fontWeight: '600',
+                                color: '#6B7280',
+                                marginBottom: '1rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                            }}>
+                                {day.date}
+                            </h3>
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {day.items.map((item, j) => (
-                                        <Card key={j} hover>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {day.items.map((item, j) => (
+                                    <Card key={j} hover>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '60px 1fr auto auto',
+                                            gap: '1rem',
+                                            alignItems: 'center',
+                                        }}>
+                                            {/* Icon */}
                                             <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '60px 1fr auto auto',
-                                                gap: '1rem',
+                                                width: '60px',
+                                                height: '60px',
+                                                borderRadius: '12px',
+                                                background: 'linear-gradient(135deg, #FFB5C5 0%, #FFA8BA 100%)',
+                                                display: 'flex',
                                                 alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '1.5rem',
                                             }}>
-                                                {/* Icon */}
-                                                <div style={{
-                                                    width: '60px',
-                                                    height: '60px',
-                                                    borderRadius: '12px',
-                                                    background: 'linear-gradient(135deg, #FFB5C5 0%, #FFA8BA 100%)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '1.5rem',
-                                                }}>
-                                                    ▶️
-                                                </div>
+                                                ▶️
+                                            </div>
 
-                                                {/* Info */}
-                                                <div>
-                                                    <div style={{
-                                                        fontWeight: '600',
-                                                        color: '#374151',
-                                                        marginBottom: '0.25rem',
-                                                    }}>
-                                                        {item.anime}
-                                                    </div>
-                                                    <div style={{
-                                                        fontSize: '0.9rem',
-                                                        color: '#6B7280',
-                                                    }}>
-                                                        {item.episode}
-                                                    </div>
-                                                </div>
-
-                                                {/* Duration */}
+                                            {/* Info */}
+                                            <div>
                                                 <div style={{
-                                                    padding: '0.5rem 1rem',
-                                                    borderRadius: '8px',
-                                                    background: 'rgba(199, 184, 234, 0.2)',
-                                                    fontSize: '0.9rem',
-                                                    color: '#6B21A8',
                                                     fontWeight: '600',
+                                                    color: '#374151',
+                                                    marginBottom: '0.25rem',
                                                 }}>
-                                                    {item.duration}
+                                                    {item.anime}
                                                 </div>
-
-                                                {/* Time */}
                                                 <div style={{
                                                     fontSize: '0.9rem',
-                                                    color: '#9CA3AF',
-                                                    minWidth: '80px',
-                                                    textAlign: 'right',
+                                                    color: '#6B7280',
                                                 }}>
-                                                    {item.time}
+                                                    {item.episode}
                                                 </div>
                                             </div>
-                                        </Card>
-                                    ))}
-                                </div>
+
+                                            {/* Duration */}
+                                            <div style={{
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '8px',
+                                                background: 'rgba(199, 184, 234, 0.2)',
+                                                fontSize: '0.9rem',
+                                                color: '#6B21A8',
+                                                fontWeight: '600',
+                                            }}>
+                                                {item.duration}
+                                            </div>
+
+                                            {/* Time */}
+                                            <div style={{
+                                                fontSize: '0.9rem',
+                                                color: '#9CA3AF',
+                                                minWidth: '80px',
+                                                textAlign: 'right',
+                                            }}>
+                                                {item.time}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                ) : (
-                    <EmptyState
-                        icon="📭"
-                        title="No watch history yet"
-                        description="Start watching anime to see your history here"
-                    />
-                )}
-            </div>
-        </Layout>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <EmptyState
+                    icon="📭"
+                    title="No watch history yet"
+                    description="Start watching anime to see your history here"
+                />
+            )}
+        </div>
     );
 }
 

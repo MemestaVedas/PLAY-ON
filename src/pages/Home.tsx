@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import Layout from '../components/Layout';
 import { Card, StatCard, SectionHeader } from '../components/UIComponents';
 import BounceCards from '../components/BounceCards';
-import { useFavoriteAnime } from '../hooks/useFavoriteAnime';
+import { useAnimeImages } from '../hooks/useAnimeImages';
 
 function Home() {
     const [mediaWindow, setMediaWindow] = useState<string>('Loading...');
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch user's favorite anime from AniList
-    const { coverImages, loading: animeLoading } = useFavoriteAnime();
+    // Static anime list (no authentication needed)
+    const animeList = ['Code Geass', 'K-On!', 'Tengen Toppa Gurren Lagann', 'My Hero Academia', 'One Piece'];
+    const { images: coverImages, loading: animeLoading } = useAnimeImages(animeList, 'large');
 
     const transformStyles = [
         "rotate(5deg) translate(-150px)",
@@ -40,7 +40,7 @@ function Home() {
     const isNoMedia = mediaWindow === 'No media playing' || mediaWindow === 'No active window';
 
     return (
-        <Layout>
+        <>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 <SectionHeader
                     title="Dashboard"
@@ -70,7 +70,7 @@ function Home() {
                     minHeight: '250px',
                 }}>
                     {animeLoading ? (
-                        <p style={{ color: '#9CA3AF' }}>Loading your favorite anime...</p>
+                        <p style={{ color: '#9CA3AF' }}>Loading anime covers...</p>
                     ) : coverImages.length > 0 ? (
                         <BounceCards
                             className="custom-bounceCards"
@@ -85,7 +85,7 @@ function Home() {
                         />
                     ) : (
                         <p style={{ color: '#9CA3AF' }}>
-                            No favorite anime found. Add some favorites on AniList!
+                            Loading anime covers...
                         </p>
                     )}
                 </div>
@@ -206,7 +206,7 @@ function Home() {
                     </div>
                 </div>
             </div>
-        </Layout>
+        </>
     );
 }
 
