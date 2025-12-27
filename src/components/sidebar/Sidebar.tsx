@@ -1,4 +1,6 @@
 import { useState } from 'react';
+// @ts-ignore
+import { open } from '@tauri-apps/plugin-opener';
 import { useNavigate, useLocation } from 'react-router-dom';
 import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
@@ -135,6 +137,43 @@ function Sidebar({ width }: SidebarProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Login Button (Visible if not authenticated) */}
+            {!isAuthenticated && (
+                <div style={{ padding: '0 0.75rem 0.75rem' }}>
+                    <button
+                        onClick={async () => {
+                            // REPLACE WITH YOUR ACTUAL ANILIST CLIENT ID
+                            const CLIENT_ID = '24967'; // Placeholder ID (example)
+                            const redirectUri = 'playon://auth';
+                            const authUrl = `https://anilist.co/api/v2/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token`;
+
+                            try {
+                                // @ts-ignore - plugin-opener might have strict types
+                                await open(authUrl);
+                            } catch (error) {
+                                console.error('Failed to open auth URL:', error);
+                            }
+                        }}
+                        style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                            background: colors.pastelPink,
+                            color: '#1a1b1e',
+                            fontWeight: '600',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            transition: 'transform 0.2s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                        Login with AniList
+                    </button>
+                </div>
+            )}
 
             {/* Profile Section */}
             <div style={{

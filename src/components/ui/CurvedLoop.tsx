@@ -29,7 +29,8 @@ const CurvedLoop: FC<CurvedLoopProps> = ({
     const [offset, setOffset] = useState(0);
     const uid = useId();
     const pathId = `curve-${uid}`;
-    const pathD = `M-100,40 Q500,${40 + curveAmount} 1540,40`;
+    const pathD = `M-100,40 Q720,${40 + curveAmount} 1540,40`;
+
 
     const dragRef = useRef(false);
     const lastXRef = useRef(0);
@@ -109,7 +110,7 @@ const CurvedLoop: FC<CurvedLoopProps> = ({
 
     return (
         <div
-            className="min-h-screen flex items-center justify-center w-full"
+            className="flex items-center justify-center w-full"
             style={{ visibility: ready ? 'visible' : 'hidden', cursor: cursorStyle }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}

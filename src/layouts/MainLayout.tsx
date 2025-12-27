@@ -3,6 +3,9 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/sidebar/Sidebar';
 import Titlebar from '../components/titlebar/Titlebar';
 import TabNavigation from '../components/ui/TabNavigation';
+import SearchBar from '../components/ui/SearchBar';
+import Breadcrumbs from '../components/ui/Breadcrumbs';
+import StatusBar from '../components/ui/StatusBar';
 
 /**
  * MainLayout Component
@@ -88,6 +91,7 @@ function MainLayout() {
             </div>
 
             {/* Main Content Area - Styled as a contained "Canvas" */}
+            {/* Main Content Area - Styled as a contained "Canvas" */}
             <div style={{
                 marginLeft: `${sidebarWidth + 8}px`, // Dynamic margin
                 marginTop: '40px',   // Gap from Titlebar
@@ -99,18 +103,29 @@ function MainLayout() {
                 height: 'calc(100vh - 48px)', // Remaining height
                 position: 'relative',
                 zIndex: 1,
-                background: '#9f9f9fff', // Content Color
                 borderRadius: '16px', // Rounded separation
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 overflow: 'hidden', // Contain scrolling
-            }}>
+            }} className="bg-content">
                 {/* Page Content Outlet */}
-                <div
-                    className="relative flex-1 flex flex-col overflow-hidden"
-                    style={{ background: '#2B2D31' }}
-                >
+                <div className="relative flex-1 flex flex-col overflow-hidden bg-content">
                     {/* Custom Corner Tab Navigation */}
                     <TabNavigation onBack={handleBack} onForward={handleForward} />
+
+                    {/* Center Breadcrumbs */}
+                    <Breadcrumbs />
+
+                    {/* Top Right Controls */}
+                    <div className="absolute top-0 right-0 z-20 flex">
+                        <SearchBar />
+                    </div>
+
+
+                    {/* Search Bar - Component handles its own positioning, but wrapping it to coexist */}
+                    {/* (Search Bar is absolute top-right, handled by its component CSS) */}
+
+                    {/* Status Bar */}
+                    <StatusBar />
 
                     {/* Scrollable Content Container */}
                     <div className="flex-1 overflow-y-auto px-8 py-8 pt-24">

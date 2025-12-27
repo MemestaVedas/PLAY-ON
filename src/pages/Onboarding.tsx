@@ -1,85 +1,162 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Aurora from '../components/ui/Aurora';
+import CurvedLoop from '../components/ui/CurvedLoop';
 
 /**
  * Onboarding Component
  * 
- * PURPOSE: This page shows ONLY on the first visit to the app.
- * 
- * HOW IT WORKS:
- * 1. User sees this page when they open the app for the first time
- * 2. When they click "Get Started", we:
- *    - Save a flag in localStorage (browser's local storage)
- *    - Navigate them to the home page
- * 3. On subsequent visits, App.tsx checks localStorage and skips this page
- * 
- * KEY CONCEPT - useNavigate():
- * This is React Router's hook for programmatic navigation.
- * Instead of using <a> tags or window.location, we use navigate('/path')
- * This keeps the app as a Single Page Application (SPA) - no page reloads!
+ * The first interaction point for new users.
+ * Features a mesmerizing Aurora background and interactive text.
  */
 function Onboarding() {
-    // useNavigate hook gives us a function to navigate programmatically
-    // Think of it as: "navigate = the ability to change pages in code"
     const navigate = useNavigate();
+    const [username, setUsername] = useState('');
+    const [error, setError] = useState('');
 
-    /**
-     * handleGetStarted - Called when user clicks the button
-     * 
-     * CRUX OF NAVIGATION:
-     * 1. localStorage.setItem() - Saves data in browser (persists even after closing app)
-     * 2. navigate('/home') - Changes the URL to /home WITHOUT reloading the page
-     *    - React Router sees the URL change
-     *    - It unmounts Onboarding component
-     *    - It mounts Home component
-     *    - All happens instantly, no server request needed!
-     */
     const handleGetStarted = () => {
-        // Mark onboarding as completed in browser's localStorage
-        // This persists even when the app is closed
+        if (!username.trim()) {
+            setError('Please enter a username to continue');
+            return;
+        }
+
+        // Save username and completion status
+        localStorage.setItem('username', username.trim());
         localStorage.setItem('onboardingCompleted', 'true');
 
-        // Navigate to home page - THIS IS THE CRUX!
-        // navigate() changes the route without page reload
+        // Navigate to home
         navigate('/home');
     };
 
-    return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            background: 'linear-gradient(135deg, #E0BBE4 0%, #D4A5D8 50%, #C7B8EA 100%)', // Pastel lavender/purple
-            color: 'white'
-        }}>
-            <h1 style={{ fontSize: '3rem', marginBottom: '1rem', fontWeight: '700' }}>Welcome to PLAY-ON!</h1>
-            <p style={{ fontSize: '1.5rem', marginBottom: '2rem', opacity: 0.95 }}>Your anime tracking companion</p>
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleGetStarted();
+        }
+    };
 
-            {/* 
-        NAVIGATION TRIGGER:
-        When clicked, handleGetStarted() is called
-        This saves to localStorage and navigates to /home
-      */}
-            <button
-                onClick={handleGetStarted}
-                style={{
-                    padding: '1rem 2rem',
-                    fontSize: '1.2rem',
-                    background: 'white',
-                    color: '#C7B8EA',
-                    border: 'none',
-                    borderRadius: '25px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    transition: 'transform 0.2s',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-                Get Started
-            </button>
+    return (
+        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: '#000' }}>
+            {/* 1. Aurora Background */}
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
+                <Aurora
+                    colorStops={["#3A29FF", "#FF94B4", "#FF3232"]}
+                    blend={0.5}
+                    amplitude={1.0}
+                    speed={0.5}
+                />
+            </div>
+
+            {/* 2. Content Overlay */}
+            <div style={{
+                position: 'relative',
+                zIndex: 10,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center'
+            }}>
+
+                {/* Curved Text Animation */}
+                <div style={{ marginBottom: '4rem', width: '100%' }}>
+                    <CurvedLoop
+                        marqueeText="Welcome ✦ To ✦ PLAY-ON!"
+                        speed={2}
+                        curveAmount={100}
+                        direction="right"
+                        interactive={true}
+
+                    />
+                </div>
+
+                {/* User Input Section */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1.5rem',
+                    width: '100%',
+                    padding: '0 2rem'
+                }}>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Enter your AniList username"
+                            value={username}
+                            onChange={(e) => {
+                                setUsername(e.target.value);
+                                setError('');
+                            }}
+                            onKeyDown={handleKeyDown}
+                            style={{
+                                padding: '1rem 2rem',
+                                fontSize: '1.25rem',
+                                width: '350px',
+                                maxWidth: '90vw',
+                                borderRadius: '16px',
+                                border: '2px solid rgba(255, 255, 255, 0.2)',
+                                background: 'rgba(0, 0, 0, 0.4)',
+                                color: 'white',
+                                outline: 'none',
+                                textAlign: 'center',
+                                backdropFilter: 'blur(10px)',
+                                transition: 'all 0.3s ease',
+                                boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                                e.target.style.background = 'rgba(0, 0, 0, 0.6)';
+                                e.target.style.transform = 'scale(1.02)';
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                                e.target.style.background = 'rgba(0, 0, 0, 0.4)';
+                                e.target.style.transform = 'scale(1)';
+                            }}
+                        />
+                        {error && (
+                            <p style={{
+                                position: 'absolute',
+                                bottom: '-25px',
+                                left: 0,
+                                width: '100%',
+                                textAlign: 'center',
+                                color: '#FF94B4',
+                                fontSize: '0.85rem',
+                                marginTop: '0.5rem'
+                            }}>
+                                {error}
+                            </p>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleGetStarted}
+                        style={{
+                            padding: '0.75rem 3rem',
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            borderRadius: '30px',
+                            border: 'none',
+                            background: 'white',
+                            color: '#3A29FF',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s, boxShadow 0.2s',
+                            boxShadow: '0 4px 15px rgba(58, 41, 255, 0.3)',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(58, 41, 255, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(58, 41, 255, 0.3)';
+                        }}
+                    >
+                        Continue →
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

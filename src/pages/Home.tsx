@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Card, StatCard, SectionHeader } from '../components/ui/UIComponents';
 import { useFavoriteAnime } from '../hooks/useFavoriteAnime';
+import TiltedCard from '../components/ui/TiltedCard';
 
 function Home() {
     const [mediaWindow, setMediaWindow] = useState<string>('Loading...');
     const [error, setError] = useState<string | null>(null);
 
     // Fetch REAL favorites from AniList instead of placeholders
-    const { coverImages, loading: animeLoading } = useFavoriteAnime();
+    const { favorites, loading: animeLoading } = useFavoriteAnime();
 
 
     useEffect(() => {
@@ -52,19 +53,38 @@ function Home() {
                     <StatCard icon="⏸️" label="On Hold" value={4} color="#FFE5B4" />
                 </div>
 
-                {/* Simple 2D Anime List */}
-                <div className="mb-8 flex justify-center items-center gap-4 overflow-x-auto py-4">
+                {/* Tilted Cards Anime List */}
+                <div className="mb-12 flex justify-center items-center gap-8 overflow-x-auto py-8">
                     {animeLoading ? (
                         <p className="text-gray-400">Loading anime covers...</p>
-                    ) : coverImages.length > 0 ? (
-                        coverImages.map((img, idx) => (
-                            <div
-                                key={idx}
-                                className="w-32 h-48 flex-shrink-0 rounded-lg overflow-hidden border-2 border-white/10 shadow-sm"
-                            >
-                                <img src={img} alt="Anime Cover" className="w-full h-full object-cover" />
-                            </div>
-                        ))
+                    ) : favorites.length > 0 ? (
+                        favorites.map((anime) => {
+                            const title = anime.title.english || anime.title.romaji;
+                            return (
+                                <TiltedCard
+                                    key={anime.id}
+                                    imageSrc={anime.coverImage.extraLarge || anime.coverImage.large}
+                                    altText={title}
+                                    captionText={title}
+                                    containerHeight="260px"
+                                    containerWidth="180px"
+                                    imageHeight="260px"
+                                    imageWidth="180px"
+                                    rotateAmplitude={12}
+                                    scaleOnHover={1.15}
+                                    showMobileWarning={false}
+                                    showTooltip={true}
+                                    displayOverlayContent={true}
+                                    overlayContent={
+                                        <div className="p-4 w-full h-full flex items-end justify-center bg-gradient-to-t from-black/80 via-transparent to-transparent rounded-[15px]">
+                                            <p className="text-white font-bold text-center text-sm drop-shadow-md">
+                                                {title}
+                                            </p>
+                                        </div>
+                                    }
+                                />
+                            );
+                        })
                     ) : (
                         <p className="text-gray-400">No favorites found.</p>
                     )}

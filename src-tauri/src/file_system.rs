@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FileItem {
@@ -8,6 +9,7 @@ pub struct FileItem {
     pub path: String,
     pub is_dir: bool,
     pub size: Option<u64>,
+    pub last_modified: Option<u64>,
 }
 
 #[tauri::command]
@@ -31,11 +33,18 @@ pub fn get_folder_contents(path: String) -> Result<Vec<FileItem>, String> {
                 continue;
             }
 
+            let metadata = entry.metadata().ok();
             let size = if !is_dir {
-                entry.metadata().ok().map(|m| m.len())
+                metadata.as_ref().map(|m| m.len())
             } else {
                 None
             };
+
+            let last_modified = metadata
+                .as_ref()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs());
 
             // If it's a file, filter by video extensions
             if !is_dir {
@@ -48,6 +57,7 @@ pub fn get_folder_contents(path: String) -> Result<Vec<FileItem>, String> {
                                 path: path_buf.to_string_lossy().to_string(),
                                 is_dir,
                                 size,
+                                last_modified,
                             });
                         }
                         _ => continue, // Skip non-video files
@@ -60,6 +70,7 @@ pub fn get_folder_contents(path: String) -> Result<Vec<FileItem>, String> {
                     path: path_buf.to_string_lossy().to_string(),
                     is_dir,
                     size,
+                    last_modified,
                 });
             }
         }

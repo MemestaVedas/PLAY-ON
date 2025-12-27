@@ -1,262 +1,119 @@
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, SectionHeader } from '../components/ui/UIComponents';
+import { useAnimeData, Anime } from '../hooks/useAnimeData';
 
 function AnimeDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { getAnimeDetails } = useAnimeData();
+    const [anime, setAnime] = useState<Anime | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Sample anime data (in real app, fetch based on ID)
-    const anime = {
-        title: 'Attack on Titan',
-        japaneseTitle: '進撃の巨人',
-        episodes: 75,
-        status: 'Watching',
-        progress: 50,
-        score: 9.1,
-        genres: ['Action', 'Drama', 'Fantasy', 'Military'],
-        studio: 'MAPPA',
-        year: 2013,
-        synopsis: 'Centuries ago, mankind was slaughtered to near extinction by monstrous humanoid creatures called Titans, forcing humans to hide in fear behind enormous concentric walls.',
-    };
+    useEffect(() => {
+        if (!id) return;
+        async function load() {
+            setLoading(true);
+            const data = await getAnimeDetails(parseInt(id!));
+            if (data) setAnime(data);
+            setLoading(false);
+        }
+        load();
+    }, [id]);
 
-    const episodes = [
-        { number: 1, title: 'To You, in 2000 Years', watched: true, duration: '24m' },
-        { number: 2, title: 'That Day', watched: true, duration: '24m' },
-        { number: 3, title: 'A Dim Light Amid Despair', watched: true, duration: '24m' },
-        { number: 4, title: 'The Night of the Closing Ceremony', watched: false, duration: '24m' },
-        { number: 5, title: 'First Battle', watched: false, duration: '24m' },
-    ];
+    if (loading) return <div className="p-10 text-center text-text-secondary">Loading details...</div>;
+    if (!anime) return <div className="p-10 text-center text-red-400">Anime not found.</div>;
+
+    // Use banner or fallback to extra large cover
+    const heroImage = anime.bannerImage || anime.coverImage.extraLarge;
+    const title = anime.title.english || anime.title.romaji;
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="h-full overflow-hidden flex flex-col pt-4 pb-10 px-6 max-w-[1800px] mx-auto">
             {/* Back Button */}
             <button
-                onClick={() => navigate('/anime-list')}
-                style={{
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(200, 200, 220, 0.4)',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    color: '#6B7280',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    marginBottom: '2rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                }}
+                onClick={() => navigate(-1)}
+                className="self-start text-text-secondary hover:text-white mb-4 flex items-center gap-2 transition-colors"
             >
-                ← Back to List
+                ← Back
             </button>
 
-            {/* Header Section */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '300px 1fr',
-                gap: '2rem',
-                marginBottom: '3rem',
-            }}>
-                {/* Poster */}
-                <div style={{
-                    width: '100%',
-                    height: '420px',
-                    borderRadius: '16px',
-                    background: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url('/assets/anime/anime_mock_5_1766682347429.png')`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                }}>
-                    <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '16px',
-                        pointerEvents: 'none',
-                    }} />
-                </div>
+            {/* 3-Column Layout: Left+Center (Visual) | Right (Info) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
 
-                {/* Info */}
-                <div>
-                    <h1 style={{
-                        fontSize: '2.5rem',
-                        fontWeight: '700',
-                        color: '#374151',
-                        marginBottom: '0.5rem',
-                    }}>
-                        {anime.title}
-                    </h1>
+                {/* Visual Section (Spans 2 columns on large screens) */}
+                <div className="lg:col-span-2 relative rounded-2xl overflow-hidden group shadow-2xl h-[50vh] lg:h-auto">
+                    <img
+                        src={heroImage}
+                        alt={title}
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-shell via-shell/20 to-transparent opacity-90" />
 
-                    <p style={{
-                        fontSize: '1.1rem',
-                        color: '#9CA3AF',
-                        marginBottom: '1.5rem',
-                    }}>
-                        {anime.japaneseTitle}
-                    </p>
-
-                    {/* Stats */}
-                    <div style={{
-                        display: 'flex',
-                        gap: '2rem',
-                        marginBottom: '2rem',
-                        flexWrap: 'wrap',
-                    }}>
-                        <div>
-                            <div style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '0.25rem' }}>
-                                Score
-                            </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#C7B8EA' }}>
-                                ⭐ {anime.score}
-                            </div>
-                        </div>
-
-                        <div>
-                            <div style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '0.25rem' }}>
-                                Episodes
-                            </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#374151' }}>
-                                {anime.episodes}
-                            </div>
-                        </div>
-
-                        <div>
-                            <div style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '0.25rem' }}>
-                                Progress
-                            </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#86EFAC' }}>
-                                {anime.progress}%
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Genres */}
-                    <div style={{ marginBottom: '2rem' }}>
-                        <div style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '0.75rem' }}>
-                            Genres
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            {anime.genres.map((genre, i) => (
-                                <span
-                                    key={i}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        borderRadius: '12px',
-                                        background: 'rgba(199, 184, 234, 0.2)',
-                                        color: '#6B21A8',
-                                        fontSize: '0.9rem',
-                                        fontWeight: '600',
-                                    }}
-                                >
-                                    {genre}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Synopsis */}
-                    <div>
-                        <div style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '0.75rem' }}>
-                            Synopsis
-                        </div>
-                        <p style={{
-                            fontSize: '1rem',
-                            color: '#6B7280',
-                            lineHeight: '1.6',
-                        }}>
-                            {anime.synopsis}
+                    {/* Floating Title on Visual (Optional, Netflix style) */}
+                    <div className="absolute bottom-10 left-10 max-w-2xl">
+                        <h1 className="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight mb-4">
+                            {title}
+                        </h1>
+                        <p className="text-lg text-gray-200 line-clamp-3 md:line-clamp-4 max-w-xl drop-shadow-md">
+                            {anime.description?.replace(/<[^>]*>/g, '')}
                         </p>
                     </div>
                 </div>
-            </div>
 
-            {/* Episodes Section */}
-            <div>
-                <h3 style={{
-                    fontSize: '1.5rem',
-                    fontWeight: '600',
-                    color: '#374151',
-                    marginBottom: '1rem',
-                }}>
-                    📺 Episodes
-                </h3>
+                {/* Info Panel (Right Column) */}
+                <div className="flex flex-col gap-6 h-full overflow-y-auto pr-2 custom-scrollbar">
 
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
-                }}>
-                    {episodes.map((episode) => (
-                        <Card key={episode.number} hover>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: '60px 1fr auto auto',
-                                gap: '1rem',
-                                alignItems: 'center',
-                            }}>
-                                {/* Episode Number */}
-                                <div style={{
-                                    width: '60px',
-                                    height: '60px',
-                                    borderRadius: '12px',
-                                    background: episode.watched
-                                        ? 'linear-gradient(135deg, #86EFAC 0%, #6EE7B7 100%)'
-                                        : 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '1.25rem',
-                                    fontWeight: '700',
-                                    color: episode.watched ? '#15803D' : '#6B7280',
-                                }}>
-                                    {episode.number}
-                                </div>
+                    {/* Metadata Stack */}
+                    <div className="flex flex-col gap-4 p-6 bg-tab rounded-xl border border-white/5">
+                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
+                            <span className="text-sm text-text-secondary uppercase tracking-wider">Format</span>
+                            <span className="font-semibold text-white">{anime.format || 'Unknown'}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
+                            <span className="text-sm text-text-secondary uppercase tracking-wider">Year</span>
+                            <span className="font-semibold text-white">{anime.seasonYear || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
+                            <span className="text-sm text-text-secondary uppercase tracking-wider">Episodes</span>
+                            <span className="font-semibold text-white">{anime.episodes || '?'}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
+                            <span className="text-sm text-text-secondary uppercase tracking-wider">Score</span>
+                            <span className="font-bold text-green-400 text-lg">{anime.averageScore ? `${anime.averageScore}%` : 'N/A'}</span>
+                        </div>
+                        <div className="flex items-baseline justify-between pb-2">
+                            <span className="text-sm text-text-secondary uppercase tracking-wider">Status</span>
+                            <span className={`font-semibold px-2 py-1 rounded text-xs ${anime.status === 'RELEASING' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
+                                {anime.status}
+                            </span>
+                        </div>
+                    </div>
 
-                                {/* Title */}
-                                <div>
-                                    <div style={{
-                                        fontWeight: '600',
-                                        color: '#374151',
-                                        marginBottom: '0.25rem',
-                                    }}>
-                                        {episode.title}
-                                    </div>
-                                    <div style={{
-                                        fontSize: '0.85rem',
-                                        color: '#9CA3AF',
-                                    }}>
-                                        Episode {episode.number}
-                                    </div>
-                                </div>
+                    {/* Actions */}
+                    <div className="flex flex-col gap-3">
+                        <button className="w-full py-4 bg-white text-black font-bold text-lg rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                            <span>▶</span> Play Episode 1
+                        </button>
+                        <button className="w-full py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors border border-white/5">
+                            + Add to List
+                        </button>
+                    </div>
 
-                                {/* Duration */}
-                                <div style={{
-                                    fontSize: '0.9rem',
-                                    color: '#6B7280',
-                                }}>
-                                    {episode.duration}
-                                </div>
+                    {/* Genres */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {anime.genres?.map(g => (
+                            <span key={g} className="px-3 py-1 bg-curve text-text-secondary text-xs rounded-full border border-white/5">
+                                {g}
+                            </span>
+                        ))}
+                    </div>
 
-                                {/* Status */}
-                                <div style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '8px',
-                                    background: episode.watched
-                                        ? 'rgba(134, 239, 172, 0.2)'
-                                        : 'rgba(229, 231, 235, 0.5)',
-                                    fontSize: '0.85rem',
-                                    color: episode.watched ? '#15803D' : '#6B7280',
-                                    fontWeight: '600',
-                                }}>
-                                    {episode.watched ? '✓ Watched' : 'Not Watched'}
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
+                    {/* Studios */}
+                    {anime.studios?.nodes && anime.studios.nodes.length > 0 && (
+                        <div className="mt-auto pt-6 text-sm text-text-secondary">
+                            Studios: <span className="text-white">{anime.studios.nodes.map(s => s.name).join(', ')}</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@theme {
+  --color-shell: #1b1b1b;
+  --color-content: #2e2e2e;
+  --color-tab: #1b1b1b;
+  --color-curve: #1b1b1b;
+  --color-text-secondary: #4b4b6e;
+  --color-text-hover: #6a6a9e;
+}
+
 .logo.vite:hover {
   filter: drop-shadow(0 0 2em #747bff);
 }
@@ -127,6 +136,8 @@ button {
 
 /* Hide scrollbar for IE, Edge and Firefox */
 * {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
