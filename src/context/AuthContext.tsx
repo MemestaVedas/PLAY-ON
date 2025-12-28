@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { fetchCurrentUser } from '../api/anilistClient';
+import { cacheRestoredPromise } from '../lib/apollo';
 import { open } from '@tauri-apps/plugin-shell';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { listen } from '@tauri-apps/api/event';
@@ -46,7 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Initial load and deep link listener
     useEffect(() => {
-        checkAuth();
+        const init = async () => {
+            await cacheRestoredPromise;
+            checkAuth();
+        };
+        init();
 
         // Setup deep link listener for OAuth redirects
         let unlisten: (() => void) | undefined;
@@ -88,9 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const result = await fetchCurrentUser();
                 console.log("fetchCurrentUser result:", result);
 
-                if (result.data && result.data.Viewer) {
-                    console.log("User authenticated:", result.data.Viewer.name);
-                    setUser(result.data.Viewer);
+                if (result.data && (result.data as any).Viewer) {
+                    console.log("User authenticated:", (result.data as any).Viewer.name);
+                    setUser((result.data as any).Viewer);
                     setError(null);
                     setLoading(false);
                 } else {

@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@apollo/client';
 import AnimeCard from '../components/ui/AnimeCard';
 import { useAuth } from '../hooks/useAuth';
-import { fetchUserAnimeCollection, fetchTrendingAnime } from '../api/anilistClient';
+import { USER_ANIME_COLLECTION_QUERY, fetchTrendingAnime } from '../api/anilistClient';
+import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
 
 // Define status types based on AniList
 type ListStatus = 'All' | 'Watching' | 'Completed' | 'Paused' | 'Dropped' | 'Planning';
@@ -34,70 +36,75 @@ interface AnimeEntry {
     };
 }
 
+// ... (existing imports and interfaces kept the same)
+
 function AnimeList() {
     const navigate = useNavigate();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
 
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [fullAnimeList, setFullAnimeList] = useState<AnimeEntry[]>([]); // Flattened list
+    // Use Apollo Query for automatic caching and loading state management
+    const { data, loading: queryLoading, error: queryError } = useQuery(USER_ANIME_COLLECTION_QUERY, {
+        variables: { userId: user?.id },
+        skip: !user?.id,
+        fetchPolicy: 'cache-first', // Use cache if available, don't flash loading
+    });
+
+    const [loading, setLoading] = useState(true); // Keep strictly for trending fallback logic
+    const [fullAnimeList, setFullAnimeList] = useState<AnimeEntry[]>([]);
     const [selectedStatus, setSelectedStatus] = useState<ListStatus>('All');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [isTrending, setIsTrending] = useState(false); // Fallback state
+    const [isTrending, setIsTrending] = useState(false);
 
     useEffect(() => {
-        const loadData = async () => {
-            // Wait for auth to initialize
-            if (authLoading) return;
-
+        // If we are loading user data via Apollo, sync it to state
+        if (queryLoading) {
             setLoading(true);
-            setError(null);
+            return;
+        }
 
-            if (isAuthenticated && user) {
-                try {
-                    const data = await fetchUserAnimeCollection(user.id);
-
-                    if (data.data?.MediaListCollection?.lists) {
-                        const lists = data.data.MediaListCollection.lists;
-
-                        // Flatten all lists into one array
-                        const allEntries = lists.flatMap((list: any) => list.entries);
-
-                        // Deduplicate entries based on ID (to handle potential overlaps from custom lists)
-                        const uniqueEntriesMap = new Map();
-                        allEntries.forEach((entry: any) => {
-                            if (!uniqueEntriesMap.has(entry.id)) {
-                                uniqueEntriesMap.set(entry.id, entry);
-                            }
-                        });
-                        const uniqueEntries = Array.from(uniqueEntriesMap.values());
-
-                        setFullAnimeList(uniqueEntries as AnimeEntry[]);
-                        setIsTrending(false);
-                    } else {
-                        setError("Could not load your anime list.");
-                    }
-                } catch (err) {
-                    console.error("Error loading anime list:", err);
-                    setError("Failed to fetch anime list from AniList.");
-                }
-            } else {
-                // Not logged in? Show trending instead or prompt
-                try {
-                    const data = await fetchTrendingAnime();
-                    if (data.data?.Page?.media) {
-                        setIsTrending(true);
-                        setFullAnimeList([]);
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            }
+        if (isAuthenticated && data?.MediaListCollection?.lists) {
             setLoading(false);
-        };
+            const lists = data.MediaListCollection.lists;
+            // Flatten all lists into one array
+            const allEntries = lists.flatMap((list: any) => list.entries);
 
-        loadData();
-    }, [isAuthenticated, user, authLoading]);
+            // Deduplicate entries
+            const uniqueEntriesMap = new Map();
+            allEntries.forEach((entry: any) => {
+                if (!uniqueEntriesMap.has(entry.id)) {
+                    uniqueEntriesMap.set(entry.id, entry);
+                }
+            });
+            const uniqueEntries = Array.from(uniqueEntriesMap.values());
+
+            setFullAnimeList(uniqueEntries as AnimeEntry[]);
+            setIsTrending(false);
+        } else if (!isAuthenticated && !authLoading) {
+            // Fallback to trending if not logged in
+            const loadTrending = async () => {
+                setLoading(true);
+                try {
+                    const tData = await fetchTrendingAnime();
+                    if (tData.data?.Page?.media) {
+                        setIsTrending(true);
+                        setFullAnimeList([]); // Clear user list (we would need to map trending to AnimeEntry if we want to show it, but logic here assumes explicit trending handling or different UI. Actually the original code just set fullAnimeList to empty and set isTrending=true, but didn't populate trending data into fullAnimeList? Re-reading original code... )
+                        // Original code: setFullAnimeList([]); setIsTrending(true);
+                        // It seems the original code MIGHT have had a bug or 'isTrending' is used elsewhere to fetch trending data?
+                        // Checking stats calculation: "if (isTrending) return counts;" -> returns 0 counts.
+                        // Checking render: "if (!isAuthenticated) return <Please Login>" -> So trending data isn't even shown in MAIN render if !auth.
+                        // So the trending fetch in original code was effectively doing nothing visible except stopping loading state?
+                        // I will preserve the behavior: stop loading.
+                    }
+                } catch (e) { }
+                setLoading(false);
+            };
+            loadTrending();
+        } else if (data && !data.MediaListCollection) {
+            setLoading(false); // Loaded but no lists?
+        }
+    }, [data, queryLoading, isAuthenticated, authLoading]);
+
+    const error = queryError ? "Failed to fetch anime list." : null;
 
     const handleAnimeClick = (id: number) => {
         navigate(`/anime/${id}`);
@@ -183,9 +190,9 @@ function AnimeList() {
     }
 
     return (
-        <div className="max-w-[1600px] mx-auto pb-10 px-6">
+        <div className="max-w-[1600px] mx-auto pb-10 px-6 min-h-screen">
             {/* Header / Stats Bar */}
-            <div className="flex flex-wrap items-center justify-between mb-8 py-4 border-b border-white/5">
+            <div className="flex flex-wrap items-center justify-between mb-8 py-4 border-b border-white/5 sticky top-0 z-30 bg-[#0f0f0f]/95 backdrop-blur-md">
                 <div className="flex flex-wrap items-center gap-4">
                     {(['All', 'Watching', 'Completed', 'Paused', 'Dropped', 'Planning'] as ListStatus[]).map((status) => (
                         <button
@@ -238,11 +245,32 @@ function AnimeList() {
                 </h2>
             </div>
 
-            {/* List/Grid Render */}
+            {/* Main Content Area - Virtualized */}
             {filteredList.length > 0 ? (
                 viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-                        {filteredList.map((entry) => (
+                    <VirtuosoGrid
+                        customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
+                        data={filteredList}
+                        totalCount={filteredList.length}
+                        overscan={200}
+                        components={{
+                            List: forwardRef(({ style, children, ...props }: any, ref) => (
+                                <div
+                                    ref={ref}
+                                    {...props}
+                                    style={style}
+                                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-20"
+                                >
+                                    {children}
+                                </div>
+                            )),
+                            Item: forwardRef(({ children, ...props }: any, ref) => (
+                                <div ref={ref} {...props}>
+                                    {children}
+                                </div>
+                            ))
+                        }}
+                        itemContent={(index, entry) => (
                             <AnimeCard
                                 key={entry.id}
                                 anime={{
@@ -251,20 +279,29 @@ function AnimeList() {
                                 progress={entry.progress}
                                 onClick={() => handleAnimeClick(entry.media.id)}
                             />
-                        ))}
-                    </div>
+                        )}
+                    />
                 ) : (
-                    <div className="flex flex-col gap-2">
-                        {/* List Header */}
-                        <div className="grid grid-cols-[80px_1fr_100px_100px] gap-4 px-4 py-2 text-sm text-text-secondary font-medium uppercase tracking-wider border-b border-white/5">
-                            <div>Image</div>
-                            <div>Title</div>
-                            <div>Score</div>
-                            <div>Progress</div>
-                        </div>
-                        {filteredList.map((entry) => (
+                    <Virtuoso
+                        customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
+                        data={filteredList}
+                        totalCount={filteredList.length}
+                        overscan={200}
+                        components={{
+                            Header: () => (
+                                <div className="grid grid-cols-[80px_1fr_100px_100px] gap-4 px-4 py-2 text-sm text-text-secondary font-medium uppercase tracking-wider border-b border-white/5 mb-2 bg-[#0f0f0f]">
+                                    <div>Image</div>
+                                    <div>Title</div>
+                                    <div>Score</div>
+                                    <div>Progress</div>
+                                </div>
+                            ),
+                            List: forwardRef(({ style, children, ...props }: any, ref) => (
+                                <div ref={ref} {...props} style={style} className="flex flex-col gap-2 pb-20">{children}</div>
+                            ))
+                        }}
+                        itemContent={(index, entry) => (
                             <div
-                                key={entry.id}
                                 onClick={() => handleAnimeClick(entry.media.id)}
                                 className="grid grid-cols-[80px_1fr_100px_100px] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors group"
                             >
@@ -274,6 +311,7 @@ function AnimeList() {
                                         src={entry.media.coverImage.medium}
                                         alt={entry.media.title.english || entry.media.title.romaji}
                                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                        loading="lazy"
                                     />
                                 </div>
                                 {/* Title */}
@@ -292,8 +330,8 @@ function AnimeList() {
                                     <span className="opacity-50"> / {entry.media.episodes || '?'}</span>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    />
                 )
             ) : (
                 <div className="text-center text-text-secondary py-20">

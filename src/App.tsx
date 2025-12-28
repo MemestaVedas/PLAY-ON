@@ -148,7 +148,14 @@ function ProtectedRoute() {
  * - No communication with Rust backend needed
  * - Tauri window stays open, content inside changes
  */
+import { useOfflineSync } from './lib/offlineQueue';
+
+import { ApolloProvider } from '@apollo/client';
+import { apolloClient } from './lib/apollo';
+
 function App() {
+  useOfflineSync();
+
   useEffect(() => {
     // DEV: Clear onboarding status to force onboarding every time
     // Remove this line when ready for production!
@@ -157,31 +164,33 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <LocalMediaProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Root route - checks if onboarding needed */}
-            <Route path="/" element={<ProtectedRoute />} />
+    <ApolloProvider client={apolloClient}>
+      <AuthProvider>
+        <LocalMediaProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Root route - checks if onboarding needed */}
+              <Route path="/" element={<ProtectedRoute />} />
 
-            {/* Main App Layout */}
-            <Route element={<MainLayout />}>
-              <Route path="/home" element={<Home />} />
-              <Route path="/anime-list" element={<AnimeList />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/statistics" element={<Statistics />} />
+              {/* Main App Layout */}
+              <Route element={<MainLayout />}>
+                <Route path="/home" element={<Home />} />
+                <Route path="/anime-list" element={<AnimeList />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/statistics" element={<Statistics />} />
 
-              {/* Dynamic route for anime details */}
-              <Route path="/anime/:id" element={<AnimeDetails />} />
-              <Route path="/counter-demo" element={<CounterDemo />} />
+                {/* Dynamic route for anime details */}
+                <Route path="/anime/:id" element={<AnimeDetails />} />
+                <Route path="/counter-demo" element={<CounterDemo />} />
 
-              {/* Local Folder Route */}
-              <Route path="/local/:folderPath" element={<LocalFolder />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </LocalMediaProvider>
-    </AuthProvider>
+                {/* Local Folder Route */}
+                <Route path="/local/:folderPath" element={<LocalFolder />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </LocalMediaProvider>
+      </AuthProvider>
+    </ApolloProvider>
   );
 }
 

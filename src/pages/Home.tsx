@@ -1,55 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Card, StatCard, SectionHeader } from '../components/ui/UIComponents';
 import TiltedCard from '../components/ui/TiltedCard';
 import { useAuth } from '../hooks/useAuth';
-import { fetchUserMediaList, fetchTrendingAnime } from '../api/anilistClient';
+import { useQuery } from '@apollo/client';
+import { USER_MEDIA_LIST_QUERY, TRENDING_ANIME_QUERY } from '../api/anilistClient';
 
 function Home() {
     const [mediaWindow, setMediaWindow] = useState<string>('Loading...');
     const [error, setError] = useState<string | null>(null);
 
-    // Anime List State
-    const [animeList, setAnimeList] = useState<any[]>([]);
-    const [animeLoading, setAnimeLoading] = useState(true);
+    // Anime List Logic replaced by useQuery
 
     const { user, isAuthenticated } = useAuth();
 
-    // Fetch Anime Data
-    useEffect(() => {
-        const loadAnime = async () => {
-            setAnimeLoading(true);
-            try {
-                if (isAuthenticated && user?.id) {
-                    // Fetch Currently Watching
-                    const data = await fetchUserMediaList(user.id, 'CURRENT');
-                    const updates = data?.data?.Page?.mediaList || [];
+    // Fetch Anime Data with useQuery for instant cache access
+    const { data: userData, loading: userLoading } = useQuery(USER_MEDIA_LIST_QUERY, {
+        variables: { userId: user?.id, status: 'CURRENT' },
+        skip: !isAuthenticated || !user?.id,
+        fetchPolicy: 'cache-first'
+    });
 
-                    // Transform to match structure if needed, or just use as is
-                    // The query returns mediaList items which contain 'media'
-                    const formatted = updates.map((item: any) => ({
-                        id: item.media.id,
-                        title: item.media.title,
-                        coverImage: item.media.coverImage,
-                        progress: item.progress,
-                        nextEpisode: item.media.nextAiringEpisode
-                    }));
-                    setAnimeList(formatted);
-                } else {
-                    // Fallback to Trending if not logged in
-                    const data = await fetchTrendingAnime(1, 10);
-                    const trending = data?.data?.Page?.media || [];
-                    setAnimeList(trending);
-                }
-            } catch (err) {
-                console.error("Failed to fetch anime", err);
-            } finally {
-                setAnimeLoading(false);
-            }
-        };
+    const { data: trendingData, loading: trendingLoading } = useQuery(TRENDING_ANIME_QUERY, {
+        variables: { page: 1, perPage: 10 },
+        skip: isAuthenticated,
+        fetchPolicy: 'cache-first'
+    });
 
-        loadAnime();
-    }, [isAuthenticated, user]);
+    const animeLoading = isAuthenticated ? userLoading : trendingLoading;
+
+    // Derived state from queries
+    const animeList = useMemo(() => {
+        if (isAuthenticated) {
+            const updates = userData?.Page?.mediaList || [];
+            return updates.map((item: any) => ({
+                id: item.media.id,
+                title: item.media.title,
+                coverImage: item.media.coverImage,
+                progress: item.progress,
+                nextEpisode: item.media.nextAiringEpisode
+            }));
+        } else {
+            return trendingData?.Page?.media || [];
+        }
+    }, [isAuthenticated, userData, trendingData]);
 
 
     useEffect(() => {

@@ -128,7 +128,7 @@ function MainLayout() {
                     <StatusBar />
 
                     {/* Scrollable Content Container */}
-                    <div className="flex-1 overflow-y-auto px-8 py-8 pt-24">
+                    <div id="main-scroll-container" className="flex-1 overflow-y-auto px-8 py-8 pt-24">
                         <Outlet />
                     </div>
                 </div>

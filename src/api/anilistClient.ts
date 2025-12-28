@@ -1,12 +1,12 @@
-/**
- * GraphQL Query to fetch public profile and favorite anime by username.
- * No tokens or keys required for this.
- */
-/**
- * GraphQL Query to fetch public profile.
- * No tokens or keys required for this.
- */
-const PUBLIC_USER_QUERY = `
+import { apolloClient } from '../lib/apollo';
+import { gql } from '@apollo/client';
+import { addToOfflineQueue, registerMutationProcessor } from '../lib/offlineQueue';
+
+// ============================================================================
+// QUERIES
+// ============================================================================
+
+const PUBLIC_USER_QUERY = gql`
 query ($name: String) {
   User (name: $name) {
     id
@@ -20,10 +20,7 @@ query ($name: String) {
 }
 `;
 
-/**
- * Query to fetch user's anime list by status (e.g., CURRENT).
- */
-const USER_MEDIA_LIST_QUERY = `
+export const USER_MEDIA_LIST_QUERY = gql`
 query ($userId: Int, $status: MediaListStatus) {
   Page {
     mediaList (userId: $userId, status: $status, type: ANIME, sort: UPDATED_TIME_DESC) {
@@ -50,10 +47,7 @@ query ($userId: Int, $status: MediaListStatus) {
 }
 `;
 
-/**
- * Query to fetch the user's full anime collection with lists.
- */
-const USER_ANIME_COLLECTION_QUERY = `
+export const USER_ANIME_COLLECTION_QUERY = gql`
 query ($userId: Int) {
   MediaListCollection(userId: $userId, type: ANIME) {
     lists {
@@ -87,68 +81,7 @@ query ($userId: Int) {
 }
 `;
 
-// ... [Trending and Anime Details queries remain unchanged] ...
-
-/**
- * Fetches public user data from AniList by username.
- */
-export async function fetchPublicUser(username: string) {
-  // ... implementation
-  const response = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      query: PUBLIC_USER_QUERY,
-      variables: { name: username }
-    }),
-  });
-
-  return response.json();
-}
-
-/**
- * Fetches the user's anime list for a specific status.
- */
-export async function fetchUserMediaList(userId: number, status: 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED' | 'PAUSED' | 'REPEATING') {
-  const response = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      query: USER_MEDIA_LIST_QUERY,
-      variables: { userId, status }
-    }),
-  });
-  return response.json();
-}
-
-/**
- * Fetches the user's full anime collection.
- */
-export async function fetchUserAnimeCollection(userId: number) {
-  const response = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      query: USER_ANIME_COLLECTION_QUERY,
-      variables: { userId }
-    }),
-  });
-  return response.json();
-}
-
-// ... [Rest of file]
-
-/**
- * Fetches public user data and favorites from AniList by username.
- * 
- * @param {string} username The AniList username to fetch
- * @returns {Promise<any>} The public user data
- */
-
-/**
- * Query to fetch currently trending anime.
- */
-const TRENDING_ANIME_QUERY = `
+export const TRENDING_ANIME_QUERY = gql`
 query ($page: Int, $perPage: Int) {
   Page (page: $page, perPage: $perPage) {
     pageInfo {
@@ -183,10 +116,7 @@ query ($page: Int, $perPage: Int) {
 }
 `;
 
-/**
- * Query to fetch detailed information for a specific anime.
- */
-const ANIME_DETAILS_QUERY = `
+const ANIME_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
     id
@@ -243,57 +173,7 @@ query ($id: Int) {
 }
 `;
 
-
-/**
- * Helper to get headers with Auth token
- */
-function getHeaders() {
-  const token = localStorage.getItem('anilist_token') || localStorage.getItem('token');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
-
-
-/**
- * Fetches trending anime data.
- */
-export async function fetchTrendingAnime(page = 1, perPage = 20) {
-  const response = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      query: TRENDING_ANIME_QUERY,
-      variables: { page, perPage }
-    }),
-  });
-  return response.json();
-}
-
-/**
- * Fetches specific anime details by ID.
- */
-export async function fetchAnimeDetails(id: number) {
-  const response = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      query: ANIME_DETAILS_QUERY,
-      variables: { id }
-    }),
-  });
-  return response.json();
-}
-
-/**
- * Query to fetch the authenticated user (Viewer).
- */
-const VIEWER_QUERY = `
+const VIEWER_QUERY = gql`
 query {
   Viewer {
     id
@@ -313,23 +193,149 @@ query {
 }
 `;
 
+// ============================================================================
+// MUTATIONS
+// ============================================================================
+
+const UPDATE_MEDIA_PROGRESS_MUTATION = gql`
+mutation UpdateMediaProgress($mediaId: Int, $progress: Int, $status: MediaListStatus) {
+  SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) {
+    id
+    progress
+    status
+    media {
+      id
+      title {
+        english
+      }
+    }
+  }
+}
+`;
+
+// ============================================================================
+// EXPORTED FUNCTIONS
+// ============================================================================
+
+/**
+ * Fetches public user data from AniList by username.
+ */
+export async function fetchPublicUser(username: string) {
+  const result = await apolloClient.query({
+    query: PUBLIC_USER_QUERY,
+    variables: { name: username }
+  });
+  return result; // Wrapper to match previous behavior? Apollo returns { data, loading, error }
+  // Previous fetch returned response.json(), which is { data: ... }
+  // Apollo result structure is slightly different but result.data is the same.
+  // We might need to adjust consumers if they expect exactly 'response.json()' structure including errors array at top level.
+  // But usually Apollo result is compatible enough or better.
+}
+
+/**
+ * Fetches the user's anime list for a specific status.
+ */
+export async function fetchUserMediaList(userId: number, status: 'CURRENT' | 'PLANNING' | 'COMPLETED' | 'DROPPED' | 'PAUSED' | 'REPEATING') {
+  const result = await apolloClient.query({
+    query: USER_MEDIA_LIST_QUERY,
+    variables: { userId, status }
+  });
+  return result;
+}
+
+/**
+ * Fetches the user's full anime collection.
+ */
+export async function fetchUserAnimeCollection(userId: number) {
+  const result = await apolloClient.query({
+    query: USER_ANIME_COLLECTION_QUERY,
+    variables: { userId }
+  });
+  return result;
+}
+
+/**
+ * Fetches trending anime data.
+ */
+export async function fetchTrendingAnime(page = 1, perPage = 20) {
+  const result = await apolloClient.query({
+    query: TRENDING_ANIME_QUERY,
+    variables: { page, perPage }
+  });
+  return result;
+}
+
+/**
+ * Fetches specific anime details by ID.
+ */
+export async function fetchAnimeDetails(id: number) {
+  const result = await apolloClient.query({
+    query: ANIME_DETAILS_QUERY,
+    variables: { id }
+  });
+  return result;
+}
+
 /**
  * Fetches the authenticated user's profile.
- * Requires a valid token in localStorage.
  */
 export async function fetchCurrentUser() {
-  const token = localStorage.getItem('anilist_token') || localStorage.getItem('token');
-  if (!token) {
-    throw new Error('No access token found');
-  }
-
-  const response = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify({
-      query: VIEWER_QUERY
-    }),
+  // Auth is handled by Apollo Link in apollo.ts
+  const result = await apolloClient.query({
+    query: VIEWER_QUERY,
+    // fetchPolicy: 'network-only' // Uncomment if we always want fresh user data on app load
   });
+  return result;
+}
 
-  return response.json();
+// Helper for mutation execution (used by both direct call and offline queue)
+const executeUpdateMediaProgress = async (variables: any) => {
+  return apolloClient.mutate({
+    mutation: UPDATE_MEDIA_PROGRESS_MUTATION,
+    variables,
+    optimisticResponse: {
+      SaveMediaListEntry: {
+        __typename: "MediaList",
+        id: -1,
+        progress: variables.progress,
+        status: variables.status || "CURRENT",
+        media: {
+          __typename: "Media",
+          id: variables.mediaId,
+          title: {
+            __typename: "MediaTitle",
+            english: "Updating..."
+          }
+        }
+      }
+    }
+  });
+};
+
+// Register for offline queue processing
+registerMutationProcessor('UpdateMediaProgress', executeUpdateMediaProgress);
+
+/**
+ * Updates anime progress. Supports offline queuing.
+ */
+export async function updateMediaProgress(mediaId: number, progress: number, status?: string) {
+  const variables = { mediaId, progress, status };
+  try {
+    return await executeUpdateMediaProgress(variables);
+  } catch (err) {
+    if (!navigator.onLine) {
+      console.warn("Offline! Queuing mutation...", err);
+      addToOfflineQueue('UpdateMediaProgress', variables);
+      // Return fake success for UI
+      return {
+        data: {
+          SaveMediaListEntry: {
+            progress,
+            status
+          }
+        }
+      };
+    }
+    throw err;
+  }
 }

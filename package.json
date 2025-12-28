@@ -10,7 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@apollo/client": "^4.0.11",
+    "@apollo/client": "^3.12.4",
     "@tailwindcss/postcss": "^4.1.18",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-deep-link": "^2.4.5",
@@ -19,6 +19,7 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-shell": "^2.3.3",
     "@tauri-apps/plugin-window": "^2.0.0-alpha.1",
+    "apollo3-cache-persist": "^0.15.0",
     "autoprefixer": "^10.4.22",
     "axios": "^1.13.2",
     "graphql": "^16.12.0",
@@ -30,6 +31,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.11.0",
+    "react-virtuoso": "^4.18.0",
+    "rxjs": "^7.8.2",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
