@@ -20,9 +20,12 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
     // Load from localStorage on mount
     useEffect(() => {
         const saved = localStorage.getItem('local-folders');
+        console.log("LocalMediaContext: Loading from localStorage:", saved);
         if (saved) {
             try {
-                setFolders(JSON.parse(saved));
+                const parsed = JSON.parse(saved);
+                console.log("LocalMediaContext: Parsed folders:", parsed);
+                setFolders(parsed);
             } catch (e) {
                 console.error("Failed to parse local folders", e);
             }
@@ -31,6 +34,7 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
 
     // Save to localStorage whenever folders change
     useEffect(() => {
+        console.log("LocalMediaContext: Saving to localStorage:", folders);
         localStorage.setItem('local-folders', JSON.stringify(folders));
     }, [folders]);
 

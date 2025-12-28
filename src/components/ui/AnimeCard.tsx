@@ -4,10 +4,12 @@ import { Anime } from '../../hooks/useAnimeData';
 interface AnimeCardProps {
     anime: Anime;
     onClick: (id: number) => void;
+    progress?: number;
 }
 
-const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick }) => {
+const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress }) => {
     const title = anime.title.english || anime.title.romaji;
+    const episodes = anime.episodes || '?';
 
     return (
         <div
@@ -22,6 +24,13 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick }) => {
                 className="w-full h-full object-cover"
                 loading="lazy"
             />
+
+            {/* Progress Badge (Always visible if progress exists) */}
+            {progress !== undefined && (
+                <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm z-20">
+                    {progress} / {episodes} EP
+                </div>
+            )}
 
             {/* Hover Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">

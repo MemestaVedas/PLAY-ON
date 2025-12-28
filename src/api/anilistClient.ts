@@ -50,6 +50,43 @@ query ($userId: Int, $status: MediaListStatus) {
 }
 `;
 
+/**
+ * Query to fetch the user's full anime collection with lists.
+ */
+const USER_ANIME_COLLECTION_QUERY = `
+query ($userId: Int) {
+  MediaListCollection(userId: $userId, type: ANIME) {
+    lists {
+      name
+      entries {
+        id
+        status
+        score
+        progress
+        media {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            extraLarge
+            large
+            medium
+          }
+          episodes
+          status
+          nextAiringEpisode {
+            episode
+            timeUntilAiring
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
 // ... [Trending and Anime Details queries remain unchanged] ...
 
 /**
@@ -79,6 +116,21 @@ export async function fetchUserMediaList(userId: number, status: 'CURRENT' | 'PL
     body: JSON.stringify({
       query: USER_MEDIA_LIST_QUERY,
       variables: { userId, status }
+    }),
+  });
+  return response.json();
+}
+
+/**
+ * Fetches the user's full anime collection.
+ */
+export async function fetchUserAnimeCollection(userId: number) {
+  const response = await fetch('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      query: USER_ANIME_COLLECTION_QUERY,
+      variables: { userId }
     }),
   });
   return response.json();

@@ -152,7 +152,7 @@ function App() {
   useEffect(() => {
     // DEV: Clear onboarding status to force onboarding every time
     // Remove this line when ready for production!
-    // localStorage.removeItem('onboardingCompleted'); 
+    // localStorage.removeItem('onboardingCompleted');
     // localStorage.removeItem('username'); // Commented out to persist login for now
   }, []);
 

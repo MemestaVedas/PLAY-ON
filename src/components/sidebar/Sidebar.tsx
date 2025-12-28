@@ -27,10 +27,11 @@ function Sidebar({ width }: SidebarProps) {
     const { user, loading, error, isAuthenticated, login } = useAuth();
     // Fetch local folder data
     const { folders: localItems, addFolder } = useLocalMedia();
+    console.log("Sidebar: localItems:", localItems);
 
     const mainItems: SidebarNavItem[] = [
         { label: 'Home', path: '/home', icon: <HomeIcon /> },
-        { label: 'Media List', path: '/anime-list', icon: <ListIcon /> },
+        { label: 'Anime List', path: '/anime-list', icon: <ListIcon /> },
         { label: 'History', path: '/history', icon: <HistoryIcon /> },
     ];
 
