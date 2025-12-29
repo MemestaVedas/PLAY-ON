@@ -7,13 +7,21 @@
 /// - No guessing or complex heuristics
 /// - Media players advertise themselves in window titles
 /// - Easy to extend and debug
+///
+/// NOTE: For more robust detection, consider using Windows Media Session API (SMTC)
+/// in a future enhancement - this current approach relies on window titles.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MediaPlayer {
     VLC,
     MPV,
     MPC,
+    PotPlayer,
+    KMPlayer,
+    GOM,
+    WMP,
     Browser,
+    Generic, // For players detected by file extension
 }
 
 /// Detect media player type from window title
@@ -23,31 +31,68 @@ pub enum MediaPlayer {
 ///
 /// This is the core filtering logic - only known media players pass through
 pub fn detect_media_player(title: &str) -> Option<MediaPlayer> {
-    let title = title.to_lowercase();
+    let title_lower = title.to_lowercase();
 
     // VLC Media Player
-    if title.contains("vlc media player") {
+    if title_lower.contains("vlc media player") || title_lower.contains("vlc") {
         return Some(MediaPlayer::VLC);
     }
 
     // MPV Player
-    if title.contains("mpv") {
+    if title_lower.contains("mpv") {
         return Some(MediaPlayer::MPV);
     }
 
     // Media Player Classic (MPC-HC, MPC-BE)
-    if title.contains("mpc") || title.contains("media player classic") {
+    if title_lower.contains("mpc") || title_lower.contains("media player classic") {
         return Some(MediaPlayer::MPC);
     }
 
+    // PotPlayer
+    if title_lower.contains("potplayer") || title_lower.contains("pot player") {
+        return Some(MediaPlayer::PotPlayer);
+    }
+
+    // KMPlayer
+    if title_lower.contains("kmplayer") || title_lower.contains("km player") {
+        return Some(MediaPlayer::KMPlayer);
+    }
+
+    // GOM Player
+    if title_lower.contains("gom player") || title_lower.contains("gomplayer") {
+        return Some(MediaPlayer::GOM);
+    }
+
+    // Windows Media Player
+    if title_lower.contains("windows media player") || title_lower.contains("wmp") {
+        return Some(MediaPlayer::WMP);
+    }
+
     // Browser-based media (YouTube, Netflix, etc.)
-    if title.contains("youtube")
-        || title.contains("netflix")
-        || title.contains("prime video")
-        || title.contains("crunchyroll")
-        || title.contains("funimation")
+    if title_lower.contains("youtube")
+        || title_lower.contains("netflix")
+        || title_lower.contains("prime video")
+        || title_lower.contains("crunchyroll")
+        || title_lower.contains("funimation")
+        || title_lower.contains("hidive")
+        || title_lower.contains("animixplay")
+        || title_lower.contains("9anime")
+        || title_lower.contains("gogoanime")
+        || title_lower.contains("zoro")
+        || title_lower.contains("aniwave")
     {
         return Some(MediaPlayer::Browser);
+    }
+
+    // Generic detection: Check for common video file extensions in title
+    // Many players show the filename in the window title
+    let video_extensions = [
+        ".mkv", ".mp4", ".avi", ".webm", ".m4v", ".mov", ".wmv", ".flv",
+    ];
+    for ext in &video_extensions {
+        if title_lower.contains(ext) {
+            return Some(MediaPlayer::Generic);
+        }
     }
 
     // Not a known media player - ignore

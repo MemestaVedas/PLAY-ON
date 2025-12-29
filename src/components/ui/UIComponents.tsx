@@ -9,6 +9,74 @@ import React from 'react';
 import colors from '../../styles/colors';
 import Counter from './Counter';
 
+// ============================================================================
+// SKELETON LOADER - Animated loading placeholder
+// ============================================================================
+interface SkeletonProps {
+    width?: string | number;
+    height?: string | number;
+    borderRadius?: string;
+    style?: React.CSSProperties;
+}
+
+export const Skeleton: React.FC<SkeletonProps> = ({
+    width = '100%',
+    height = '1rem',
+    borderRadius = '8px',
+    style
+}) => {
+    return (
+        <div
+            style={{
+                width,
+                height,
+                borderRadius,
+                background: 'linear-gradient(90deg, rgba(75, 75, 110, 0.2) 25%, rgba(100, 100, 140, 0.3) 50%, rgba(75, 75, 110, 0.2) 75%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 1.5s infinite',
+                ...style,
+            }}
+        />
+    );
+};
+
+// ============================================================================
+// PAGE TRANSITION - Wrapper for smooth page animations
+// ============================================================================
+interface PageTransitionProps {
+    children: React.ReactNode;
+}
+
+export const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
+    return (
+        <div
+            style={{
+                animation: 'fadeSlideIn 0.3s ease-out',
+            }}
+        >
+            {children}
+            <style>{`
+                @keyframes fadeSlideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                @keyframes shimmer {
+                    0% { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                }
+            `}</style>
+        </div>
+    );
+};
+
+
+
 // Card Component - Base building block
 interface CardProps {
     children: React.ReactNode;
