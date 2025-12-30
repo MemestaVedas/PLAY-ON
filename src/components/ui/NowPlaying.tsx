@@ -46,10 +46,19 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
     const [error, setError] = useState<string | null>(null);
     const [progressiveResult, setProgressiveResult] = useState<ProgressiveSearchResult | null>(null);
     const [isSearching, setIsSearching] = useState(false);
-    const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'syncing' | 'synced' | 'error'>('idle');
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'waiting' | 'saving' | 'syncing' | 'synced' | 'error'>('idle');
+    const [watchProgress, setWatchProgress] = useState<number>(0); // 0-100%
+    const [remainingTime, setRemainingTime] = useState<number>(0); // Seconds remaining
 
     // Track last saved episode to avoid duplicate saves
     const lastSavedRef = useRef<string | null>(null);
+
+    // Track watch time for 80% threshold sync
+    const watchTimeRef = useRef<{ key: string; startTime: number; synced: boolean } | null>(null);
+
+    // Sync threshold: 10 minutes of watch time (set to 30 seconds for testing if DEBUG_MODE is true)
+    const DEBUG_MODE = false; // Set to true for testing with 30 second threshold
+    const SYNC_THRESHOLD_MS = DEBUG_MODE ? 30 * 1000 : 10 * 60 * 1000;
 
     // Test progressive search with a sample title
     const testProgressiveSearch = async () => {
@@ -124,9 +133,47 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                         onAnimeDetected(parsed);
                     }
 
-                    // Save progress when we detect anime with episode
+                    // Track watch time for sync threshold
                     if (parsed.parsed?.episode) {
-                        saveAndSync(parsed);
+                        const anilistMatch = parsed.anilist_match;
+                        const episodeKey = `${anilistMatch?.id || parsed.parsed.title}-ep${parsed.parsed.episode}`;
+
+                        // New episode or different episode detected
+                        if (!watchTimeRef.current || watchTimeRef.current.key !== episodeKey) {
+                            watchTimeRef.current = { key: episodeKey, startTime: Date.now(), synced: false };
+                            lastSavedRef.current = null; // Reset saved ref for new episode
+                            setSyncStatus('waiting');
+                            setWatchProgress(0);
+                            setRemainingTime(SYNC_THRESHOLD_MS / 1000);
+                            console.log('[NowPlaying] Started tracking:', episodeKey, '| Threshold:', SYNC_THRESHOLD_MS / 1000, 'seconds');
+                        }
+
+                        // Calculate watch progress
+                        const watchedMs = Date.now() - watchTimeRef.current.startTime;
+                        const progress = Math.min((watchedMs / SYNC_THRESHOLD_MS) * 100, 100);
+                        const remaining = Math.max(0, Math.ceil((SYNC_THRESHOLD_MS - watchedMs) / 1000));
+                        setWatchProgress(progress);
+                        setRemainingTime(remaining);
+
+                        // Log every ~30 seconds (every 10 polls)
+                        if (Math.round(watchedMs / 3000) % 10 === 0) {
+                            console.log(`[NowPlaying] Progress: ${Math.round(progress)}% | Remaining: ${remaining}s | Synced: ${watchTimeRef.current.synced}`);
+                        }
+
+                        // Sync after reaching threshold
+                        if (watchedMs >= SYNC_THRESHOLD_MS && !watchTimeRef.current.synced) {
+                            watchTimeRef.current.synced = true;
+                            console.log('[NowPlaying] ✓ Threshold reached! Syncing now...');
+                            saveAndSync(parsed);
+                        }
+                    }
+                } else {
+                    // Not playing - reset watch time if we were tracking
+                    if (watchTimeRef.current) {
+                        console.log('[NowPlaying] Playback stopped, resetting tracker');
+                        watchTimeRef.current = null;
+                        setWatchProgress(0);
+                        setSyncStatus('idle');
                     }
                 }
             } catch (err) {
@@ -329,36 +376,64 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                             {/* Sync Status Indicator */}
                             {syncStatus !== 'idle' && (
                                 <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    fontSize: '0.75rem',
                                     marginTop: '0.5rem',
-                                    padding: '0.35rem 0.6rem',
-                                    borderRadius: '6px',
-                                    background: syncStatus === 'synced'
-                                        ? 'rgba(134, 239, 172, 0.15)'
-                                        : syncStatus === 'error'
-                                            ? 'rgba(239, 68, 68, 0.15)'
-                                            : 'rgba(180, 162, 246, 0.15)',
-                                    color: syncStatus === 'synced'
-                                        ? '#86EFAC'
-                                        : syncStatus === 'error'
-                                            ? '#EF4444'
-                                            : '#B4A2F6',
                                 }}>
-                                    <span>
-                                        {syncStatus === 'saving' && '💾'}
-                                        {syncStatus === 'syncing' && '🔄'}
-                                        {syncStatus === 'synced' && '☁️'}
-                                        {syncStatus === 'error' && '⚠️'}
-                                    </span>
-                                    <span>
-                                        {syncStatus === 'saving' && 'Saving locally...'}
-                                        {syncStatus === 'syncing' && 'Syncing to AniList...'}
-                                        {syncStatus === 'synced' && 'Synced!'}
-                                        {syncStatus === 'error' && 'Sync failed (queued)'}
-                                    </span>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '0.75rem',
+                                        padding: '0.35rem 0.6rem',
+                                        borderRadius: '6px',
+                                        background: syncStatus === 'synced'
+                                            ? 'rgba(134, 239, 172, 0.15)'
+                                            : syncStatus === 'error'
+                                                ? 'rgba(239, 68, 68, 0.15)'
+                                                : 'rgba(180, 162, 246, 0.15)',
+                                        color: syncStatus === 'synced'
+                                            ? '#86EFAC'
+                                            : syncStatus === 'error'
+                                                ? '#EF4444'
+                                                : '#B4A2F6',
+                                    }}>
+                                        <span>
+                                            {syncStatus === 'waiting' && '⏳'}
+                                            {syncStatus === 'saving' && '💾'}
+                                            {syncStatus === 'syncing' && '🔄'}
+                                            {syncStatus === 'synced' && '☁️'}
+                                            {syncStatus === 'error' && '⚠️'}
+                                        </span>
+                                        <span>
+                                            {syncStatus === 'waiting' && (() => {
+                                                const mins = Math.floor(remainingTime / 60);
+                                                const secs = remainingTime % 60;
+                                                return `Watching... ${mins}:${secs.toString().padStart(2, '0')} until sync`;
+                                            })()}
+                                            {syncStatus === 'saving' && 'Saving locally...'}
+                                            {syncStatus === 'syncing' && 'Syncing to AniList...'}
+                                            {syncStatus === 'synced' && 'Synced!'}
+                                            {syncStatus === 'error' && 'Sync failed (queued)'}
+                                        </span>
+                                    </div>
+
+                                    {/* Progress bar for waiting state */}
+                                    {syncStatus === 'waiting' && (
+                                        <div style={{
+                                            marginTop: '0.5rem',
+                                            height: '4px',
+                                            background: 'rgba(180, 162, 246, 0.2)',
+                                            borderRadius: '2px',
+                                            overflow: 'hidden',
+                                        }}>
+                                            <div style={{
+                                                width: `${watchProgress}%`,
+                                                height: '100%',
+                                                background: 'linear-gradient(90deg, #B4A2F6, #9DF0B3)',
+                                                borderRadius: '2px',
+                                                transition: 'width 0.3s ease',
+                                            }} />
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -437,7 +512,7 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                     to { transform: rotate(360deg); }
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
 
