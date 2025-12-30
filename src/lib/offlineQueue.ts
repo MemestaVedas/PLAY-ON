@@ -1,4 +1,4 @@
-import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
+// Apollo Client types removed - not currently used but structure kept for future use
 
 /**
  * Interface for a queued mutation

@@ -54,7 +54,12 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
     const lastSavedRef = useRef<string | null>(null);
 
     // Track watch time for 80% threshold sync
-    const watchTimeRef = useRef<{ key: string; startTime: number; synced: boolean } | null>(null);
+    const watchTimeRef = useRef<{
+        key: string;
+        startTime: number;
+        synced: boolean;
+        lastSeen?: number;
+    } | null>(null);
 
     // Sync threshold: 10 minutes of watch time (set to 30 seconds for testing if DEBUG_MODE is true)
     const DEBUG_MODE = false; // Set to true for testing with 30 second threshold
@@ -128,54 +133,65 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                 setDetection(parsed);
                 setError(null);
 
-                if (parsed.status === 'detected') {
+                if (parsed.status === 'detected' && parsed.parsed?.episode) {
                     if (onAnimeDetected) {
                         onAnimeDetected(parsed);
                     }
 
-                    // Track watch time for sync threshold
-                    if (parsed.parsed?.episode) {
-                        const anilistMatch = parsed.anilist_match;
-                        const episodeKey = `${anilistMatch?.id || parsed.parsed.title}-ep${parsed.parsed.episode}`;
+                    const anilistMatch = parsed.anilist_match;
+                    const episodeKey = `${anilistMatch?.id || parsed.parsed.title}-ep${parsed.parsed.episode}`;
 
-                        // New episode or different episode detected
-                        if (!watchTimeRef.current || watchTimeRef.current.key !== episodeKey) {
-                            watchTimeRef.current = { key: episodeKey, startTime: Date.now(), synced: false };
-                            lastSavedRef.current = null; // Reset saved ref for new episode
-                            setSyncStatus('waiting');
-                            setWatchProgress(0);
-                            setRemainingTime(SYNC_THRESHOLD_MS / 1000);
-                            console.log('[NowPlaying] Started tracking:', episodeKey, '| Threshold:', SYNC_THRESHOLD_MS / 1000, 'seconds');
-                        }
+                    // New episode or different episode detected
+                    if (!watchTimeRef.current || watchTimeRef.current.key !== episodeKey) {
+                        console.log('[NowPlaying] New tracking session:', episodeKey);
+                        watchTimeRef.current = { key: episodeKey, startTime: Date.now(), synced: false };
+                        lastSavedRef.current = null;
+                        setSyncStatus('waiting');
+                        setWatchProgress(0);
+                        setRemainingTime(SYNC_THRESHOLD_MS / 1000);
+                    }
 
-                        // Calculate watch progress
-                        const watchedMs = Date.now() - watchTimeRef.current.startTime;
-                        const progress = Math.min((watchedMs / SYNC_THRESHOLD_MS) * 100, 100);
-                        const remaining = Math.max(0, Math.ceil((SYNC_THRESHOLD_MS - watchedMs) / 1000));
-                        setWatchProgress(progress);
-                        setRemainingTime(remaining);
+                    // Calculate watch progress
+                    const watchedMs = Date.now() - watchTimeRef.current.startTime;
+                    const progress = Math.min((watchedMs / SYNC_THRESHOLD_MS) * 100, 100);
+                    const remaining = Math.max(0, Math.ceil((SYNC_THRESHOLD_MS - watchedMs) / 1000));
+                    setWatchProgress(progress);
+                    setRemainingTime(remaining);
 
-                        // Log every ~30 seconds (every 10 polls)
-                        if (Math.round(watchedMs / 3000) % 10 === 0) {
-                            console.log(`[NowPlaying] Progress: ${Math.round(progress)}% | Remaining: ${remaining}s | Synced: ${watchTimeRef.current.synced}`);
-                        }
-
-                        // Sync after reaching threshold
-                        if (watchedMs >= SYNC_THRESHOLD_MS && !watchTimeRef.current.synced) {
-                            watchTimeRef.current.synced = true;
-                            console.log('[NowPlaying] ✓ Threshold reached! Syncing now...');
-                            saveAndSync(parsed);
-                        }
+                    // Sync after reaching threshold
+                    if (watchedMs >= SYNC_THRESHOLD_MS && !watchTimeRef.current.synced) {
+                        watchTimeRef.current.synced = true;
+                        console.log('[NowPlaying] ✓ Threshold reached! Syncing...');
+                        saveAndSync(parsed);
                     }
                 } else {
-                    // Not playing - reset watch time if we were tracking
-                    if (watchTimeRef.current) {
-                        console.log('[NowPlaying] Playback stopped, resetting tracker');
-                        watchTimeRef.current = null;
-                        setWatchProgress(0);
-                        setSyncStatus('idle');
+                    // Not playing or no episode info - use grace period before resetting
+                    // This prevents resets if detection fails for a few seconds
+                    if (watchTimeRef.current && !watchTimeRef.current.synced) {
+                        const gracePeriodMs = 60 * 1000; // 60 seconds grace
+                        const timeSinceLastDetection = Date.now() - (watchTimeRef.current.lastSeen || Date.now());
+
+                        if (!watchTimeRef.current.lastSeen) {
+                            watchTimeRef.current.lastSeen = Date.now();
+                        }
+
+                        if (timeSinceLastDetection > gracePeriodMs) {
+                            console.log('[NowPlaying] Playback lost for >60s, resetting tracker');
+                            watchTimeRef.current = null;
+                            setWatchProgress(0);
+                            setSyncStatus('idle');
+                        } else {
+                            // Still in grace period, just show as "waiting"
+                            // We don't update progress while "lost"
+                        }
                     }
                 }
+
+                // Update last seen timestamp if detected
+                if (parsed.status === 'detected' && watchTimeRef.current) {
+                    watchTimeRef.current.lastSeen = Date.now();
+                }
+
             } catch (err) {
                 console.error('Error detecting anime:', err);
                 setError('Detection error');

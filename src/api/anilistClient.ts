@@ -37,6 +37,9 @@ query ($userId: Int, $status: MediaListStatus) {
           large
         }
         episodes
+        status
+        format
+        averageScore
         nextAiringEpisode {
           episode
           timeUntilAiring
@@ -74,6 +77,28 @@ query ($userId: Int) {
             episode
             timeUntilAiring
           }
+        }
+      }
+    }
+  }
+}
+`;
+
+export const USER_STATS_QUERY = gql`
+query ($userId: Int) {
+  User (id: $userId) {
+    id
+    name
+    statistics {
+      anime {
+        count
+        meanScore
+        standardDeviation
+        minutesWatched
+        episodesWatched
+        statuses {
+          count
+          status
         }
       }
     }

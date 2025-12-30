@@ -1,7 +1,8 @@
+use winapi::shared::minwindef::{BOOL, LPARAM};
 use winapi::shared::windef::HWND;
 use winapi::um::winnt::LPWSTR;
 use winapi::um::winuser::{
-    GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW, IsWindowVisible,
+    EnumWindows, GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW, IsWindowVisible,
 };
 
 unsafe fn get_foreground_window() -> Option<HWND> {
@@ -13,13 +14,13 @@ unsafe fn get_foreground_window() -> Option<HWND> {
     }
 }
 
-unsafe fn get_window_title(hwnd: HWND) -> Option<String> {
+pub unsafe fn get_window_title(hwnd: HWND) -> Option<String> {
     if IsWindowVisible(hwnd) == 0 {
         return None;
     }
 
     let length = GetWindowTextLengthW(hwnd);
-    if length == 0 {
+    if length <= 0 {
         return None;
     }
 
@@ -39,4 +40,22 @@ pub fn get_active_window_title() -> Option<String> {
         let hwnd = get_foreground_window()?;
         get_window_title(hwnd)
     }
+}
+
+/// Callback for EnumWindows to collect all visible windows
+unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let titles = &mut *(lparam as *mut Vec<String>);
+    if let Some(title) = get_window_title(hwnd) {
+        titles.push(title);
+    }
+    1 // Continue enumeration
+}
+
+/// Returns titles of all visible windows
+pub fn get_all_visible_window_titles() -> Vec<String> {
+    let mut titles: Vec<String> = Vec::new();
+    unsafe {
+        EnumWindows(Some(enum_windows_callback), &mut titles as *mut _ as LPARAM);
+    }
+    titles
 }

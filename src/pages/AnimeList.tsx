@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import AnimeCard from '../components/ui/AnimeCard';
 import { useAuth } from '../hooks/useAuth';
@@ -40,6 +40,7 @@ interface AnimeEntry {
 
 function AnimeList() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
 
     // Use Apollo Query for automatic caching and loading state management
@@ -51,7 +52,11 @@ function AnimeList() {
 
     const [loading, setLoading] = useState(true); // Keep strictly for trending fallback logic
     const [fullAnimeList, setFullAnimeList] = useState<AnimeEntry[]>([]);
-    const [selectedStatus, setSelectedStatus] = useState<ListStatus>('All');
+
+    // Initialize status from URL if present
+    const initialStatus = (searchParams.get('status') as ListStatus) || 'All';
+    const [selectedStatus, setSelectedStatus] = useState<ListStatus>(initialStatus);
+
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isTrending, setIsTrending] = useState(false);
 
@@ -107,7 +112,7 @@ function AnimeList() {
     const error = queryError ? "Failed to fetch anime list." : null;
 
     const handleAnimeClick = (id: number) => {
-        navigate(`/anime/${id}`);
+        navigate(`/anime/details/${id}`);
     };
 
     // Calculate stats
@@ -198,16 +203,16 @@ function AnimeList() {
                         <button
                             key={status}
                             onClick={() => setSelectedStatus(status)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${selectedStatus === status
+                            className={`flex items - center gap - 2 px - 3 py - 1.5 rounded - lg text - sm font - medium transition - all duration - 200 ${selectedStatus === status
                                 ? 'bg-white text-black shadow-lg shadow-white/10 scale-105'
                                 : 'text-text-secondary hover:text-white hover:bg-white/5'
-                                }`}
+                                } `}
                         >
                             <span>{status}</span>
-                            <span className={`px-1.5 rounded-md text-xs font-bold ${selectedStatus === status
+                            <span className={`px - 1.5 rounded - md text - xs font - bold ${selectedStatus === status
                                 ? 'bg-black/10 text-black/70'
                                 : 'bg-white/10 text-text-secondary'
-                                }`}>
+                                } `}>
                                 {stats[status]}
                             </span>
                         </button>
@@ -218,16 +223,16 @@ function AnimeList() {
                 <div className="flex items-center bg-white/5 rounded-lg p-1 gap-1">
                     <button
                         onClick={() => setViewMode('grid')}
-                        className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-white'
-                            }`}
+                        className={`p - 1.5 rounded - md transition - colors ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-white'
+                            } `}
                         title="Grid View"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
                     <button
                         onClick={() => setViewMode('list')}
-                        className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-white'
-                            }`}
+                        className={`p - 1.5 rounded - md transition - colors ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-white'
+                            } `}
                         title="List View"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
@@ -270,7 +275,7 @@ function AnimeList() {
                                 </div>
                             ))
                         }}
-                        itemContent={(index, entry) => (
+                        itemContent={(_index, entry) => (
                             <AnimeCard
                                 key={entry.id}
                                 anime={{
@@ -300,7 +305,7 @@ function AnimeList() {
                                 <div ref={ref} {...props} style={style} className="flex flex-col gap-2 pb-20">{children}</div>
                             ))
                         }}
-                        itemContent={(index, entry) => (
+                        itemContent={(_index, entry) => (
                             <div
                                 onClick={() => handleAnimeClick(entry.media.id)}
                                 className="grid grid-cols-[80px_1fr_100px_100px] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors group"
@@ -320,16 +325,16 @@ function AnimeList() {
                                 </div>
                                 {/* Score */}
                                 <div className="text-sm">
-                                    <span className={`${(entry.score || 0) >= 7 ? 'text-green-400' : 'text-text-secondary'}`}>
+                                    <span className={`${(entry.score || 0) >= 7 ? 'text-green-400' : 'text-text-secondary'} `}>
                                         {entry.score > 0 ? `${entry.score}/10` : '-'}
-                                    </span>
-                                </div>
+                                    </span >
+                                </div >
                                 {/* Progress */}
-                                <div className="text-sm text-text-secondary">
+                                < div className="text-sm text-text-secondary" >
                                     <span className="text-white">{entry.progress}</span>
                                     <span className="opacity-50"> / {entry.media.episodes || '?'}</span>
-                                </div>
-                            </div>
+                                </div >
+                            </div >
                         )}
                     />
                 )
@@ -338,7 +343,7 @@ function AnimeList() {
                     No anime found in this category.
                 </div>
             )}
-        </div>
+        </div >
     );
 }
 

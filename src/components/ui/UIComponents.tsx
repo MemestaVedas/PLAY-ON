@@ -122,11 +122,12 @@ interface StatCardProps {
     label: string;
     value: number;
     color: string;
+    onClick?: () => void;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color }) => {
+export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color, onClick }) => {
     return (
-        <Card hover>
+        <Card hover onClick={onClick}>
             <div style={{ textAlign: 'center' }}>
                 <div style={{
                     fontSize: '2.5rem',
@@ -146,7 +147,7 @@ export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color })
                         padding={5}
                         gap={4}
                         textColor={color}
-                        fontWeight={700}
+                        fontWeight={900}
                         gradientHeight={0}
                     />
                 </div>
@@ -155,6 +156,7 @@ export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color })
                     color: '#6B7280',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
+                    fontWeight: 600,
                 }}>
                     {label}
                 </div>

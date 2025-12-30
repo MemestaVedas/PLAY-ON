@@ -141,47 +141,81 @@ fn parse_window_title_command(window_title: String) -> String {
 async fn detect_anime_command() -> Result<String, String> {
     use serde_json::json;
 
-    // Get active window title
-    let window_title = match win_name::get_active_window_title() {
-        Some(t) => t,
-        None => return Ok(json!({ "status": "no_window" }).to_string()),
-    };
+    // 1. Try active window first
+    let active_title = win_name::get_active_window_title();
+    if let Some(ref window_title) = active_title {
+        if let Some(player) = media_player::detect_media_player(window_title) {
+            let parsed = title_parser::parse_window_title(window_title);
+            let anime_match = if let Some(ref title) = parsed.title {
+                match anilist::search_anime(title, 1).await {
+                    Ok(results) => results.into_iter().next(),
+                    Err(_) => None,
+                }
+            } else {
+                None
+            };
 
-    // Check if it's a media player
-    let player = match media_player::detect_media_player(&window_title) {
-        Some(p) => p,
-        None => {
-            return Ok(json!({ "status": "not_media_player", "window": window_title }).to_string())
+            return Ok(json!({
+                "status": "detected",
+                "player": format!("{:?}", player),
+                "window_title": window_title,
+                "parsed": {
+                    "title": parsed.title,
+                    "episode": parsed.episode,
+                    "season": parsed.season
+                },
+                "anilist_match": anime_match
+            })
+            .to_string());
         }
-    };
+    }
 
-    // Parse the window title
-    let parsed = title_parser::parse_window_title(&window_title);
+    // 2. If active window isn't a media player, search ALL visible windows
+    let all_titles = win_name::get_all_visible_window_titles();
+    for window_title in all_titles {
+        if let Some(player) = media_player::detect_media_player(&window_title) {
+            let parsed = title_parser::parse_window_title(&window_title);
 
-    // If we got a title, search AniList
-    let anime_match = if let Some(ref title) = parsed.title {
-        match anilist::search_anime(title, 1).await {
-            Ok(results) => results.into_iter().next(),
-            Err(_) => None,
+            // Only count as "detected" if we actually parsed a title or episode
+            // This avoids catching empty media player windows
+            if parsed.title.is_some() || parsed.episode.is_some() {
+                let anime_match = if let Some(ref title) = parsed.title {
+                    match anilist::search_anime(title, 1).await {
+                        Ok(results) => results.into_iter().next(),
+                        Err(_) => None,
+                    }
+                } else {
+                    None
+                };
+
+                return Ok(json!({
+                    "status": "detected",
+                    "player": format!("{:?}", player),
+                    "window_title": window_title,
+                    "parsed": {
+                        "title": parsed.title,
+                        "episode": parsed.episode,
+                        "season": parsed.season
+                    },
+                    "anilist_match": anime_match
+                })
+                .to_string());
+            }
         }
+    }
+
+    // 3. Fallback
+    let status = if active_title.is_some() {
+        "not_media_player"
     } else {
-        None
+        "no_window"
     };
 
-    // Build response
-    let response = json!({
-        "status": "detected",
-        "player": format!("{:?}", player),
-        "window_title": window_title,
-        "parsed": {
-            "title": parsed.title,
-            "episode": parsed.episode,
-            "season": parsed.season
-        },
-        "anilist_match": anime_match
-    });
-
-    Ok(response.to_string())
+    Ok(json!({
+        "status": status,
+        "window": active_title.unwrap_or_default()
+    })
+    .to_string())
 }
 
 /// Tauri command to update anime progress on AniList

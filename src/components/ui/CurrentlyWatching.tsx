@@ -16,7 +16,7 @@ function CurrentlyWatching() {
     const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
 
-    const { data, loading: listLoading, error } = useQuery(USER_MEDIA_LIST_QUERY, {
+    const { data, loading: listLoading } = useQuery(USER_MEDIA_LIST_QUERY, {
         variables: { userId: user?.id, status: 'CURRENT' },
         skip: !user?.id,
         fetchPolicy: 'cache-first'
