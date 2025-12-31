@@ -8,7 +8,6 @@
 export const config = {
     /**
      * AniList username to fetch profile data for
-     * 
      * CHANGE THIS to your AniList username!
      * Example: 'YourUsername'
      */

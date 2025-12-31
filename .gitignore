@@ -28,3 +28,5 @@ session_summary.md
 
 # Sensitive config files (contains API tokens)
 src/config/
+.env
+.env.*
