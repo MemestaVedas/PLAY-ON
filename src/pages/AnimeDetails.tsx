@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAnimeData, Anime } from '../hooks/useAnimeData';
+import { updateMediaProgress } from '../api/anilistClient';
 
 function AnimeDetails() {
     const { id } = useParams<{ id: string }>();
@@ -8,17 +9,37 @@ function AnimeDetails() {
     const { getAnimeDetails } = useAnimeData();
     const [anime, setAnime] = useState<Anime | null>(null);
     const [loading, setLoading] = useState(true);
+    const [progress, setProgress] = useState(0);
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         if (!id) return;
         async function load() {
             setLoading(true);
             const data = await getAnimeDetails(parseInt(id!));
-            if (data) setAnime(data);
+            if (data) {
+                setAnime(data);
+                if (data.mediaListEntry) {
+                    setProgress(data.mediaListEntry.progress);
+                }
+            }
             setLoading(false);
         }
         load();
     }, [id]);
+
+    const handleProgressUpdate = async (newProgress: number) => {
+        if (!anime || updating) return;
+        setUpdating(true);
+        try {
+            await updateMediaProgress(anime.id, newProgress);
+            setProgress(newProgress);
+        } catch (err) {
+            console.error("Failed to update progress:", err);
+        } finally {
+            setUpdating(false);
+        }
+    };
 
     if (loading) return <div className="p-10 text-center text-text-secondary">Loading details...</div>;
     if (!anime) return <div className="p-10 text-center text-red-400">Anime not found.</div>;
@@ -91,12 +112,48 @@ function AnimeDetails() {
 
                     {/* Actions */}
                     <div className="flex flex-col gap-3">
-                        <button className="w-full py-4 bg-white text-black font-bold text-lg rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-                            <span>▶</span> Play Episode 1
-                        </button>
-                        <button className="w-full py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors border border-white/5">
-                            + Add to List
-                        </button>
+                        {anime.mediaListEntry ? (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between bg-white/5 p-4 rounded-lg border border-white/10">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs text-text-secondary uppercase tracking-wider font-medium">Progress</span>
+                                        <span className="text-2xl font-black text-white">
+                                            {progress} <span className="text-sm font-normal text-text-secondary">/ {anime.episodes || '?'}</span>
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                            disabled={progress <= 0 || updating}
+                                            onClick={() => handleProgressUpdate(progress - 1)}
+                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-50 transition-all active:scale-95 border border-white/5"
+                                            title="Decrement episode"
+                                        >
+                                            <span className="text-xl font-bold">-</span>
+                                        </button>
+                                        <button
+                                            disabled={(anime.episodes && progress >= anime.episodes) || updating}
+                                            onClick={() => handleProgressUpdate(progress + 1)}
+                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-black hover:bg-gray-200 disabled:opacity-50 transition-all active:scale-95 shadow-lg"
+                                            title="Increment episode"
+                                        >
+                                            <span className="text-xl font-bold">+</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter ${anime.mediaListEntry.status === 'CURRENT' ? 'bg-green-500/20 text-green-400' : 'bg-gray-700/50 text-gray-400'}`}>
+                                        {anime.mediaListEntry.status}
+                                    </span>
+                                </div>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => handleProgressUpdate(1)}
+                                className="w-full py-4 bg-white text-black font-bold text-lg rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                            >
+                                + Add to List
+                            </button>
+                        )}
                     </div>
 
                     {/* Genres */}

@@ -174,6 +174,12 @@ query ($id: Int) {
       episode
       timeUntilAiring
     }
+    mediaListEntry {
+      id
+      status
+      progress
+      score(format: POINT_100)
+    }
     trailer {
       id
       site
@@ -191,6 +197,31 @@ query ($id: Int) {
              large
              medium
            }
+        }
+      }
+    }
+  }
+}
+`;
+
+export const USER_ACTIVITY_QUERY = gql`
+query ($userId: Int, $page: Int, $perPage: Int) {
+  Page (page: $page, perPage: $perPage) {
+    activities (userId: $userId, type: MEDIA_LIST, sort: ID_DESC) {
+      ... on ListActivity {
+        id
+        status
+        progress
+        createdAt
+        media {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            medium
+          }
         }
       }
     }
@@ -297,6 +328,17 @@ export async function fetchAnimeDetails(id: number) {
   const result = await apolloClient.query({
     query: ANIME_DETAILS_QUERY,
     variables: { id }
+  });
+  return result;
+}
+
+/**
+ * Fetches the user's activity history.
+ */
+export async function fetchUserActivity(userId: number, page = 1, perPage = 25) {
+  const result = await apolloClient.query({
+    query: USER_ACTIVITY_QUERY,
+    variables: { userId, page, perPage }
   });
   return result;
 }

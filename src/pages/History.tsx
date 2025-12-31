@@ -1,125 +1,108 @@
+import { forwardRef } from 'react';
 import { Card, SectionHeader, EmptyState } from '../components/ui/UIComponents';
+import { useHistory, HistoryFlatItem } from '../hooks/useHistory';
+import { Virtuoso } from 'react-virtuoso';
 
 function History() {
-    // Sample history data
-    const historyData = [
-        {
-            date: 'Today', items: [
-                { anime: 'Attack on Titan', episode: 'S4 E16', duration: '24 min', time: '2:30 PM' },
-                { anime: 'Demon Slayer', episode: 'S2 E8', duration: '24 min', time: '11:15 AM' },
-            ]
-        },
-        {
-            date: 'Yesterday', items: [
-                { anime: 'My Hero Academia', episode: 'S5 E23', duration: '24 min', time: '8:45 PM' },
-                { anime: 'Jujutsu Kaisen', episode: 'S1 E12', duration: '24 min', time: '3:20 PM' },
-            ]
-        },
-        {
-            date: '2 days ago', items: [
-                { anime: 'One Piece', episode: 'E1045', duration: '24 min', time: '7:00 PM' },
-            ]
-        },
-    ];
+    const { flatHistory, loading, error } = useHistory();
+
+    if (loading) {
+        return (
+            <div className="max-w-[1000px] mx-auto p-8 text-center text-text-secondary">
+                <div className="animate-pulse">Loading watch history...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-[1000px] mx-auto p-8">
+                <SectionHeader title="Watch History" subtitle="Failed to load history" icon="❌" />
+                <EmptyState icon="⚠️" title="Oops!" description={error} />
+            </div>
+        );
+    }
 
     return (
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <SectionHeader
-                title="Watch History"
-                subtitle="Your recent anime viewing activity"
-                icon="🕒"
-            />
+        <div className="h-full flex flex-col max-w-[1000px] mx-auto px-6">
+            <div className="pt-4 pb-2">
+                <SectionHeader
+                    title="Watch History"
+                    subtitle="Your recent anime viewing activity"
+                    icon="🕒"
+                />
+            </div>
 
-            {historyData.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {historyData.map((day, i) => (
-                        <div key={i}>
-                            <h3 style={{
-                                fontSize: '1.2rem',
-                                fontWeight: '600',
-                                color: '#6B7280',
-                                marginBottom: '1rem',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                            }}>
-                                {day.date}
-                            </h3>
+            <div className="flex-1 min-h-0">
+                {flatHistory.length > 0 ? (
+                    <Virtuoso
+                        style={{ height: '100%' }}
+                        customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
+                        data={flatHistory}
+                        overscan={200}
+                        components={{
+                            List: forwardRef(({ style, children, ...props }: any, ref) => (
+                                <div ref={ref} {...props} style={style} className="flex flex-col gap-3 pb-20">
+                                    {children}
+                                </div>
+                            ))
+                        }}
+                        itemContent={(_index, item: HistoryFlatItem) => {
+                            if (item.type === 'header') {
+                                return (
+                                    <h3 className="text-lg font-semibold text-text-secondary uppercase tracking-wider py-4 bg-[#0f0f0f] sticky top-0 z-10">
+                                        {item.date}
+                                    </h3>
+                                );
+                            }
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {day.items.map((item, j) => (
-                                    <Card key={j} hover>
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '60px 1fr auto auto',
-                                            gap: '1rem',
-                                            alignItems: 'center',
-                                        }}>
-                                            {/* Icon */}
-                                            <div style={{
-                                                width: '60px',
-                                                height: '60px',
-                                                borderRadius: '12px',
-                                                background: 'linear-gradient(135deg, #FFB5C5 0%, #FFA8BA 100%)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '1.5rem',
-                                            }}>
-                                                ▶️
+                            const data = item.data;
+                            return (
+                                <Card hover>
+                                    <div className="grid grid-cols-[60px_1fr_auto] gap-4 items-center">
+                                        {/* Icon/Thumbnail */}
+                                        <div className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-surface-light flex items-center justify-center border border-white/5">
+                                            <img
+                                                src={data.image}
+                                                alt={data.anime}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).src = 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/default.jpg';
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="min-w-0">
+                                            <div className="font-bold text-white truncate mb-1">
+                                                {data.anime}
                                             </div>
-
-                                            {/* Info */}
-                                            <div>
-                                                <div style={{
-                                                    fontWeight: '600',
-                                                    color: '#374151',
-                                                    marginBottom: '0.25rem',
-                                                }}>
-                                                    {item.anime}
-                                                </div>
-                                                <div style={{
-                                                    fontSize: '0.9rem',
-                                                    color: '#6B7280',
-                                                }}>
-                                                    {item.episode}
-                                                </div>
-                                            </div>
-
-                                            {/* Duration */}
-                                            <div style={{
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '8px',
-                                                background: 'rgba(199, 184, 234, 0.2)',
-                                                fontSize: '0.9rem',
-                                                color: '#6B21A8',
-                                                fontWeight: '600',
-                                            }}>
-                                                {item.duration}
-                                            </div>
-
-                                            {/* Time */}
-                                            <div style={{
-                                                fontSize: '0.9rem',
-                                                color: '#9CA3AF',
-                                                minWidth: '80px',
-                                                textAlign: 'right',
-                                            }}>
-                                                {item.time}
+                                            <div className="text-sm text-text-secondary flex gap-2 items-center">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${data.status === 'COMPLETED' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                                                    }`}>
+                                                    {data.status}
+                                                </span>
+                                                <span className="opacity-70">{data.progress}</span>
                                             </div>
                                         </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <EmptyState
-                    icon="📭"
-                    title="No watch history yet"
-                    description="Start watching anime to see your history here"
-                />
-            )}
+
+                                        {/* Time */}
+                                        <div className="text-sm text-text-secondary font-medium tabular-nums px-3 py-1 bg-white/5 rounded-lg border border-white/5">
+                                            {data.time}
+                                        </div>
+                                    </div>
+                                </Card>
+                            );
+                        }}
+                    />
+                ) : (
+                    <EmptyState
+                        icon="📭"
+                        title="No watch history yet"
+                        description="Start updating your anime progress to see your history here"
+                    />
+                )}
+            </div>
         </div>
     );
 }

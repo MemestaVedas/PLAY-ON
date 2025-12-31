@@ -29,6 +29,12 @@ export interface Anime {
         episode: number;
         timeUntilAiring: number;
     };
+    mediaListEntry?: {
+        id: number;
+        status: string;
+        progress: number;
+        score?: number;
+    };
 }
 
 export function useAnimeData() {
