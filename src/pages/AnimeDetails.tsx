@@ -44,9 +44,9 @@ function AnimeDetails() {
     if (loading) return <div className="p-10 text-center text-text-secondary">Loading details...</div>;
     if (!anime) return <div className="p-10 text-center text-red-400">Anime not found.</div>;
 
-    // Use banner or fallback to extra large cover
-    const heroImage = anime.bannerImage || anime.coverImage.extraLarge;
-    const title = anime.title.english || anime.title.romaji;
+    // Use banner or fallback to extra large cover (with null checks)
+    const heroImage = anime.bannerImage || anime.coverImage?.extraLarge || anime.coverImage?.large || '';
+    const title = anime.title?.english || anime.title?.romaji || 'Unknown Title';
 
     return (
         <div className="h-full overflow-hidden flex flex-col pt-4 pb-10 px-6 max-w-[1800px] mx-auto">
