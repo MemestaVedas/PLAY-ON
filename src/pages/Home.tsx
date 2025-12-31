@@ -145,23 +145,35 @@ function Home() {
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mint-tonic"></div>
                         </div>
                     ) : animeList.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                            {animeList.map((anime: any) => (
-                                <AnimeCard
-                                    key={anime.id}
-                                    anime={isAuthenticated ? {
-                                        id: anime.id,
-                                        title: anime.title,
-                                        coverImage: anime.coverImage,
-                                        episodes: anime.episodes,
-                                        format: anime.format,
-                                        averageScore: anime.averageScore
-                                    } : anime}
-                                    progress={isAuthenticated ? anime.progress : undefined}
-                                    onClick={() => handleAnimeClick(anime.id)}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                                {animeList.slice(0, 5).map((anime: any) => (
+                                    <AnimeCard
+                                        key={anime.id}
+                                        anime={isAuthenticated ? {
+                                            id: anime.id,
+                                            title: anime.title,
+                                            coverImage: anime.coverImage,
+                                            episodes: anime.episodes,
+                                            format: anime.format,
+                                            averageScore: anime.averageScore
+                                        } : anime}
+                                        progress={isAuthenticated ? anime.progress : undefined}
+                                        onClick={() => handleAnimeClick(anime.id)}
+                                    />
+                                ))}
+                            </div>
+                            {animeList.length > 5 && (
+                                <div className="flex justify-center mt-6">
+                                    <button
+                                        onClick={() => navigate('/anime-list')}
+                                        className="px-6 py-2 bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white rounded-lg transition-all text-sm font-medium"
+                                    >
+                                        See More →
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="text-center py-10 bg-white/5 rounded-2xl border border-dashed border-white/10">
                             <p className="text-text-secondary">No anime found in your list.</p>

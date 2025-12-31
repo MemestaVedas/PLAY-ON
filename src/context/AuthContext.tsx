@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { fetchCurrentUser } from '../api/anilistClient';
 import { cacheRestoredPromise } from '../lib/apollo';
@@ -43,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const processingRef = useRef<string | null>(null);
 
     // Initial load and deep link listener
     useEffect(() => {
@@ -190,21 +191,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const handleDeepLink = async (url: string) => {
         // playon://auth?code=...
         try {
-            // Need to parse URL carefully. 
-            // Note: URLSearchParams works on the query string part.
-            // url might be "playon://auth?code=123"
-            const urlObj = new URL(url); // This might fail for custom schemes in some envs, but usually fine in modern browsers/Tauri? 
-            // If URL() constructor fails, we parse manually.
-
+            console.log('Processing deep link:', url);
+            const urlObj = new URL(url);
             const code = urlObj.searchParams.get('code');
+
             if (code) {
+                // Prevent double-processing
+                if (processingRef.current === code) {
+                    console.log('Code already being processed, ignoring:', code.substring(0, 5) + '...');
+                    return;
+                }
+
+                processingRef.current = code;
                 await exchangeCodeForToken(code);
+                // Clear ref after some time or on success/fail
+                setTimeout(() => { processingRef.current = null; }, 5000);
             }
         } catch (e) {
             // Manual fallback if URL parsing fails
             if (url.includes('code=')) {
                 const code = url.split('code=')[1].split('&')[0];
-                await exchangeCodeForToken(code);
+                if (code && processingRef.current !== code) {
+                    processingRef.current = code;
+                    await exchangeCodeForToken(code);
+                    setTimeout(() => { processingRef.current = null; }, 5000);
+                }
             }
         }
     };

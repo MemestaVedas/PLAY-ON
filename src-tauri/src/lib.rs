@@ -272,7 +272,7 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
 
-                // Identify query string or url in argv
+                // Forward deep link URLs to frontend for OAuth handling
                 for arg in argv {
                     if arg.starts_with("playon://") {
                         let _ = window.emit("auth-callback", arg);
