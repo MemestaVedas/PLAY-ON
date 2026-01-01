@@ -1,42 +1,45 @@
 /* src/components/ui/CurrentlyWatching.css */
-
 .watching-container {
-    padding: 2rem;
+    padding: 0;
+    margin-bottom: 2rem;
 }
 
 .watching-header {
-    color: #374151;
     margin-bottom: 1.5rem;
+    color: #fff;
+    font-family: var(--font-rounded);
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
 .watching-grid {
     display: grid;
     gap: 1.5rem;
-    /* Increased gap to accommodate the tab sticking out if necessary */
-    /* Ensure enough space on top for the first card's tab if it sticks out? 
-       Actually gap is between grid items. Top padding of container handles first item. */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
 .watching-card {
     position: relative;
     display: flex;
-    gap: 1.5rem;
+    gap: 1.25rem;
     padding: 1.25rem;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 16px;
-    border-top-right-radius: 0;
-    /* Important: Flatten top-right for the tab integration */
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    backdrop-filter: blur(10px);
+    background: var(--color-content, rgba(20, 20, 25, 0.65));
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Dark glass border */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(12px);
     cursor: pointer;
-    transition: transform 0.2s ease;
-    margin-top: 1.5rem;
-    /* Add margin top to fit the tab */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
 }
 
 .watching-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    background: rgba(30, 30, 35, 0.8);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
 }
 
 .watching-cover {
@@ -44,7 +47,7 @@
     height: 110px;
     object-fit: cover;
     border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .watching-info {
@@ -52,13 +55,17 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    position: relative;
+    z-index: 2;
 }
 
 .watching-title {
     margin: 0 0 0.5rem 0;
-    color: #1F2937;
+    color: #fff;
     font-size: 1.1rem;
     font-weight: 700;
+    font-family: var(--font-rounded);
+    line-height: 1.3;
 }
 
 .watching-progress-wrapper {
@@ -68,119 +75,37 @@
 .watching-progress-bar-bg {
     height: 6px;
     width: 100%;
-    background: #E5E7EB;
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
     overflow: hidden;
     margin-bottom: 0.5rem;
 }
 
 .watching-progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #C7B8EA, #FFB5C5);
-    border-radius: 3px;
-    transition: width 0.3s ease;
-}
-
-.watching-progress-text {
-    margin: 0;
-    font-size: 0.85rem;
-    color: #6B7280;
-    font-weight: 500;
-}
-
-.highlight-text {
-    color: #C7B8EA;
+    background: linear-gradient(90deg, var(--color-zen-accent) 0%, #9FA5FE 100%);
+    border-radius: 100px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 10px rgba(180, 162, 246, 0.3);
 }
 
 .watching-btn {
     align-self: flex-start;
     padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #C7B8EA 0%, #B8A4E8 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.85rem;
+    background: rgba(180, 162, 246, 0.15);
+    color: #C7B8EA;
+    border: 1px solid rgba(180, 162, 246, 0.3);
+    border-radius: 10px;
+    font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(199, 184, 234, 0.3);
+    font-family: var(--font-rounded);
 }
 
 .watching-btn:hover {
-    transform: translateY(-1px);
+    background: var(--color-zen-accent);
+    color: #000;
+    border-color: var(--color-zen-accent);
+    box-shadow: 0 0 15px rgba(180, 162, 246, 0.4);
 }
-
-.watching-btn:active {
-    transform: translateY(0);
-}
-
-/* --- Inverted Tab Styles --- */
-
-.progress-tab {
-    position: absolute;
-    top: -2rem;
-    /* Adjust based on height */
-    right: -1px;
-    /* Align with right border (taking border width into account) */
-    height: 2rem;
-    background: rgba(255, 255, 255, 0.8);
-    /* Match card bg */
-    padding: 0 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-bottom: none;
-    /* Merges with card */
-    font-weight: bold;
-    color: #6B7280;
-    font-size: 0.9rem;
-    z-index: 1;
-    /* Ensure it stays on top if needed, though simpler is better */
-    backdrop-filter: blur(10px);
-    /* Match card */
-}
-
-/* The Inverted Curve Connector */
-.progress-tab::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    /* Align to bottom of tab (which is top of card) */
-    left: -20px;
-    /* Width of the curve area */
-    width: 20px;
-    height: 20px;
-    /* Use radial gradient to create the concave curve 
-       - Circle at Top-Left (0 0)
-       - Transparent for 20px (the radius)
-       - Colored for the rest
-    */
-    background: radial-gradient(circle at 0 0, transparent 19px, rgba(255, 255, 255, 0.8) 20px);
-    backdrop-filter: blur(10px);
-    /* Match the card's blur effect */
-    z-index: 1;
-    display: block;
-    pointer-events: none;
-}
-
-/* To hide the border seam where tab meets card */
-.progress-tab::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.8);
-    /* Cover the border line */
-    z-index: 2;
-}
-
-/* Since the main card has a border, the ::before 'filler' also needs to handle the border? 
-   The complex part of inverted radius with borders is the border line. 
-   Simplest is to ignore the border on the curve or try to fake it.
-   Given the request is about the "shape", I'll focus on the shape first.
-*/

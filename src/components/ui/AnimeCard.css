@@ -14,47 +14,24 @@
 /* --- Progress Badge (Top Right Corner) --- */
 .anime-card__progress-badge {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 8px;
+    right: 8px;
     z-index: 25;
-    background: var(--color-content, #2e2e2e);
-    padding: 6px 12px;
-    font-size: 0.95rem;
-    font-weight: bold;
+    background: rgba(18, 18, 20, 0.85);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
     color: #fff;
+    font-family: var(--font-rounded);
+    letter-spacing: 0.02em;
     display: flex;
     align-items: center;
-    gap: 3px;
-    border-bottom-left-radius: 12px;
-}
-
-/* Inverted corner connector - creates the smooth curve between badge and card edge */
-.anime-card__progress-badge::before {
-    content: '';
-    position: absolute;
-    bottom: 24px;
-    left: -16px;
-    width: 16px;
-    height: 16px;
-    background: transparent;
-    /* Radial gradient creates the inverted curve:
-       Circle at top-right of this element,
-       transparent inside the circle (the curve),
-       colored outside to match the badge background */
-    background: radial-gradient(circle at 0% 100%, transparent 16px, var(--color-content, #2e2e2e) 16px);
-}
-
-/* Inverted corner on the right side of badge (connects to card's right edge) */
-.anime-card__progress-badge::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    right: -4px;
-    width: 16px;
-    height: 16px;
-    background: transparent;
-    /* Circle at top-right, transparent inside, colored outside */
-    background: radial-gradient(circle at 0% 100%, transparent 16px, var(--color-content, #2e2e2e) 16px);
+    gap: 4px;
+    border-radius: 100px;
+    /* Pill shape */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .anime-card__progress-current {
@@ -78,13 +55,10 @@
     aspect-ratio: 2 / 3;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* When there's progress, adjust the top-right corner */
-.anime-card__image-wrapper--notched {
-    border-top-right-radius: 0;
-}
+
 
 /* --- Image --- */
 .anime-card__image {
@@ -105,6 +79,10 @@
     flex-direction: column;
     justify-content: flex-end;
     padding: 1rem;
+    z-index: 20;
+    /* Below the badge (z-index 25) and pseudo-elements (z-index 30) */
+    border-radius: inherit;
+    /* Inherit the rounded corners from parent */
 }
 
 .anime-card:hover .anime-card__overlay {

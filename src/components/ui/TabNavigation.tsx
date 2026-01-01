@@ -7,39 +7,23 @@ interface TabNavigationProps {
 
 const TabNavigation: React.FC<TabNavigationProps> = ({ onBack, onForward }) => {
     return (
-        <div className="absolute top-0 left-0 z-20">
-            {/* The Tab itself (cutout color) */}
-            <div
-                className="relative w-28 h-12 rounded-br-[32px] flex items-center justify-center gap-4 bg-tab"
+        <div className="glass-panel px-2 py-1 flex items-center bg-black/20 rounded-full border border-white/5 backdrop-blur-md">
+            <button
+                onClick={onBack}
+                className="p-2 w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all active:scale-95"
+                title="Back"
+                style={{ fontFamily: 'var(--font-rounded)' }}
             >
-                {/* Inverted Corner Join - Right */}
-                <div className="absolute -right-6 top-0 w-6 h-6 bg-curve">
-                    <div className="w-full h-full rounded-tl-full bg-content"></div>
-                </div>
-
-                {/* Inverted Corner Join - Bottom */}
-                <div className="absolute left-0 -bottom-6 w-6 h-6 bg-curve">
-                    <div className="w-full h-full rounded-tl-full bg-content"></div>
-                </div>
-
-                {/* Navigation Buttons */}
-                <div className="flex gap-4 mb-2 mr-2">
-                    <button
-                        onClick={onBack}
-                        className="p-2 text-text-secondary hover:text-lavender-mist transition-colors cursor-pointer text-2xl font-bold"
-                        title="Back"
-                    >
-                        ‹
-                    </button>
-                    <button
-                        onClick={onForward}
-                        className="p-2 text-text-secondary hover:text-lavender-mist transition-colors cursor-pointer text-2xl font-bold"
-                        title="Forward"
-                    >
-                        ›
-                    </button>
-                </div>
-            </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </button>
+            <div className="w-px h-4 bg-white/10 mx-1"></div>
+            <button
+                onClick={onForward}
+                className="p-2 w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all active:scale-95"
+                title="Forward"
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+            </button>
         </div>
     );
 };

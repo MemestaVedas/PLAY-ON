@@ -141,6 +141,33 @@ query ($page: Int, $perPage: Int) {
 }
 `;
 
+export const SEARCH_ANIME_QUERY = gql`
+query ($search: String, $page: Int, $perPage: Int) {
+  Page (page: $page, perPage: $perPage) {
+    pageInfo {
+      total
+      currentPage
+      hasNextPage
+    }
+    media (search: $search, type: ANIME, sort: SEARCH_MATCH) {
+      id
+      title {
+        english
+        romaji
+      }
+      coverImage {
+        large
+        medium
+      }
+      format
+      episodes
+      averageScore
+      status
+    }
+  }
+}
+`;
+
 const ANIME_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
@@ -317,6 +344,18 @@ export async function fetchTrendingAnime(page = 1, perPage = 20) {
   const result = await apolloClient.query({
     query: TRENDING_ANIME_QUERY,
     variables: { page, perPage }
+  });
+  return result;
+}
+
+/**
+ * Searches anime by title via AniList API.
+ */
+export async function searchAnime(search: string, page = 1, perPage = 10) {
+  const result = await apolloClient.query({
+    query: SEARCH_ANIME_QUERY,
+    variables: { search, page, perPage },
+    fetchPolicy: 'network-only' // Always fetch fresh results for search
   });
   return result;
 }

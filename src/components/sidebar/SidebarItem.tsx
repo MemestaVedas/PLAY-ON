@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import colors from '../../styles/colors';
+
 
 interface SidebarItemProps {
     label: string;
@@ -19,43 +19,47 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ label, icon, isActive, onClic
             style={{
                 width: '100%',
                 padding: '0.75rem 1rem',
-                marginBottom: '0.25rem',
-                borderRadius: '8px',
+                marginBottom: '0.5rem',
+                borderRadius: '16px', // Rounded softness
                 border: 'none',
-                background: isActive ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                color: isActive ? '#FFFFFF' : (isHovered ? '#DBDEE1' : '#B5BAC1'),
+                background: isActive ? 'var(--color-zen-surfacehigh)' : 'transparent',
+                color: isActive ? '#FFFFFF' : (isHovered ? '#DBDEE1' : '#A1A1AA'),
+                fontFamily: 'var(--font-rounded)', // Switch to rounded font if available, or inherit
                 fontSize: '0.95rem',
-                fontWeight: isActive ? '600' : '500',
+                fontWeight: isActive ? '700' : '500',
                 cursor: 'pointer',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', // Soft springy transition
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
                 textAlign: 'left',
                 position: 'relative',
                 overflow: 'hidden',
-                backgroundColor: isActive ? '#404249' : (isHovered ? '#35373C' : 'transparent'),
+                letterSpacing: '0.02em', // More breathing room
             }}
         >
-            {/* Active Indicator Line */}
+            {/* Active Indicator - Soft Pill */}
             {isActive && (
                 <div style={{
                     position: 'absolute',
-                    left: 0,
-                    top: '20%',
-                    bottom: '20%',
+                    left: '6px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    height: '60%',
                     width: '4px',
-                    backgroundColor: colors.lavenderMist,
-                    borderRadius: '0 4px 4px 0',
+                    backgroundColor: 'var(--color-zen-accent)',
+                    borderRadius: '4px',
+                    boxShadow: '0 0 12px var(--color-zen-accent)',
                 }} />
             )}
 
             <div style={{
-                fontSize: '1.25rem',
+                fontSize: '1.2rem',
                 display: 'flex',
                 alignItems: 'center',
-                color: isActive ? colors.lavenderMist : (isHovered ? '#FFFFFF' : '#B5BAC1'),
-                transition: 'color 0.2s ease',
+                color: isActive ? 'var(--color-zen-accent)' : (isHovered ? '#FFFFFF' : '#71717A'),
+                transition: 'color 0.3s ease',
+                marginLeft: isActive ? '8px' : '0', // Slight slide effect
             }}>
                 {icon}
             </div>

@@ -39,18 +39,18 @@ function Sidebar({ width }: SidebarProps) {
     };
 
     return (
-        <div style={{
-            width: `${width}px`,
-            height: '100vh',
-            background: 'transparent', // Match shell area (transparent to show background)
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            zIndex: 100,
-            paddingTop: '32px', // Space for transparent titlebar
-        }}>
+        <div
+            style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                paddingTop: '64px', // Keep padding for titlebar
+                background: 'rgba(0, 0, 0, 0.2)',
+                borderRight: '1px solid rgba(255, 255, 255, 0.03)',
+                backdropFilter: 'blur(10px)',
+            }}
+        >
             {/* Navigation Items */}
             <div style={{
                 flex: 1,
@@ -79,18 +79,19 @@ function Sidebar({ width }: SidebarProps) {
                 <div>
                     <div style={{
                         padding: '0 0.75rem',
-                        marginBottom: '0.5rem',
+                        marginBottom: '0.75rem',
                         fontSize: '0.75rem',
-                        fontWeight: '600',
-                        color: '#6B6F76',
+                        fontWeight: '700',
+                        color: 'var(--color-text-secondary)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px'
+                        gap: '8px',
+                        fontFamily: 'var(--font-rounded)',
                     }}>
-                        <span>Local</span>
-                        <div style={{ flex: 1, height: '1px', background: '#313338' }}></div>
+                        <span>Local Sources</span>
+                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
                     </div>
 
                     {localItems.map((item) => (
@@ -117,22 +118,33 @@ function Sidebar({ width }: SidebarProps) {
                     <div
                         onClick={addFolder}
                         style={{
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '4px',
-                            color: colors.lavenderMist, // Accent color
+                            padding: '0.6rem 1rem',
+                            borderRadius: '12px',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            color: 'var(--color-zen-accent)',
                             cursor: 'pointer',
-                            fontSize: '0.85rem',
-                            transition: 'all 0.2s',
+                            fontSize: '0.8rem',
+                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                             marginLeft: '0.5rem',
-                            marginTop: '0.25rem',
+                            marginTop: '0.75rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            justifyContent: 'center',
+                            gap: '8px',
+                            fontFamily: 'var(--font-rounded)',
+                            fontWeight: '600',
+                            letterSpacing: '0.02em',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
                     >
-                        + Add folder
+                        <span>+ Add Source</span>
                     </div>
                 </div>
             </div>
@@ -143,7 +155,6 @@ function Sidebar({ width }: SidebarProps) {
                     <button
                         onClick={async () => {
                             try {
-                                // Calls login from AuthContext which handles the deep link redirect
                                 await login();
                             } catch (error) {
                                 console.error('Failed to initiate login:', error);
@@ -151,18 +162,26 @@ function Sidebar({ width }: SidebarProps) {
                         }}
                         style={{
                             width: '100%',
-                            padding: '0.75rem',
-                            borderRadius: '8px',
-                            background: colors.lavenderMist,
-                            color: '#1a1b1e',
-                            fontWeight: '600',
+                            padding: '0.8rem',
+                            borderRadius: '14px',
+                            background: 'linear-gradient(135deg, var(--color-zen-accent) 0%, #9FA5FE 100%)',
+                            color: '#000',
+                            fontWeight: '700',
                             border: 'none',
                             cursor: 'pointer',
                             fontSize: '0.9rem',
-                            transition: 'transform 0.2s',
+                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                            fontFamily: 'var(--font-rounded)',
+                            boxShadow: '0 4px 15px rgba(180, 162, 246, 0.3)',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(180, 162, 246, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(180, 162, 246, 0.3)';
+                        }}
                     >
                         Login with AniList
                     </button>
@@ -273,18 +292,7 @@ function Sidebar({ width }: SidebarProps) {
                         </div>
                     </div>
 
-                    {/* Settings Icon */}
-                    <div style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#B5BAC1',
-                        fontSize: '1rem',
-                    }}>
-                        ⚙️
-                    </div>
+
                 </div>
             </div>
 

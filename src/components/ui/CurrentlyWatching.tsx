@@ -48,11 +48,11 @@ function CurrentlyWatching() {
     return (
         <div className="watching-container">
             <h2 className="watching-header">
-                📺 Currently Watching - {user.name}
+                Currently Watching
             </h2>
 
             {!animeList || animeList.length === 0 ? (
-                <p style={{ color: '#6B7280' }}>No titles currently watching</p>
+                <p style={{ color: '#a1a1aa', fontFamily: 'var(--font-rounded)' }}>No titles currently watching</p>
             ) : (
                 <div className="watching-grid">
                     {animeList.map((entry: any) => (
@@ -61,13 +61,6 @@ function CurrentlyWatching() {
                             className="watching-card"
                             onClick={() => navigate(`/anime/${entry.media.id}`)}
                         >
-                            {/* Inverted Corner Tab */}
-                            <div className="progress-tab">
-                                <span style={{ color: '#C7B8EA' }}>{entry.progress}</span>
-                                <span style={{ margin: '0 4px' }}>/</span>
-                                <span>{entry.media.episodes || '?'}</span>
-                            </div>
-
                             {/* Poster Cover Image */}
                             <img
                                 src={entry.media.coverImage?.medium || entry.media.coverImage?.large}
@@ -82,6 +75,10 @@ function CurrentlyWatching() {
                                 </h3>
 
                                 <div className="watching-progress-wrapper">
+                                    <div className="flex justify-between text-xs text-gray-400 mb-1 font-medium font-mono">
+                                        <span style={{ color: 'var(--color-zen-accent)' }}>EP {entry.progress}</span>
+                                        <span>{entry.media.episodes ? ` / ${entry.media.episodes}` : ''}</span>
+                                    </div>
                                     <div className="watching-progress-bar-bg">
                                         <div
                                             className="watching-progress-bar-fill"
@@ -99,8 +96,6 @@ function CurrentlyWatching() {
                                         e.stopPropagation();
                                         handleIncrement(entry.media.id, entry.progress);
                                     }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                                 >
                                     +1 Episode
                                 </button>

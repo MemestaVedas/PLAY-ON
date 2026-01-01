@@ -96,28 +96,26 @@ const Breadcrumbs: React.FC = () => {
     const crumbs = getCrumbs();
 
     return (
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-20 mt-6">
-            {/* Simple Text Breadcrumbs */}
-            <div className="flex items-center gap-2 text-sm font-medium px-4 py-2">
-                {crumbs.map((crumb, index) => {
-                    const isLast = index === crumbs.length - 1;
-                    const isClickable = !isLast && crumb.path;
+        <div className="glass-panel px-4 py-2 flex items-center gap-2 bg-black/20 rounded-full border border-white/5 backdrop-blur-md">
+            {crumbs.map((crumb, index) => {
+                const isLast = index === crumbs.length - 1;
+                const isClickable = !isLast && crumb.path;
 
-                    return (
-                        <React.Fragment key={index}>
-                            <span
-                                className={`transition-colors ${isClickable ? 'text-gray-400 hover:text-white cursor-pointer' : 'text-gray-500 cursor-default'} ${isLast ? 'text-white font-semibold' : ''}`}
-                                onClick={() => isClickable && crumb.path && navigate(crumb.path)}
-                            >
-                                {crumb.label}
-                            </span>
-                            {!isLast && (
-                                <span className="text-gray-600">/</span>
-                            )}
-                        </React.Fragment>
-                    );
-                })}
-            </div>
+                return (
+                    <React.Fragment key={index}>
+                        <span
+                            className={`transition-colors text-sm font-medium ${isClickable ? 'text-white/50 hover:text-white cursor-pointer' : 'text-white/30 cursor-default'} ${isLast ? 'text-white font-bold shadow-glow-sm' : ''}`}
+                            onClick={() => isClickable && crumb.path && navigate(crumb.path)}
+                            style={{ fontFamily: 'var(--font-rounded)' }}
+                        >
+                            {crumb.label}
+                        </span>
+                        {!isLast && (
+                            <span className="text-white/20 text-xs">/</span>
+                        )}
+                    </React.Fragment>
+                );
+            })}
         </div>
     );
 };

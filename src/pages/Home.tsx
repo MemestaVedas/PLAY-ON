@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StatCard, SectionHeader, PageTransition } from '../components/ui/UIComponents';
+import { PageTransition } from '../components/ui/UIComponents';
 import AnimeCard from '../components/ui/AnimeCard';
 import NowPlaying from '../components/ui/NowPlaying';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
-import { USER_MEDIA_LIST_QUERY, TRENDING_ANIME_QUERY, USER_STATS_QUERY } from '../api/anilistClient';
+import { USER_MEDIA_LIST_QUERY, TRENDING_ANIME_QUERY } from '../api/anilistClient';
 
 function Home() {
     const navigate = useNavigate();
@@ -24,12 +24,7 @@ function Home() {
         fetchPolicy: 'cache-first'
     });
 
-    // Fetch User Stats
-    const { data: statsData } = useQuery(USER_STATS_QUERY, {
-        variables: { userId: user?.id },
-        skip: !isAuthenticated || !user?.id,
-        fetchPolicy: 'cache-first'
-    });
+
 
     const animeLoading = isAuthenticated ? userLoading : trendingLoading;
 
@@ -52,92 +47,33 @@ function Home() {
         }
     }, [isAuthenticated, userData, trendingData]);
 
-    // Format stats for display
-    const stats = useMemo(() => {
-        if (!isAuthenticated || !statsData?.User?.statistics?.anime) {
-            return {
-                total: 0,
-                completed: 0,
-                watching: 0,
-                onHold: 0
-            };
-        }
 
-        const animeStats = statsData.User.statistics.anime;
-        const total = animeStats.count;
-
-        const statuses = animeStats.statuses || [];
-        const completed = statuses.find((s: any) => s.status === 'COMPLETED')?.count || 0;
-        const watching = (statuses.find((s: any) => s.status === 'CURRENT')?.count || 0) +
-            (statuses.find((s: any) => s.status === 'REPEATING')?.count || 0);
-        const onHold = statuses.find((s: any) => s.status === 'PAUSED')?.count || 0;
-
-        return { total, completed, watching, onHold };
-    }, [isAuthenticated, statsData]);
 
     const handleAnimeClick = (id: number) => {
         navigate(`/anime/${id}`);
     };
 
-    const handleStatClick = (status?: string) => {
-        if (status) {
-            navigate(`/anime-list?status=${status}`);
-        } else {
-            navigate('/anime-list');
-        }
-    };
+
 
     return (
         <PageTransition>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <SectionHeader
-                    title={isAuthenticated ? `Welcome back, ${user?.name}` : "Dashboard"}
-                    subtitle={isAuthenticated ? "Continue watching where you left off" : "Track your anime watching activity"}
-                    icon="🏠"
-                />
-
-                {/* Stats Grid */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '1.5rem',
-                    marginBottom: '2rem',
-                }}>
-                    <StatCard
-                        icon="📺"
-                        label="Total Anime"
-                        value={stats.total}
-                        color="#C7B8EA"
-                        onClick={() => handleStatClick()}
-                    />
-                    <StatCard
-                        icon="✅"
-                        label="Completed"
-                        value={stats.completed}
-                        color="#86EFAC"
-                        onClick={() => handleStatClick('Completed')}
-                    />
-                    <StatCard
-                        icon="▶️"
-                        label="Watching"
-                        value={stats.watching}
-                        color="#FFB5C5"
-                        onClick={() => handleStatClick('Watching')}
-                    />
-                    <StatCard
-                        icon="⏸️"
-                        label="On Hold"
-                        value={stats.onHold}
-                        color="#FFE5B4"
-                        onClick={() => handleStatClick('Paused')}
-                    />
+                <div className="mb-10 mt-6 px-2">
+                    <h1 className="text-4xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-rounded)', letterSpacing: '-0.02em', textShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                        {isAuthenticated ? `Welcome back, ${user?.name}` : "Dashboard"}
+                    </h1>
+                    <p className="text-white/40 text-lg font-medium" style={{ fontFamily: 'var(--font-rounded)' }}>
+                        {isAuthenticated ? "Ready to dive back in?" : "Track your anime journey"}
+                    </p>
                 </div>
+
+
 
                 {/* Anime Cards Section */}
                 <div className="mb-10">
-                    <h3 className="text-xl font-bold text-white mb-6 px-2 flex items-center gap-3">
-                        <span className="w-2 h-8 bg-mint-tonic rounded-full"></span>
-                        {isAuthenticated ? "Currently Watching" : "Trending Now"}
+                    <h3 className="text-lg font-bold text-white mb-6 px-2 flex items-center gap-3" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-zen-accent)] shadow-[0_0_8px_var(--color-zen-accent)]"></div>
+                        {isAuthenticated ? "CURRENTLY_WATCHING" : "TRENDING_NOW"}
                     </h3>
 
                     {animeLoading ? (
@@ -167,9 +103,29 @@ function Home() {
                                 <div className="flex justify-center mt-6">
                                     <button
                                         onClick={() => navigate('/anime-list')}
-                                        className="px-6 py-2 bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white rounded-lg transition-all text-sm font-medium"
+                                        className="px-8 py-3 rounded-xl transition-all text-sm font-bold tracking-wide"
+                                        style={{
+                                            background: 'rgba(180, 162, 246, 0.1)',
+                                            color: 'var(--color-zen-accent)',
+                                            border: '1px solid rgba(180, 162, 246, 0.2)',
+                                            backdropFilter: 'blur(10px)',
+                                            fontFamily: 'var(--font-rounded)',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'var(--color-zen-accent)';
+                                            e.currentTarget.style.color = '#000';
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(180, 162, 246, 0.3)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'rgba(180, 162, 246, 0.1)';
+                                            e.currentTarget.style.color = 'var(--color-zen-accent)';
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                                        }}
                                     >
-                                        See More →
+                                        SEE MORE
                                     </button>
                                 </div>
                             )}
