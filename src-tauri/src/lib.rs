@@ -1,16 +1,27 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
-// Import the win_name module
+// Platform-specific window detection modules
+#[cfg(windows)]
 mod win_name;
+
+#[cfg(target_os = "macos")]
+mod mac_name;
+
 // Import the media_player module
 mod media_player;
 // Import the anilist module
 mod anilist;
 // Import file system module
-// Import file system module
 mod file_system;
 // Import title parser module
 mod title_parser;
+
+// Platform-conditional imports for unified interface
+#[cfg(windows)]
+use win_name as platform_window;
+
+#[cfg(target_os = "macos")]
+use mac_name as platform_window;
 
 use tauri::{Emitter, Manager};
 
@@ -49,7 +60,7 @@ async fn get_anime_by_id_command(id: i32) -> Result<String, String> {
 #[tauri::command]
 async fn match_anime_from_window_command() -> Result<String, String> {
     // Get active window title
-    let title = match win_name::get_active_window_title() {
+    let title = match platform_window::get_active_window_title() {
         Some(t) => t,
         None => return Ok("null".to_string()),
     };
@@ -71,7 +82,7 @@ async fn match_anime_from_window_command() -> Result<String, String> {
 /// Use get_active_media_window for filtered results
 #[tauri::command]
 fn get_active_window() -> String {
-    win_name::get_active_window_title().unwrap_or_else(|| "No active window".to_string())
+    platform_window::get_active_window_title().unwrap_or_else(|| "No active window".to_string())
 }
 
 /// Tauri command to get active media player window
@@ -84,7 +95,7 @@ fn get_active_media_window() -> String {
     use media_player::detect_media_player;
 
     // Get active window title
-    let title = match win_name::get_active_window_title() {
+    let title = match platform_window::get_active_window_title() {
         Some(t) => t,
         None => return "No active window".to_string(),
     };
@@ -199,7 +210,7 @@ async fn detect_anime_command() -> Result<String, String> {
     }
 
     // 1. Try active window first
-    let active_title = win_name::get_active_window_title();
+    let active_title = platform_window::get_active_window_title();
     if let Some(ref window_title) = active_title {
         if let Some(player) = media_player::detect_media_player(window_title) {
             let parsed = title_parser::parse_window_title(window_title);
@@ -225,7 +236,7 @@ async fn detect_anime_command() -> Result<String, String> {
     }
 
     // 2. If active window isn't a media player, search ALL visible windows
-    let all_titles = win_name::get_all_visible_window_titles();
+    let all_titles = platform_window::get_all_visible_window_titles();
     for window_title in all_titles {
         if let Some(player) = media_player::detect_media_player(&window_title) {
             let parsed = title_parser::parse_window_title(&window_title);
