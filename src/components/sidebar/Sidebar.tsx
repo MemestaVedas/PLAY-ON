@@ -18,7 +18,7 @@ interface SidebarProps {
     width: number;
 }
 
-function Sidebar({ width }: SidebarProps) {
+function Sidebar({ width: _width }: SidebarProps) {
     const navigate = useNavigate();
     const location = useLocation();
     const [showProfileModal, setShowProfileModal] = useState(false);
