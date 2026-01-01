@@ -51,6 +51,18 @@ export async function syncEntryToAniList(entry: LocalAnimeEntry): Promise<boolea
         // Mark as synced in local DB
         markAsSynced(entry.id);
 
+        // Notify user of successful sync
+        // Using a short timeout to prevent it from overlapping with the "watching" notification
+        setTimeout(() => {
+            const seasonText = entry.season ? ` S${entry.season}` : '';
+            import('../services/notification').then(({ sendDesktopNotification }) => {
+                sendDesktopNotification(
+                    'Synced to AniList',
+                    `Updated: ${entry.title} - Ep ${entry.episode}${seasonText}`
+                );
+            });
+        }, 1500);
+
         return true;
     } catch (error) {
         console.error('[Sync] ✗ Failed:', entry.title, error);
@@ -127,6 +139,7 @@ export async function updateAndSync(
         title: string;
         titleRomaji?: string;
         episode: number;
+        season?: number;
         totalEpisodes?: number;
         anilistId?: number;
         coverImage?: string;

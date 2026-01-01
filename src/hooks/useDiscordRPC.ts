@@ -19,6 +19,7 @@ import {
     setBrowsingActivity,
     clearDiscordActivity,
 } from '../services/discordRPC';
+import { sendDesktopNotification } from '../services/notification';
 
 // Poll interval in milliseconds (check every 10 seconds - less aggressive)
 const POLL_INTERVAL = 10000;
@@ -99,9 +100,23 @@ export function useDiscordRPC(enabled: boolean = true) {
                 const isDifferentSeason = lastDetectionRef.current?.season !== newDetection.season;
                 const wasNotWatching = !isWatchingRef.current;
 
+
+
                 if (isDifferentAnime || isDifferentEpisode || isDifferentSeason || wasNotWatching) {
                     lastDetectionRef.current = newDetection;
                     isWatchingRef.current = true;
+
+                    // Send notification if it's a new anime or we weren't watching
+                    // We can also notify on episode change if desired
+                    if (isDifferentAnime || isDifferentEpisode || wasNotWatching) {
+                        const seasonText = newDetection.season ? ` S${newDetection.season}` : '';
+                        const episodeText = newDetection.episode ? ` Ep ${newDetection.episode}` : '';
+                        const title = newDetection.animeName;
+                        const body = `Now Watching${seasonText}${episodeText}`;
+                        const imageUrl = newDetection.coverImage || undefined;
+
+                        sendDesktopNotification(title, body, imageUrl);
+                    }
 
                     await updateAnimeActivity({
                         animeName: newDetection.animeName,

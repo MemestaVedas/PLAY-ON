@@ -19,6 +19,8 @@ export interface LocalAnimeEntry {
     titleRomaji?: string;
     /** AniList media ID (null if not matched yet) */
     anilistId: number | null;
+    /** Current season (if known) */
+    season?: number;
     /** Current episode progress */
     episode: number;
     /** Total episodes (if known) */
@@ -82,6 +84,7 @@ export function updateProgress(
         title: string;
         titleRomaji?: string;
         episode: number;
+        season?: number;
         totalEpisodes?: number;
         anilistId?: number;
         coverImage?: string;
@@ -96,6 +99,7 @@ export function updateProgress(
         titleRomaji: data.titleRomaji,
         anilistId: data.anilistId ?? existing?.anilistId ?? null,
         episode: data.episode,
+        season: data.season ?? existing?.season,
         totalEpisodes: data.totalEpisodes ?? existing?.totalEpisodes,
         status: determineStatus(data.episode, data.totalEpisodes),
         lastWatched: Date.now(),
