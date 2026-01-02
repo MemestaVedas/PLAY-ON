@@ -264,3 +264,11 @@ mod tests {
         assert_eq!(result, "Anime - 01");
     }
 }
+
+    #[test]
+    fn test_hianime_browser_title() {
+        let result = parse_window_title("Chitose Is In The Ramune Bottle Episode 1 English Sub at Hianime - Google Chrome");
+        println!("Parsed: title={:?}, episode={:?}", result.title, result.episode);
+        assert_eq!(result.episode, Some(1));
+        assert!(result.title.is_some());
+    }

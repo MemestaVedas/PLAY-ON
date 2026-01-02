@@ -121,3 +121,12 @@ mod tests {
         assert_eq!(detect_media_player("File Explorer"), None);
     }
 }
+
+    #[test]
+    fn test_chrome_hianime_detection() {
+        let title = "Chitose Is In The Ramune Bottle Episode 1 English Sub at Hianime - Google Chrome – Suraj";
+        let result = detect_media_player(title);
+        println!("Detection result for Chrome/Hianime title: {:?}", result);
+        assert!(result.is_some(), "Should detect as browser");
+        assert_eq!(result, Some(MediaPlayer::Browser));
+    }

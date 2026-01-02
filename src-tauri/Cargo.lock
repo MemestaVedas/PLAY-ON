@@ -2952,6 +2952,8 @@ name = "play-on"
 version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
+ "core-foundation 0.10.1",
+ "core-graphics",
  "lazy_static",
  "lofty",
  "regex",

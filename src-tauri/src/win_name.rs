@@ -1,3 +1,5 @@
+#![cfg(windows)]
+
 use winapi::shared::minwindef::{BOOL, LPARAM};
 use winapi::shared::windef::HWND;
 use winapi::um::winnt::LPWSTR;
