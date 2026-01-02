@@ -25,9 +25,9 @@
     aspect-ratio: 2 / 3;
     border-radius: 16px;
     overflow: hidden;
-    background: #1a1a20;
+    background: var(--color-bg-card);
     /* Border stroke effect */
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
 
     /* Fix for backdrop-filter bleeding and clipping */
     transform: translateZ(0);
@@ -42,7 +42,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
     transition: box-shadow 0.3s ease;
     pointer-events: none;
     z-index: 5;
@@ -90,9 +90,10 @@
 }
 
 .anime-card:hover .anime-card__progress-badge {
-    background: rgba(180, 162, 246, 0.2);
-    border-color: rgba(180, 162, 246, 0.4);
-    text-shadow: 0 0 10px rgba(180, 162, 246, 0.8);
+    background: rgba(0, 0, 0, 0.85);
+    border-color: rgba(180, 162, 246, 0.8);
+    box-shadow: 0 0 15px rgba(180, 162, 246, 0.3);
+    text-shadow: 0 0 10px rgba(180, 162, 246, 0.5);
 }
 
 .anime-card__progress-current {
@@ -135,6 +136,7 @@
 /* Title Styling */
 .anime-card__title {
     color: #fff;
+    /* Keep title white on overlay since overlay is dark */
     font-family: var(--font-rounded);
     font-weight: 700;
     font-size: 0.95rem;

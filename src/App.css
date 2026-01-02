@@ -1,24 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&family=Varela+Round&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
 @import "tailwindcss";
 
-@font-face {
-  font-family: 'Planet Kosmos';
-  src: url('/assets/planet-kosmos.regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
+
 
 @theme {
   /* App Shell Colors */
   --color-shell: transparent;
-  --color-content: rgba(20, 20, 25, 0.65);
+  --color-content: var(--color-bg-content);
   /* Cohesive Glass Panel */
   --color-tab: transparent;
   --color-curve: transparent;
-  --color-text-secondary: #4b4b6e;
-  --color-text-hover: #6a6a9e;
+  --color-text-secondary: var(--color-text-muted);
+  --color-text-hover: var(--color-text-highlight);
 
   /* Zenless / Tech Palette (Softened) */
   --color-zen-black: #09090b;
@@ -40,13 +34,31 @@
 }
 
 :root {
+  /* Default Dark Mode Variables */
+  --color-bg-main: #0c0c0e;
+  --color-bg-content: rgba(20, 20, 25, 0.65);
+  --color-bg-card: #1a1a20;
+  --color-bg-glass: rgba(18, 18, 20, 0.65);
+  --color-bg-glass-hover: rgba(255, 255, 255, 0.08);
+
+  --color-text-main: #ededed;
+  --color-text-muted: #cdcdcd;
+  /* #4b4b6e is too dark for dark mode text sometimes, adjusting for contrast */
+  --color-text-highlight: #6a6a9e;
+
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-highlight: rgba(255, 255, 255, 0.15);
+
+  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  /* Font Settings */
   font-family: "Varela Round", sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
 
-  color: #ededed;
-  background-color: #0c0c0e;
+  color: var(--color-text-main);
+  background-color: var(--color-bg-main);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -55,30 +67,64 @@
   -webkit-text-size-adjust: 100%;
 }
 
+
+
 /* Peaceful Mesh Gradient Background */
 body {
-  background-color: #0c0c0e;
+  background-color: var(--color-bg-main);
   background-image:
     radial-gradient(circle at 15% 50%, rgba(180, 162, 246, 0.08), transparent 25%),
     radial-gradient(circle at 85% 30%, rgba(165, 219, 248, 0.08), transparent 25%);
   background-attachment: fixed;
   min-height: 100vh;
+  color: var(--color-text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Tech-Glass Utilities (Softened) */
 .glass-panel {
-  background: rgba(18, 18, 20, 0.65);
+  background: var(--color-bg-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-glass);
   border-radius: 24px;
   /* Much rounder */
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .glass-panel-hover:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--color-bg-glass-hover);
+  border-color: var(--color-border-highlight);
+}
+
+/* Grainy Glass Effect */
+.glass-grainy {
+  position: relative;
+  background: var(--color-bg-content);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border-subtle);
+  /* More subtle border */
+  overflow: hidden;
+  /* Ensure noise doesn't spill */
+  transition: background 0.3s ease;
+}
+
+.glass-grainy::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.07'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+
+.glass-grainy>* {
+  position: relative;
+  z-index: 1;
 }
 
 /* Typography Overrides */
@@ -89,7 +135,8 @@ body {
 }
 
 .font-planet {
-  font-family: 'Planet Kosmos', sans-serif;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
 }
 
 /* Scrollbars */

@@ -25,10 +25,10 @@ export type HistoryFlatItem =
 export function useHistory() {
     const { user } = useAuth();
 
-    const { data, loading, error } = useQuery(USER_ACTIVITY_QUERY, {
+    const { data, loading, error, refetch } = useQuery(USER_ACTIVITY_QUERY, {
         variables: { userId: user?.id, perPage: 50 },
         skip: !user?.id,
-
+        notifyOnNetworkStatusChange: true,
         fetchPolicy: 'cache-first',
     });
 
@@ -88,7 +88,7 @@ export function useHistory() {
         historyGroups,
         flatHistory,
         loading,
-        refetch: data?.refetch,
+        refetch,
         error: error ? error.message : null
     };
 }

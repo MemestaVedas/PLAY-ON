@@ -5,7 +5,7 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { ListIcon, HistoryIcon, HomeIcon, FolderIcon } from '../ui/Icons';
+import { ListIcon, HistoryIcon, HomeIcon, FolderIcon, BookIcon, SettingsIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
 
 interface SidebarNavItem {
@@ -29,9 +29,11 @@ function Sidebar({ width: _width }: SidebarProps) {
     const { folders: localItems, addFolder } = useLocalMedia();
 
     const mainItems: SidebarNavItem[] = [
-        { label: 'Home', path: '/home', icon: <HomeIcon /> },
-        { label: 'Anime List', path: '/anime-list', icon: <ListIcon /> },
-        { label: 'History', path: '/history', icon: <HistoryIcon /> },
+        { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> },
+        { label: 'Anime List', path: '/anime-list', icon: <ListIcon size={20} /> },
+        { label: 'Manga List', path: '/manga-list', icon: <BookIcon size={20} /> },
+        { label: 'History', path: '/history', icon: <HistoryIcon size={20} /> },
+        { label: 'Settings', path: '/settings', icon: <SettingsIcon size={20} /> },
     ];
 
     const handleNavClick = (path: string) => {
@@ -46,9 +48,9 @@ function Sidebar({ width: _width }: SidebarProps) {
                 display: 'flex',
                 flexDirection: 'column',
                 paddingTop: '40px', // Keep padding for titlebar
-                background: 'rgba(0, 0, 0, 0.2)',
-                borderRight: '1px solid rgba(255, 255, 255, 0.03)',
-                backdropFilter: 'blur(10px)',
+                borderRadius: '0',  // Sidebar shouldn't be rounded
+                border: 'none',     // Remove all borders
+                background: 'transparent', // Unify with shell
             }}
         >
             {/* Navigation Items */}
@@ -91,7 +93,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                         fontFamily: 'var(--font-rounded)',
                     }}>
                         <span>Local Sources</span>
-                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.05)' }}></div>
+                        <div style={{ flex: 1, height: '1px', background: 'var(--color-border-subtle)' }}></div>
                     </div>
 
                     {localItems.map((item) => (
@@ -101,14 +103,14 @@ function Sidebar({ width: _width }: SidebarProps) {
                             style={{
                                 padding: '0.5rem 0.75rem',
                                 borderRadius: '4px',
-                                color: '#949BA4',
+                                color: 'var(--color-text-muted)',
                                 cursor: 'pointer',
                                 fontSize: '0.9rem',
                                 transition: 'all 0.2s',
                                 marginLeft: '0.5rem'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = '#FFFFFF'}
-                            onMouseLeave={(e) => e.currentTarget.style.color = '#949BA4'}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
                         >
                             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <FolderIcon size={16} />
@@ -123,7 +125,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                         style={{
                             padding: '0.6rem 1rem',
                             borderRadius: '12px',
-                            background: 'rgba(255, 255, 255, 0.03)',
+                            background: 'var(--color-bg-glass-hover)',
                             color: 'var(--color-zen-accent)',
                             cursor: 'pointer',
                             fontSize: '0.8rem',
@@ -139,11 +141,11 @@ function Sidebar({ width: _width }: SidebarProps) {
                             letterSpacing: '0.02em',
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                            e.currentTarget.style.background = 'var(--color-border-highlight)';
                             e.currentTarget.style.transform = 'translateY(-1px)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                            e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
                             e.currentTarget.style.transform = 'translateY(0)';
                         }}
                     >
@@ -215,7 +217,7 @@ function Sidebar({ width: _width }: SidebarProps) {
             {/* Profile Section */}
             <div style={{
                 padding: '0.75rem',
-                borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                borderTop: '1px solid var(--color-border-subtle)',
                 background: 'transparent',
             }}>
                 <div style={{
@@ -229,7 +231,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                 }}
                     onClick={() => setShowProfileModal(true)}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#35373C';
+                        e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
                     }}
                     onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
@@ -240,7 +242,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: loading ? '#404249' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
+                        background: loading ? 'var(--color-bg-glass-hover)' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -253,7 +255,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                             <div style={{
                                 width: '100%',
                                 height: '100%',
-                                backgroundImage: 'linear-gradient(90deg, #404249 0%, #4f5159 50%, #404249 100%)',
+                                backgroundImage: 'linear-gradient(90deg, var(--color-bg-glass-hover) 0%, var(--color-border-subtle) 50%, var(--color-bg-glass-hover) 100%)',
                                 backgroundSize: '200% 100%',
                                 animation: 'pulse 1.5s ease-in-out infinite',
                             }} />
@@ -277,7 +279,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                         <div style={{
                             fontSize: '0.9rem',
                             fontWeight: '600',
-                            color: '#FFFFFF',
+                            color: 'var(--color-text-main)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -286,7 +288,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                         </div>
                         <div style={{
                             fontSize: '0.75rem',
-                            color: '#B5BAC1',
+                            color: 'var(--color-text-muted)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',

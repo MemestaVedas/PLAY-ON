@@ -8,7 +8,7 @@ import {
  * Send a desktop notification
  * Automatically handles permission requests
  */
-export async function sendDesktopNotification(title: string, body: string, imageUrl?: string): Promise<void> {
+export async function sendDesktopNotification(title: string, body: string): Promise<void> {
     try {
         let permissionGranted = await isPermissionGranted();
 
@@ -18,22 +18,12 @@ export async function sendDesktopNotification(title: string, body: string, image
         }
 
         if (permissionGranted) {
-            const options: any = {
+            sendNotification({
                 title,
                 body,
                 sound: 'default'
-            };
-
-            // Add attachment if image URL is provided
-            if (imageUrl) {
-                options.attachments = [{
-                    id: 'image-1',
-                    url: imageUrl
-                }];
-            }
-
-            sendNotification(options);
-            console.log(`[Notification] Sent: ${title} - ${body}${imageUrl ? ' (with image)' : ''}`);
+            });
+            console.log(`[Notification] Sent: ${title} - ${body}`);
         } else {
             console.warn('[Notification] Permission denied');
         }

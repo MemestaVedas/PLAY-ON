@@ -168,6 +168,69 @@ query ($search: String, $page: Int, $perPage: Int) {
 }
 `;
 
+// ============================================================================
+// MANGA QUERIES
+// ============================================================================
+
+export const USER_MANGA_COLLECTION_QUERY = gql`
+query ($userId: Int) {
+  MediaListCollection(userId: $userId, type: MANGA) {
+    lists {
+      name
+      entries {
+        id
+        status
+        score
+        progress
+        progressVolumes
+        media {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            extraLarge
+            large
+            medium
+          }
+          chapters
+          volumes
+          status
+        }
+      }
+    }
+  }
+}
+`;
+
+export const SEARCH_MANGA_QUERY = gql`
+query ($search: String, $page: Int, $perPage: Int) {
+  Page (page: $page, perPage: $perPage) {
+    pageInfo {
+      total
+      currentPage
+      hasNextPage
+    }
+    media (search: $search, type: MANGA, sort: SEARCH_MATCH) {
+      id
+      title {
+        english
+        romaji
+      }
+      coverImage {
+        large
+        medium
+      }
+      format
+      chapters
+      volumes
+      averageScore
+      status
+    }
+  }
+}
+`;
 const ANIME_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
@@ -360,6 +423,29 @@ export async function searchAnime(search: string, page = 1, perPage = 10) {
     query: SEARCH_ANIME_QUERY,
     variables: { search, page, perPage },
     fetchPolicy: 'network-only' // Always fetch fresh results for search
+  });
+  return result;
+}
+
+/**
+ * Fetches the user's full manga collection.
+ */
+export async function fetchUserMangaCollection(userId: number) {
+  const result = await apolloClient.query({
+    query: USER_MANGA_COLLECTION_QUERY,
+    variables: { userId }
+  });
+  return result;
+}
+
+/**
+ * Searches manga by title via AniList API.
+ */
+export async function searchManga(search: string, page = 1, perPage = 10) {
+  const result = await apolloClient.query({
+    query: SEARCH_MANGA_QUERY,
+    variables: { search, page, perPage },
+    fetchPolicy: 'network-only'
   });
   return result;
 }

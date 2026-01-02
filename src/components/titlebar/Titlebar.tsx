@@ -41,7 +41,7 @@ function Titlebar() {
                 <span style={{
                     fontSize: '0.85rem',
                     fontWeight: '800',
-                    color: '#FFFFFF',
+                    color: 'var(--color-text-main)',
                     letterSpacing: '1px',
                     textTransform: 'uppercase'
                 }}>

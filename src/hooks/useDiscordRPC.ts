@@ -92,7 +92,7 @@ interface LastDetection {
     timestamp: number;
 }
 
-export function useDiscordRPC(enabled: boolean = true) {
+export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'minimal' | 'hidden' = 'full') {
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const lastDetectionRef = useRef<LastDetection | null>(null);
     const notDetectedCountRef = useRef<number>(0);
@@ -123,6 +123,22 @@ export function useDiscordRPC(enabled: boolean = true) {
             }
 
             // PRIORITY 1: Manual session is active AND detection matches - use its anime info, just parse episode
+            // BUT FIRST: Check if window title still contains video content
+            if (manualSession && data.status === 'detected') {
+                const windowTitle = data.window_title || '';
+                const hasVideoContent = /\.(mkv|mp4|avi|mov|wmv|flv|webm)/i.test(windowTitle) ||
+                    /episode|ep\s*\d|s\d+e\d+|\d+x\d+/i.test(windowTitle);
+
+                if (!hasVideoContent && !data.parsed?.episode) {
+                    // Player is open but not playing video - clear the session
+                    console.log('[useDiscordRPC] Player open but no video content, clearing session');
+                    console.log('[useDiscordRPC] Window title was:', windowTitle);
+                    clearManualSession();
+                    notDetectedCountRef.current++;
+                    // Fall through to browsing logic
+                }
+            }
+
             if (manualSession && data.status === 'detected' && (!data.anilist_match?.id || data.anilist_match.id === manualSession.anilistId)) {
                 const windowTitle = data.window_title || data.parsed?.title || '';
                 const episode = data.parsed?.episode || parseEpisodeFromString(windowTitle);
@@ -151,7 +167,7 @@ export function useDiscordRPC(enabled: boolean = true) {
                         isWatchingRef.current = true;
 
                         const episodeText = episode ? ` Ep ${episode}` : '';
-                        sendDesktopNotification(manualSession.animeName, `Now Watching${episodeText}`, manualSession.coverImage || undefined);
+                        sendDesktopNotification(manualSession.animeName, `Now Watching${episodeText}`);
 
                         await updateAnimeActivity({
                             animeName: manualSession.animeName,
@@ -160,6 +176,7 @@ export function useDiscordRPC(enabled: boolean = true) {
                             anilistId: manualSession.anilistId,
                             coverImage: manualSession.coverImage || null,
                             totalEpisodes: null,
+                            privacyLevel,
                         });
                     }
                     return; // Done, skip everything else
@@ -217,7 +234,7 @@ export function useDiscordRPC(enabled: boolean = true) {
 
                     // Send notification for episode changes
                     const episodeText = newDetection.episode ? ` Ep ${newDetection.episode}` : '';
-                    sendDesktopNotification(newDetection.animeName, `Now Watching${episodeText}`, newDetection.coverImage || undefined);
+                    sendDesktopNotification(newDetection.animeName, `Now Watching${episodeText}`);
 
                     await updateAnimeActivity({
                         animeName: newDetection.animeName,
@@ -226,6 +243,7 @@ export function useDiscordRPC(enabled: boolean = true) {
                         anilistId: newDetection.anilistId,
                         coverImage: newDetection.coverImage,
                         totalEpisodes: newDetection.totalEpisodes,
+                        privacyLevel,
                     });
                 }
                 return; // Successfully detected, don't fall through
@@ -256,7 +274,7 @@ export function useDiscordRPC(enabled: boolean = true) {
                     isWatchingRef.current = true;
 
                     const episodeText = newDetection.episode ? ` Ep ${newDetection.episode}` : '';
-                    sendDesktopNotification(newDetection.animeName, `Now Watching${episodeText}`, newDetection.coverImage || undefined);
+                    sendDesktopNotification(newDetection.animeName, `Now Watching${episodeText}`);
 
                     await updateAnimeActivity({
                         animeName: newDetection.animeName,
@@ -265,6 +283,7 @@ export function useDiscordRPC(enabled: boolean = true) {
                         anilistId: newDetection.anilistId,
                         coverImage: newDetection.coverImage,
                         totalEpisodes: null,
+                        privacyLevel,
                     });
                 }
                 return;
@@ -308,9 +327,8 @@ export function useDiscordRPC(enabled: boolean = true) {
                         const episodeText = newDetection.episode ? ` Ep ${newDetection.episode}` : '';
                         const title = newDetection.animeName;
                         const body = `Now Watching${seasonText}${episodeText}`;
-                        const imageUrl = newDetection.coverImage || undefined;
 
-                        sendDesktopNotification(title, body, imageUrl);
+                        sendDesktopNotification(title, body);
                     }
 
                     await updateAnimeActivity({
@@ -320,6 +338,7 @@ export function useDiscordRPC(enabled: boolean = true) {
                         anilistId: newDetection.anilistId,
                         coverImage: newDetection.coverImage,
                         totalEpisodes: newDetection.totalEpisodes,
+                        privacyLevel,
                     });
                 }
             } else {
@@ -334,7 +353,14 @@ export function useDiscordRPC(enabled: boolean = true) {
                     console.log('[useDiscordRPC] Switching to browsing mode after debounce');
                     isWatchingRef.current = false;
                     lastDetectionRef.current = null;
-                    await setBrowsingActivity();
+
+                    // Clear manual session when no media player is detected
+                    if (manualSession) {
+                        console.log('[useDiscordRPC] Clearing manual session - no media player detected');
+                        clearManualSession();
+                    }
+
+                    await setBrowsingActivity(privacyLevel);
                 }
                 // Otherwise, keep showing the current anime (the debounce is protecting us)
             }
@@ -343,10 +369,15 @@ export function useDiscordRPC(enabled: boolean = true) {
             // On error, increment the counter but don't immediately switch
             notDetectedCountRef.current++;
         }
-    }, [manualSession, getMappingForFilePath, clearManualSession]);
+    }, [manualSession, getMappingForFilePath, clearManualSession, privacyLevel]);
 
     useEffect(() => {
         if (!enabled) {
+            // Ensure we clean up if disabled dynamically
+            if (isInitialized) {
+                clearDiscordActivity();
+                stopDiscordRPC();
+            }
             return;
         }
 
@@ -354,7 +385,7 @@ export function useDiscordRPC(enabled: boolean = true) {
         initDiscordRPC().then((success) => {
             if (success) {
                 // Set initial browsing activity
-                setBrowsingActivity();
+                setBrowsingActivity(privacyLevel);
 
                 // Do an initial check after a short delay
                 setTimeout(checkAndUpdateActivity, 2000);
@@ -373,12 +404,12 @@ export function useDiscordRPC(enabled: boolean = true) {
             }
             stopDiscordRPC();
         };
-    }, [enabled, checkAndUpdateActivity]);
+    }, [enabled, privacyLevel, checkAndUpdateActivity]);
 
     // Expose manual controls
     return {
         refresh: checkAndUpdateActivity,
         clear: clearDiscordActivity,
-        setBrowsing: setBrowsingActivity,
+        setBrowsing: () => setBrowsingActivity(privacyLevel),
     };
 }

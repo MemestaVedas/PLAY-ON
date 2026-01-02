@@ -176,6 +176,22 @@ export function FloatingNowPlaying({ onAnimeDetected }: FloatingNowPlayingProps)
 
                 // PRIORITY 1: Manual session is active - use its anime info, just update episode
                 // (Only if manualSession wasn't just cleared above)
+                // BUT FIRST: Check if window title still contains a video file (not just empty player)
+                if (manualSession && parsed.status === 'detected') {
+                    const windowTitle = parsed.window_title || '';
+                    const hasVideoContent = /\.(mkv|mp4|avi|mov|wmv|flv|webm)/i.test(windowTitle) ||
+                        /episode|ep\s*\d|s\d+e\d+|\d+x\d+/i.test(windowTitle);
+
+                    if (!hasVideoContent && !parsed.parsed?.episode) {
+                        // Player is open but not playing video - clear the session
+                        console.log('[FloatingNowPlaying] Player open but no video content detected, clearing session');
+                        console.log('[FloatingNowPlaying] Window title was:', windowTitle);
+                        clearManualSession();
+                        setIsVisible(false);
+                        return;
+                    }
+                }
+
                 if (manualSession && parsed.status === 'detected' && (!parsed.anilist_match?.id || parsed.anilist_match.id === manualSession.anilistId)) {
                     const windowTitle = parsed.window_title || parsed.parsed?.title || '';
                     // Parse episode from window title (handles 1x02, S01E02, - 02 - formats)
@@ -297,10 +313,22 @@ export function FloatingNowPlaying({ onAnimeDetected }: FloatingNowPlayingProps)
                             setWatchProgress(0);
                             setSyncStatus('idle');
                             setIsVisible(false);
+
+                            // Clear manual session when no media player detected for too long
+                            if (manualSession) {
+                                console.log('[FloatingNowPlaying] Clearing manual session - no media player detected');
+                                clearManualSession();
+                            }
                         }
                     } else if (!watchTimeRef.current) {
                         // Not watching anything, hide the pill
                         setIsVisible(false);
+
+                        // Also clear manual session if not watching
+                        if (manualSession && parsed.status !== 'detected') {
+                            console.log('[FloatingNowPlaying] Clearing stale manual session');
+                            clearManualSession();
+                        }
                     }
                 }
 

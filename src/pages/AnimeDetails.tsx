@@ -2,17 +2,25 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAnimeData, Anime } from '../hooks/useAnimeData';
 import { updateMediaProgress } from '../api/anilistClient';
+import { useFolderMappings } from '../hooks/useFolderMappings';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
+import { AnimeStats } from '../components/anime/AnimeStats';
+import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
+import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
 
 function AnimeDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { getAnimeDetails } = useAnimeData();
+    const { getMappingByAnilistId } = useFolderMappings();
     const [anime, setAnime] = useState<Anime | null>(null);
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [updating, setUpdating] = useState(false);
+
+    // Check if this anime is linked to a local folder
+    const folderMapping = anime ? getMappingByAnilistId(anime.id) : undefined;
 
     useEffect(() => {
         if (!id) return;
@@ -60,7 +68,7 @@ function AnimeDetails() {
     const recommendations = anime.recommendations?.nodes.map(n => n.mediaRecommendation) || [];
 
     return (
-        <div className="relative min-h-full font-rounded text-white overflow-hidden">
+        <div className="relative min-h-full font-rounded overflow-hidden pb-20" style={{ color: 'var(--color-text-main)' }}>
             {/* --- Y2K Glass Background --- */}
             <div className="fixed inset-0 z-0 select-none pointer-events-none">
                 {/* Blurred Hero Background */}
@@ -135,19 +143,7 @@ function AnimeDetails() {
                         </div>
 
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { label: 'SCORE', value: anime.averageScore ? `${anime.averageScore}%` : 'N/A', color: 'text-mint-tonic' },
-                                { label: 'RANK', value: '#--', color: 'text-sky-blue' }, // Placeholder for rank if not available
-                                { label: 'POPULARITY', value: 'High', color: 'text-pastels-pink' },
-                                { label: 'SOURCE', value: 'Original', color: 'text-white' }
-                            ].map((stat, i) => (
-                                <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors">
-                                    <span className="font-mono text-[10px] text-white/40 uppercase tracking-widest">{stat.label}</span>
-                                    <span className={`font-bold text-xl ${stat.color} drop-shadow-md`}>{stat.value}</span>
-                                </div>
-                            ))}
-                        </div>
+                        <AnimeStats anime={anime} />
 
                         {/* Description Box */}
                         <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
@@ -158,42 +154,21 @@ function AnimeDetails() {
                             />
                         </div>
 
-                        {/* Progress Control */}
-                        <div className="p-1 rounded-2xl bg-gradient-to-r from-white/10 to-transparent p-[1px]">
-                            <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col md:flex-row items-center gap-6">
-                                <div className="flex-1 w-full">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <span className="font-mono text-xs text-lavender-mist uppercase tracking-widest">PROGRESS</span>
-                                        <span className="font-mono text-xl font-bold">{progress} <span className="text-white/30">/ {anime.episodes || '?'}</span></span>
-                                    </div>
-                                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-lavender-mist to-sky-blue relative"
-                                            style={{ width: `${anime.episodes ? (progress / anime.episodes) * 100 : 0}%` }}
-                                        >
-                                            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white box-shadow-[0_0_10px_white]" />
-                                        </div>
-                                    </div>
-                                </div>
+                        {/* Resume Button (Separated Action) */}
+                        {folderMapping && (
+                            <AnimeResumeButton
+                                onClick={() => navigate(`/local/${encodeURIComponent(folderMapping.folderPath)}`)}
+                                folderPath={folderMapping.folderPath}
+                            />
+                        )}
 
-                                <div className="flex gap-2 shrink-0">
-                                    <button
-                                        disabled={progress <= 0 || updating}
-                                        onClick={() => handleProgressUpdate(progress - 1)}
-                                        className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white disabled:opacity-30"
-                                    >
-                                        −
-                                    </button>
-                                    <button
-                                        onClick={() => handleProgressUpdate(progress + 1)}
-                                        disabled={(anime.episodes && progress >= anime.episodes) || updating}
-                                        className="h-12 px-6 rounded-xl flex items-center justify-center font-bold bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
-                                    >
-                                        TRACK +1
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        {/* Progress Control */}
+                        <AnimeProgressCard
+                            anime={anime}
+                            progress={progress}
+                            onUpdate={handleProgressUpdate}
+                            updating={updating}
+                        />
 
                         {/* Genres */}
                         <div className="flex flex-wrap gap-2">
@@ -219,15 +194,13 @@ function AnimeDetails() {
                             {recommendations.map((rec) => (
                                 <AnimeCard
                                     key={rec.id}
-                                    anime={rec as unknown as Anime} // Casting because recommendation object is compatible enough
+                                    anime={rec as unknown as Anime}
                                     onClick={(id) => navigate(`/anime/${id}`)}
                                 />
                             ))}
                         </div>
                     </div>
                 )}
-
-                <div className="h-20" /> {/* Spacer */}
             </div>
         </div>
     );

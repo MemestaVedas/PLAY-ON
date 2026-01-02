@@ -50,6 +50,33 @@ const getFileIcon = (filename: string): string => {
     return '📄';
 };
 
+// Video file extensions
+const VIDEO_EXTS = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm'];
+
+// Parse episode number from filename using multi-pass strategy
+const parseEpisode = (filename: string): number | null => {
+    const patterns = [
+        /[sS]\d+[eE](\d+)/,                 // S01E01
+        /\d+x(\d+)/,                        // 1x01
+        /(?:^|[_\W])(?:E|EP|Episode)\.?\s*(\d+)/i,  // E01, EP01, Episode 1
+        /(?:^|[\s_\-\(\[])(\d{1,3})(?:v\d)?(?:[\s_\-\)\]\.]|$)/ // - 01 -, [01], _01_, 01.mkv
+    ];
+
+    for (const pattern of patterns) {
+        const match = filename.match(pattern);
+        if (match && match[1]) {
+            return parseInt(match[1], 10);
+        }
+    }
+    return null;
+};
+
+// Check if a file is a video file
+const isVideoFile = (filename: string): boolean => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    return VIDEO_EXTS.includes(ext || '');
+};
+
 function LocalFolder() {
     const { folderPath } = useParams();
     const navigate = useNavigate();
@@ -129,28 +156,7 @@ function LocalFolder() {
 
                 // If this folder is linked to an anime, trigger manual Now Playing session
                 if (currentMapping) {
-                    const ext = item.name.split('.').pop()?.toLowerCase();
-                    const videoExts = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm'];
-
-                    if (videoExts.includes(ext || '')) {
-                        // Parse episode number using multi-pass strategy
-                        const parseEpisode = (filename: string): number | null => {
-                            const patterns = [
-                                /[sS]\d+[eE](\d+)/,                 // S01E01
-                                /\d+x(\d+)/,                        // 1x01
-                                /(?:^|[_\W])(?:E|EP|Episode)\.?\s*(\d+)/i,  // E01, EP01, Episode 1
-                                /(?:^|[\s_\-\(\[])(\d{1,3})(?:v\d)?(?:[\s_\-\)\]\.]|$)/ // - 01 -, [01], _01_, 01.mkv
-                            ];
-
-                            for (const pattern of patterns) {
-                                const match = filename.match(pattern);
-                                if (match && match[1]) {
-                                    return parseInt(match[1], 10);
-                                }
-                            }
-                            return null;
-                        };
-
+                    if (isVideoFile(item.name)) {
                         const episode = parseEpisode(item.name) || 1;
 
                         // Trigger the Now Playing session via context
@@ -169,8 +175,57 @@ function LocalFolder() {
         }
     };
 
+    // Find the video file for the next episode to watch
+    const getNextEpisodeFile = (): FileItem | null => {
+        if (!currentMapping) return null;
+
+        const nextEpisode = watchedProgress + 1;
+        const videoFiles = files.filter(f => !f.is_dir && isVideoFile(f.name));
+
+        // Find file matching the next episode
+        for (const file of videoFiles) {
+            const ep = parseEpisode(file.name);
+            if (ep === nextEpisode) {
+                return file;
+            }
+        }
+
+        // If no exact match, return the first unwatched video
+        for (const file of videoFiles) {
+            const ep = parseEpisode(file.name);
+            if (ep !== null && ep > watchedProgress) {
+                return file;
+            }
+        }
+
+        return null;
+    };
+
+    const nextEpisodeFile = getNextEpisodeFile();
+    const nextEpisodeNumber = nextEpisodeFile ? (parseEpisode(nextEpisodeFile.name) || watchedProgress + 1) : watchedProgress + 1;
+
+    // Handle resume button click
+    const handleResumeClick = async () => {
+        if (!nextEpisodeFile || !currentMapping) return;
+
+        try {
+            await openPath(nextEpisodeFile.path);
+
+            // Trigger Now Playing session
+            startManualSession({
+                anilistId: currentMapping.anilistId,
+                animeName: currentMapping.animeName,
+                coverImage: currentMapping.coverImage,
+                episode: nextEpisodeNumber,
+                filePath: nextEpisodeFile.path
+            });
+        } catch (err) {
+            console.error("Failed to open file:", err);
+        }
+    };
+
     if (!currentPath) {
-        return <div className="text-white p-8">No folder specified.</div>;
+        return <div className="p-8" style={{ color: 'var(--color-text-main)' }}>No folder specified.</div>;
     }
 
     if (loading) {
@@ -294,9 +349,24 @@ function LocalFolder() {
                                     {currentMapping.animeName}
                                 </span>
                             </div>
+                            {nextEpisodeFile && (
+                                <button
+                                    onClick={handleResumeClick}
+                                    className="ml-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                                    style={{
+                                        fontFamily: 'var(--font-rounded)',
+                                        background: 'linear-gradient(135deg, var(--color-mint-tonic), #6ed1a8)',
+                                        color: '#0a0a0f',
+                                        boxShadow: '0 4px 15px rgba(124, 245, 189, 0.3)'
+                                    }}
+                                >
+                                    <span>▶</span>
+                                    Resume EP {nextEpisodeNumber}
+                                </button>
+                            )}
                             <button
                                 onClick={() => removeMapping(currentPath)}
-                                className="ml-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:bg-red-500/20 text-red-400 border border-red-500/30"
+                                className="ml-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:bg-red-500/20 text-red-400 border border-red-500/30"
                                 style={{ fontFamily: 'var(--font-rounded)' }}
                             >
                                 Unlink

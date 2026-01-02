@@ -83,6 +83,14 @@ export function useFolderMappings() {
     }, [mappings]);
 
     /**
+     * Get mapping by AniList ID
+     * Used to check if an anime has a linked local folder
+     */
+    const getMappingByAnilistId = useCallback((anilistId: number): FolderAnimeMapping | undefined => {
+        return mappings.find(m => m.anilistId === anilistId);
+    }, [mappings]);
+
+    /**
      * Find mapping for a file path by checking if any mapped folder is a parent
      * This is used during detection - if a video file is inside a mapped folder,
      * we can use that mapping as a fallback
@@ -104,6 +112,7 @@ export function useFolderMappings() {
         addMapping,
         removeMapping,
         getMappingByPath,
+        getMappingByAnilistId,
         getMappingForFilePath
     };
 }

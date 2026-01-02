@@ -14,6 +14,7 @@ function Home() {
     const { data: userData, loading: userLoading, refetch: refetchUser } = useQuery(USER_MEDIA_LIST_QUERY, {
         variables: { userId: user?.id, status: 'CURRENT' },
         skip: !isAuthenticated || !user?.id,
+        notifyOnNetworkStatusChange: true,
         fetchPolicy: 'cache-first'
     });
 
@@ -57,10 +58,10 @@ function Home() {
     return (
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div className="mb-10 mt-6 px-2">
-                <h1 className="text-4xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-rounded)', letterSpacing: '-0.02em', textShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: 'var(--font-rounded)', letterSpacing: '-0.02em', textShadow: '0 4px 12px rgba(0,0,0,0.1)', color: 'var(--color-text-main)' }}>
                     {isAuthenticated ? `Welcome back, ${user?.name}` : "Dashboard"}
                 </h1>
-                <p className="text-white/40 text-lg font-medium" style={{ fontFamily: 'var(--font-rounded)' }}>
+                <p className="text-lg font-medium" style={{ fontFamily: 'var(--font-rounded)', color: 'var(--color-text-muted)' }}>
                     {isAuthenticated ? "Ready to dive back in?" : "Track your anime journey"}
                 </p>
             </div>
@@ -70,14 +71,17 @@ function Home() {
             {/* Anime Cards Section */}
             <div className="mb-10">
                 <div className="flex items-center justify-between mb-6 px-2">
-                    <h3 className="text-lg font-bold text-white flex items-center gap-3" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+                    <h3 className="text-lg font-bold flex items-center gap-3" style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: 'var(--color-text-main)' }}>
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-zen-accent)] shadow-[0_0_8px_var(--color-zen-accent)]"></div>
                         {isAuthenticated ? "CURRENTLY_WATCHING" : "TRENDING_NOW"}
                     </h3>
                     {isAuthenticated && (
                         <button
                             onClick={() => refetchUser()}
-                            className={`p-2 rounded-full text-white/30 hover:text-white hover:bg-white/10 transition-all ${userLoading ? 'animate-spin text-white' : ''}`}
+                            className={`p-2 rounded-full transition-all ${userLoading ? 'animate-spin' : ''}`}
+                            style={{ color: 'var(--color-text-muted)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-main)'; e.currentTarget.style.backgroundColor = 'var(--color-bg-glass-hover)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
                             title="Refresh List"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>

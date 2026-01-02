@@ -5,9 +5,18 @@ import Titlebar from '../components/titlebar/Titlebar';
 import TabNavigation from '../components/ui/TabNavigation';
 import SearchBar from '../components/ui/SearchBar';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
-import StatusBar from '../components/ui/StatusBar';
+
 import FloatingNowPlaying from '../components/ui/FloatingNowPlaying';
 import { useDiscordRPC } from '../hooks/useDiscordRPC';
+
+/**
+ * MainLayout Component
+ * 
+ * Provides the persistent shell for the application.
+ */
+import { useSettings } from '../context/SettingsContext';
+
+// ... (existing imports)
 
 /**
  * MainLayout Component
@@ -18,8 +27,11 @@ function MainLayout() {
     const [sidebarWidth, setSidebarWidth] = useState(200);
     const [isResizing, setIsResizing] = useState(false);
 
-    // Discord Rich Presence - now inside NowPlayingProvider so it can see manual sessions
-    useDiscordRPC(true);
+    // Get Discord settings
+    const { settings } = useSettings();
+
+    // Discord Rich Presence - now respects user settings
+    useDiscordRPC(settings.discordRpcEnabled, settings.discordPrivacyLevel);
 
     const handleBack = () => {
         window.history.back();
@@ -101,8 +113,6 @@ function MainLayout() {
             </div>
 
             {/* Main Content Area - Styled as a contained "Canvas" */}
-            {/* Main Content Area - Styled as a contained "Canvas" */}
-            {/* Main Content Area - Styled as a contained "Canvas" */}
             <div style={{
                 marginTop: '42px',   // Clears Titlebar
                 marginRight: '8px',
@@ -114,21 +124,22 @@ function MainLayout() {
                 position: 'relative',
                 zIndex: 1,
                 borderRadius: '24px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                boxShadow: 'var(--shadow-glass)',
                 overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.05)',
-            }} className="bg-content">
+                border: '1px solid var(--color-border-subtle)',
+                background: 'var(--color-bg-content)',
+            }}>
                 {/* Page Content Outlet */}
-                <div className="relative flex-1 flex flex-col overflow-hidden bg-content">
+                <div className="relative flex-1 flex flex-col overflow-hidden">
                     {/* Header Controls Row - Floating Overlay */}
-                    <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 pointer-events-none from-black/10 to-transparent bg-gradient-to-b">
+                    <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 pointer-events-none from-[var(--color-bg-main)]/10 to-transparent bg-gradient-to-b">
                         <div className="pointer-events-auto"><TabNavigation onBack={handleBack} onForward={handleForward} /></div>
                         <div className="pointer-events-auto"><Breadcrumbs /></div>
                         <div className="pointer-events-auto"><SearchBar /></div>
                     </div>
 
                     {/* Status Bar */}
-                    <StatusBar />
+
 
                     {/* Scrollable Content Container - Starts at top, padding pushes content down */}
                     <div id="main-scroll-container" className="flex-1 overflow-y-auto px-8 py-4 pt-24 no-scrollbar">

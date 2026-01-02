@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import AnimeList from './pages/AnimeList';
+import MangaList from './pages/MangaList';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
@@ -11,7 +12,9 @@ import MainLayout from './layouts/MainLayout';
 import { AuthProvider } from './context/AuthContext';
 import { LocalMediaProvider } from './context/LocalMediaContext';
 import { NowPlayingProvider } from './context/NowPlayingContext';
+import { SettingsProvider } from './context/SettingsContext';
 import LocalFolder from './pages/LocalFolder';
+import Settings from './pages/Settings';
 import "./App.css";
 
 /**
@@ -72,9 +75,12 @@ import "./App.css";
  * 
  * This is called a "route guard" or "protected route"
  */
+import { useSettings } from './context/SettingsContext';
+
 function ProtectedRoute() {
   const [isChecking, setIsChecking] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const { settings } = useSettings();
 
   useEffect(() => {
     // Check if user has completed onboarding
@@ -88,10 +94,10 @@ function ProtectedRoute() {
     return <div>Loading...</div>;
   }
 
-  // If onboarding completed, redirect to home
-  // Navigate component = programmatic redirect
+  // If onboarding completed, redirect to configured default page
   if (hasCompletedOnboarding) {
-    return <Navigate to="/home" replace />;
+    const targetPath = `/${settings.defaultPage}`;
+    return <Navigate to={targetPath} replace />;
   }
 
   // Otherwise, show onboarding
@@ -166,33 +172,39 @@ function App() {
 
   return (
     <ApolloProvider client={apolloClient}>
-      <AuthProvider>
-        <LocalMediaProvider>
-          <NowPlayingProvider>
-            <BrowserRouter>
-              <Routes>
-                {/* Root route - checks if onboarding needed */}
-                <Route path="/" element={<ProtectedRoute />} />
+      <SettingsProvider>
+        <AuthProvider>
+          <LocalMediaProvider>
+            <NowPlayingProvider>
+              <BrowserRouter>
+                <Routes>
+                  {/* Root route - checks if onboarding needed */}
+                  <Route path="/" element={<ProtectedRoute />} />
 
-                {/* Main App Layout */}
-                <Route element={<MainLayout />}>
-                  <Route path="/home" element={<Home />} />
-                  <Route path="/anime-list" element={<AnimeList />} />
-                  <Route path="/history" element={<History />} />
-                  <Route path="/statistics" element={<Statistics />} />
+                  {/* Main App Layout */}
+                  <Route element={<MainLayout />}>
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/anime-list" element={<AnimeList />} />
+                    <Route path="/manga-list" element={<MangaList />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/statistics" element={<Statistics />} />
 
-                  {/* Dynamic route for anime details */}
-                  <Route path="/anime/:id" element={<AnimeDetails />} />
-                  <Route path="/counter-demo" element={<CounterDemo />} />
+                    {/* Dynamic route for anime details */}
+                    <Route path="/anime/:id" element={<AnimeDetails />} />
+                    <Route path="/counter-demo" element={<CounterDemo />} />
 
-                  {/* Local Folder Route */}
-                  <Route path="/local/:folderPath" element={<LocalFolder />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </NowPlayingProvider>
-        </LocalMediaProvider>
-      </AuthProvider>
+                    {/* Settings Route */}
+                    <Route path="/settings" element={<Settings />} />
+
+                    {/* Local Folder Route */}
+                    <Route path="/local/:folderPath" element={<LocalFolder />} />
+                  </Route>
+                </Routes>
+              </BrowserRouter>
+            </NowPlayingProvider>
+          </LocalMediaProvider>
+        </AuthProvider>
+      </SettingsProvider>
     </ApolloProvider>
   );
 }
