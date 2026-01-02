@@ -69,12 +69,79 @@
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.5rem;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.95), transparent);
     z-index: 100;
     opacity: 0;
     transform: translateY(-20px);
     transition: all 0.3s ease;
     pointer-events: none;
+}
+
+/* ... unchanged ... */
+
+/* Bottom Controls */
+.reader-controls-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.95), transparent);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    gap: 1rem;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.control-group.center {
+    justify-self: center;
+    gap: 1.5rem;
+}
+
+.control-group.left {
+    justify-self: start;
+}
+
+.control-group.right {
+    justify-self: end;
+}
+
+.control-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.zoom-level {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-width: 45px;
+    text-align: center;
 }
 
 .reader-controls-top.visible {
@@ -304,4 +371,76 @@
 
 .reader-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* Vertical scroll container - needs to be scrollable */
+.vertical-scroll {
+    overflow-y: auto;
+    height: 100%;
+    width: 100%;
+}
+
+/* Sync Status Indicators */
+.sync-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.sync-status.tracking {
+    background: rgba(180, 162, 246, 0.15);
+    color: #B4A2F6;
+    border: 1px solid rgba(180, 162, 246, 0.3);
+}
+
+.sync-status.saving {
+    background: rgba(251, 191, 36, 0.15);
+    color: #FCD34D;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.sync-status.syncing {
+    background: rgba(96, 165, 250, 0.15);
+    color: #60A5FA;
+    border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.sync-status.synced {
+    background: rgba(134, 239, 172, 0.15);
+    color: #86EFAC;
+    border: 1px solid rgba(134, 239, 172, 0.3);
+}
+
+.sync-status.error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.sync-icon {
+    font-size: 0.9rem;
+}
+
+.sync-icon.spinning {
+    animation: spin 1s linear infinite;
+}
+
+.sync-progress-bar {
+    width: 60px;
+    height: 4px;
+    background: rgba(180, 162, 246, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.sync-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #B4A2F6, #9DF0B3);
+    border-radius: 2px;
+    transition: width 0.2s ease;
 }

@@ -108,21 +108,23 @@ function MangaBrowse() {
 
             {/* Controls */}
             <div className="browse-controls">
-                {/* Source Selector */}
-                <div className="source-selector">
-                    {sources.map((source) => (
-                        <button
-                            key={source.id}
-                            className={`source-btn ${source.id === currentSourceId ? 'active' : ''}`}
-                            onClick={() => handleSourceChange(source.id)}
-                        >
-                            {source.iconUrl && (
-                                <img src={source.iconUrl} alt="" className="source-icon" />
-                            )}
-                            {source.name}
-                        </button>
-                    ))}
-                </div>
+                {/* Source Selector - Only show if multiple sources */}
+                {sources.length > 1 && (
+                    <div className="source-selector">
+                        {sources.map((source) => (
+                            <button
+                                key={source.id}
+                                className={`source-btn ${source.id === currentSourceId ? 'active' : ''}`}
+                                onClick={() => handleSourceChange(source.id)}
+                            >
+                                {source.iconUrl && (
+                                    <img src={source.iconUrl} alt="" className="source-icon" />
+                                )}
+                                {source.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Search Bar */}
                 <div className="search-bar">

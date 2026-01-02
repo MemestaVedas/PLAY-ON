@@ -2,6 +2,21 @@ import { useState, useCallback, KeyboardEvent } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useAuthContext } from '../context/AuthContext';
 import { useLocalMedia } from '../context/LocalMediaContext';
+import {
+    getLibraryCategories,
+    addLibraryCategory,
+    deleteLibraryCategory,
+    getDefaultCategory,
+    setDefaultCategory
+} from '../lib/localMangaDb';
+import {
+    SettingsIcon,
+    PlayIcon,
+    LinkIcon,
+    BookIcon,
+    FolderIcon,
+    WrenchIcon
+} from '../components/ui/Icons';
 import './Settings.css';
 
 // ============================================================================
@@ -9,20 +24,21 @@ import './Settings.css';
 // Comprehensive settings interface with 5 categories
 // ============================================================================
 
-type TabId = 'general' | 'player' | 'integrations' | 'storage' | 'advanced';
+type TabId = 'general' | 'player' | 'integrations' | 'manga' | 'storage' | 'advanced';
 
 interface Tab {
     id: TabId;
     label: string;
-    icon: string;
+    icon: React.ReactNode;
 }
 
 const TABS: Tab[] = [
-    { id: 'general', label: 'General', icon: '⚙️' },
-    { id: 'player', label: 'Player', icon: '▶️' },
-    { id: 'integrations', label: 'Integrations', icon: '🔗' },
-    { id: 'storage', label: 'Storage & Library', icon: '📁' },
-    { id: 'advanced', label: 'Advanced', icon: '🔧' },
+    { id: 'general', label: 'General', icon: <SettingsIcon size={18} /> },
+    { id: 'player', label: 'Player', icon: <PlayIcon size={18} /> },
+    { id: 'integrations', label: 'Integrations', icon: <LinkIcon size={18} /> },
+    { id: 'manga', label: 'Manga', icon: <BookIcon size={18} /> },
+    { id: 'storage', label: 'Storage & Library', icon: <FolderIcon size={18} /> },
+    { id: 'advanced', label: 'Advanced', icon: <WrenchIcon size={18} /> },
 ];
 
 const SUBTITLE_LANGUAGES = [
@@ -294,6 +310,143 @@ function IntegrationsSettings() {
 }
 
 // ============================================================================
+// SECTION: Manga Settings
+// ============================================================================
+
+function MangaSettings() {
+    const [, setForceUpdate] = useState(0);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [defaultCatId, setDefaultCatId] = useState(getDefaultCategory());
+
+    // Load categories on mount and update
+    // using forceUpdate to re-read from localStorage since these functions are synchronous
+    const refresh = () => setForceUpdate(prev => prev + 1);
+
+    // We need useEffect to load initial state or just render?
+    // Since getLibraryCategories reads from localStorage sync, we can just call it in render?
+    // But better to use state to trigger re-renders.
+    // However, if we just call it in render, it will always be up to date.
+    const currentCategories = getLibraryCategories();
+
+    const handleConfirmAdd = () => {
+        if (newCategoryName.trim()) {
+            try {
+                addLibraryCategory(newCategoryName.trim());
+                refresh();
+                setIsAddDialogOpen(false);
+                setNewCategoryName('');
+            } catch (e) {
+                alert("Category exists or invalid");
+            }
+        }
+    };
+
+    const handleDeleteCategory = (id: string) => {
+        if (id === 'default') {
+            alert("Cannot delete Default category");
+            return;
+        }
+        if (confirm("Delete this category? Items in it will remain in library.")) {
+            deleteLibraryCategory(id);
+            refresh();
+        }
+    };
+
+    return (
+        <div className="settings-section">
+            <h2 className="settings-section-title">Manga</h2>
+            <p className="settings-section-description">
+                Manga preferences and library tools
+            </p>
+
+            <div className="setting-group">
+                <h3 className="setting-group-title">Preferences</h3>
+                <div className="setting-row">
+                    <div className="setting-info">
+                        <span className="setting-label">Default Category</span>
+                        <span className="setting-description">Category to pre-select when adding manga</span>
+                    </div>
+                    <select
+                        className="dropdown-select"
+                        value={defaultCatId}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setDefaultCategory(val);
+                            setDefaultCatId(val);
+                        }}
+                    >
+                        {currentCategories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <div className="setting-group">
+                <h3 className="setting-group-title">Library Categories</h3>
+                <div role="list" className="setting-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {currentCategories.map(cat => (
+                        <div key={cat.id} className="setting-row" style={{ justifyContent: 'space-between' }}>
+                            <div className="setting-info">
+                                <span className="setting-label">{cat.name}</span>
+                                <span className="setting-description text-xs opacity-50">ID: {cat.id}</span>
+                            </div>
+                            {cat.id !== 'default' && (
+                                <button
+                                    className="setting-button danger"
+                                    onClick={() => handleDeleteCategory(cat.id)}
+                                >
+                                    Delete
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                    <button className="setting-button primary mt-2" onClick={() => setIsAddDialogOpen(true)}>
+                        + Add Category
+                    </button>
+                </div>
+            </div>
+
+            {/* Add Category Dialog */}
+            {isAddDialogOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-[#1a1a1a] p-6 rounded-xl border border-white/10 w-[320px]" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-white mb-2">New Category</h3>
+                        <p className="text-sm text-white/60 mb-4">Create a new collection for your manga.</p>
+
+                        <input
+                            type="text"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="e.g. Action, Plan to Read"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white mb-4 focus:outline-none focus:border-purple-500 transition-colors"
+                            autoFocus
+                            onKeyDown={(e) => e.key === 'Enter' && handleConfirmAdd()}
+                        />
+
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => setIsAddDialogOpen(false)}
+                                className="px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmAdd}
+                                className="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+                            >
+                                Create
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ============================================================================
 // SECTION: Storage Settings
 // ============================================================================
 
@@ -326,8 +479,8 @@ function StorageSettings() {
                         <div className="folder-list">
                             {folders.map((folder) => (
                                 <div key={folder.path} className="folder-item">
-                                    <span className="folder-path">
-                                        <span className="folder-icon">📂</span>
+                                    <span className="folder-path" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <FolderIcon size={16} />
                                         {folder.path}
                                     </span>
                                     <button
@@ -473,6 +626,8 @@ export default function Settings() {
                 return <PlayerSettings />;
             case 'integrations':
                 return <IntegrationsSettings />;
+            case 'manga':
+                return <MangaSettings />;
             case 'storage':
                 return <StorageSettings />;
             case 'advanced':

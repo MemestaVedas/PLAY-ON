@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { searchManga } from '../../api/anilistClient';
 import './AniListSearchDialog.css';
 
-interface AnimeResult {
+interface MediaResult {
     id: number;
     title: {
         romaji: string;
@@ -12,30 +13,44 @@ interface AnimeResult {
         large: string;
         medium: string;
     };
-    episodes: number | null;
+    // Anime fields
+    episodes?: number | null;
+    // Manga fields
+    chapters?: number | null;
+    volumes?: number | null;
     format: string | null;
     status: string | null;
 }
 
+type MediaType = 'ANIME' | 'MANGA';
+
 interface AniListSearchDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (anime: { id: number; title: string; coverImage: string }) => void;
+    onSelect: (media: {
+        id: number;
+        title: string;
+        coverImage: string;
+        episodes?: number | null;
+        chapters?: number | null;
+        volumes?: number | null;
+    }) => void;
     initialSearchTerm?: string;
+    mediaType?: MediaType;
 }
 
 /**
- * Parse and clean a folder name to extract the anime title
+ * Parse and clean a folder/manga name to extract the title
  * Removes common noise like [SubGroup], quality tags, etc.
  */
-function parseFolderName(folderName: string): string {
-    let cleaned = folderName;
+function parseSearchTerm(name: string): string {
+    let cleaned = name;
 
     // Remove leading [SubGroup] tags like [SubsPlease], [Erai-raws], etc.
     cleaned = cleaned.replace(/^\s*\[[^\]]+\]\s*/g, '');
 
     // Remove quality tags like [1080p], (720p), [BD], [HEVC], etc.
-    cleaned = cleaned.replace(/[\[(]\s*(?:\d{3,4}p|BD|HEVC|x264|x265|AAC|FLAC|10bit|Hi10P|WEB-DL|WEB|BDRip|BluRay|DUAL|MULTI)\s*[\])]/gi, '');
+    cleaned = cleaned.replace(/[[(]\s*(?:\d{3,4}p|BD|HEVC|x264|x265|AAC|FLAC|10bit|Hi10P|WEB-DL|WEB|BDRip|BluRay|DUAL|MULTI)\s*[\])]/gi, '');
 
     // Remove hash tags like [ABCD1234]
     cleaned = cleaned.replace(/\s*\[[A-Fa-f0-9]{8}\]\s*/g, '');
@@ -60,20 +75,28 @@ function parseFolderName(folderName: string): string {
 }
 
 /**
- * Dialog for searching and selecting an anime from AniList
- * Inspired by Mihon's tracking UI - pre-populates search with folder name
+ * Dialog for searching and selecting an anime or manga from AniList
+ * Inspired by Mihon's tracking UI - pre-populates search with folder/manga name
  */
-function AniListSearchDialog({ isOpen, onClose, onSelect, initialSearchTerm = '' }: AniListSearchDialogProps) {
+function AniListSearchDialog({
+    isOpen,
+    onClose,
+    onSelect,
+    initialSearchTerm = '',
+    mediaType = 'ANIME'
+}: AniListSearchDialogProps) {
     const [searchQuery, setSearchQuery] = useState(initialSearchTerm);
-    const [results, setResults] = useState<AnimeResult[]>([]);
+    const [results, setResults] = useState<MediaResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+
+    const isManga = mediaType === 'MANGA';
 
     // Reset and auto-search when dialog opens with initial term
     useEffect(() => {
         if (isOpen && initialSearchTerm) {
-            // Parse the folder name to get a cleaner search query
-            const cleanedSearchTerm = parseFolderName(initialSearchTerm);
+            // Parse the name to get a cleaner search query
+            const cleanedSearchTerm = parseSearchTerm(initialSearchTerm);
             setSearchQuery(cleanedSearchTerm);
             performSearch(cleanedSearchTerm);
         }
@@ -93,19 +116,27 @@ function AniListSearchDialog({ isOpen, onClose, onSelect, initialSearchTerm = ''
         setIsLoading(true);
         setHasSearched(true);
         try {
-            const response = await invoke<string>('search_anime_command', {
-                query: query.trim(),
-                limit: 10
-            });
-            const data: AnimeResult[] = JSON.parse(response);
-            setResults(data);
+            if (isManga) {
+                // Use the AniList GraphQL API for manga search
+                const response = await searchManga(query.trim(), 1, 10);
+                const data = response.data?.Page?.media || [];
+                setResults(data);
+            } else {
+                // Use Tauri command for anime search
+                const response = await invoke<string>('search_anime_command', {
+                    query: query.trim(),
+                    limit: 10
+                });
+                const data: MediaResult[] = JSON.parse(response);
+                setResults(data);
+            }
         } catch (err) {
-            console.error('AniList search failed:', err);
+            console.error(`AniList ${mediaType.toLowerCase()} search failed:`, err);
             setResults([]);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [isManga, mediaType]);
 
     // Debounced search on query change
     useEffect(() => {
@@ -120,12 +151,15 @@ function AniListSearchDialog({ isOpen, onClose, onSelect, initialSearchTerm = ''
         return () => clearTimeout(timer);
     }, [searchQuery, isOpen, performSearch]);
 
-    const handleSelect = (anime: AnimeResult) => {
-        const displayTitle = anime.title.english || anime.title.romaji;
+    const handleSelect = (media: MediaResult) => {
+        const displayTitle = media.title.english || media.title.romaji;
         onSelect({
-            id: anime.id,
+            id: media.id,
             title: displayTitle,
-            coverImage: anime.coverImage.large || anime.coverImage.medium
+            coverImage: media.coverImage.large || media.coverImage.medium,
+            episodes: media.episodes,
+            chapters: media.chapters,
+            volumes: media.volumes,
         });
         onClose();
     };
@@ -143,7 +177,7 @@ function AniListSearchDialog({ isOpen, onClose, onSelect, initialSearchTerm = ''
             <div className="anilist-search-dialog" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="anilist-search-header">
-                    <h2>Track on AniList</h2>
+                    <h2>Track {isManga ? 'Manga' : 'Anime'} on AniList</h2>
                     <button className="anilist-search-close" onClick={onClose}>
                         ✕
                     </button>
@@ -154,7 +188,7 @@ function AniListSearchDialog({ isOpen, onClose, onSelect, initialSearchTerm = ''
                     <input
                         type="text"
                         className="anilist-search-input"
-                        placeholder="Search anime..."
+                        placeholder={`Search ${isManga ? 'manga' : 'anime'}...`}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         autoFocus
@@ -176,30 +210,37 @@ function AniListSearchDialog({ isOpen, onClose, onSelect, initialSearchTerm = ''
                         </div>
                     )}
 
-                    {results.map((anime) => (
+                    {results.map((media) => (
                         <div
-                            key={anime.id}
+                            key={media.id}
                             className="anilist-search-result-item"
-                            onClick={() => handleSelect(anime)}
+                            onClick={() => handleSelect(media)}
                         >
                             <img
-                                src={anime.coverImage.medium || anime.coverImage.large}
-                                alt={anime.title.romaji}
+                                src={media.coverImage.medium || media.coverImage.large}
+                                alt={media.title.romaji}
                                 className="anilist-search-result-cover"
                             />
                             <div className="anilist-search-result-info">
                                 <div className="anilist-search-result-title">
-                                    {anime.title.english || anime.title.romaji}
+                                    {media.title.english || media.title.romaji}
                                 </div>
-                                {anime.title.english && (
+                                {media.title.english && (
                                     <div className="anilist-search-result-subtitle">
-                                        {anime.title.romaji}
+                                        {media.title.romaji}
                                     </div>
                                 )}
                                 <div className="anilist-search-result-meta">
-                                    {anime.format && <span>{anime.format}</span>}
-                                    {anime.episodes && <span>• {anime.episodes} eps</span>}
-                                    {anime.status && <span>• {anime.status}</span>}
+                                    {media.format && <span>{media.format}</span>}
+                                    {isManga ? (
+                                        <>
+                                            {media.chapters && <span>• {media.chapters} chs</span>}
+                                            {media.volumes && <span>• {media.volumes} vols</span>}
+                                        </>
+                                    ) : (
+                                        media.episodes && <span>• {media.episodes} eps</span>
+                                    )}
+                                    {media.status && <span>• {media.status}</span>}
                                 </div>
                             </div>
                             <button className="anilist-search-select-btn">

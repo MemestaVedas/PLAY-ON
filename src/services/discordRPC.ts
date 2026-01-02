@@ -277,6 +277,136 @@ export function isDiscordRPCInitialized(): boolean {
 }
 
 /**
+ * Update Discord activity with currently reading manga
+ */
+export async function updateMangaActivity(params: {
+    mangaTitle: string;
+    chapter?: number | null;
+    anilistId?: number | null;
+    coverImage?: string | null;
+    totalChapters?: number | null;
+    privacyLevel?: 'full' | 'minimal' | 'hidden';
+}): Promise<void> {
+    const { mangaTitle, chapter, anilistId, coverImage, totalChapters, privacyLevel = 'full' } = params;
+
+    if (privacyLevel === 'hidden') return;
+
+    if (!isInitialized) {
+        const success = await initDiscordRPC();
+        if (!success) return;
+    }
+
+    // Check if this is the same manga
+    const isSameManga = anilistId && anilistId === currentAnimeId; // Reusing currentAnimeId for generic media ID
+
+    if (!isSameManga && anilistId) {
+        currentAnimeId = anilistId;
+        watchStartTime = Date.now();
+    } else if (!anilistId && !currentAnimeId) {
+        watchStartTime = Date.now();
+    }
+
+    try {
+        let activity = new Activity();
+
+        if (privacyLevel === 'minimal') {
+            activity = activity.setDetails('Reading Manga');
+            activity = activity.setState('Relaxing');
+            const assets = new Assets()
+                .setLargeImage(APP_ICON_ASSET)
+                .setLargeText('PLAY-ON!');
+            activity = activity.setAssets(assets);
+        } else {
+            const truncatedTitle = mangaTitle.length > 128 ? mangaTitle.substring(0, 125) + '...' : mangaTitle;
+            activity = activity.setDetails(truncatedTitle);
+
+            let stateText = 'Reading';
+            if (chapter) {
+                stateText = `Chapter ${chapter}`;
+                if (totalChapters) {
+                    stateText += ` of ${totalChapters}`;
+                }
+            }
+            activity = activity.setState(stateText);
+
+            const assets = new Assets();
+            if (coverImage) {
+                assets.setLargeImage(coverImage);
+                assets.setLargeText(mangaTitle);
+            } else {
+                assets.setLargeImage(APP_ICON_ASSET);
+                assets.setLargeText(mangaTitle);
+            }
+            assets.setSmallImage(APP_ICON_ASSET);
+            assets.setSmallText('PLAY-ON!');
+            activity = activity.setAssets(assets);
+
+            if (anilistId) {
+                activity = activity.setButton([
+                    new Button('View on AniList', `https://anilist.co/manga/${anilistId}`),
+                    new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+                ]);
+            } else {
+                activity = activity.setButton([
+                    new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+                ]);
+            }
+        }
+
+        if (watchStartTime) {
+            activity = activity.setTimestamps(new Timestamps(watchStartTime));
+        }
+
+        await setActivity(activity);
+        const logMsg = chapter ? `Ch ${chapter}` : 'Activity updated';
+        console.log(`[Discord RPC] ${mangaTitle} - ${logMsg} (${privacyLevel})`);
+    } catch (err) {
+        console.error('[Discord RPC] Failed to update manga activity:', err);
+    }
+}
+
+/**
+ * Set activity when browsing a specific manga's details
+ */
+export async function setBrowsingMangaActivity(mangaTitle: string, coverImage?: string | null): Promise<void> {
+    if (!isInitialized) {
+        const success = await initDiscordRPC();
+        if (!success) return;
+    }
+
+    try {
+        let activity = new Activity();
+        const truncatedTitle = mangaTitle.length > 128 ? mangaTitle.substring(0, 125) + '...' : mangaTitle;
+
+        activity = activity
+            .setDetails('Browsing Manga')
+            .setState(truncatedTitle);
+
+        const assets = new Assets();
+        if (coverImage) {
+            assets.setLargeImage(coverImage);
+            assets.setLargeText(mangaTitle);
+        } else {
+            assets.setLargeImage(APP_ICON_ASSET);
+            assets.setLargeText(mangaTitle);
+        }
+        assets.setSmallImage(APP_ICON_ASSET);
+        assets.setSmallText('PLAY-ON!');
+
+        activity = activity.setAssets(assets);
+        activity = activity.setButton([
+            new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+        ]);
+
+        await setActivity(activity);
+        // Don't reset generic browsing timestamp/state excessively
+        console.log(`[Discord RPC] Browsing manga: ${mangaTitle}`);
+    } catch (err) {
+        console.error('[Discord RPC] Failed to set browsing manga activity:', err);
+    }
+}
+
+/**
  * Get current watching anime ID
  */
 export function getCurrentAnimeId(): number | null {

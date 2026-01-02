@@ -4,6 +4,7 @@ import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import AnimeList from './pages/AnimeList';
 import MangaList from './pages/MangaList';
+import LocalMangaList from './pages/LocalMangaList';
 import MangaBrowse from './pages/MangaBrowse';
 import MangaSourceDetails from './pages/MangaSourceDetails';
 import MangaReader from './pages/MangaReader';
@@ -18,6 +19,7 @@ import { NowPlayingProvider } from './context/NowPlayingContext';
 import { SettingsProvider } from './context/SettingsContext';
 import LocalFolder from './pages/LocalFolder';
 import Settings from './pages/Settings';
+import UserProfile from './pages/UserProfile';
 import "./App.css";
 
 /**
@@ -192,6 +194,7 @@ function App() {
                     <Route path="/home" element={<Home />} />
                     <Route path="/anime-list" element={<AnimeList />} />
                     <Route path="/manga-list" element={<MangaList />} />
+                    <Route path="/local-manga" element={<LocalMangaList />} />
                     <Route path="/history" element={<History />} />
                     <Route path="/statistics" element={<Statistics />} />
 
@@ -201,6 +204,7 @@ function App() {
 
                     {/* Settings Route */}
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/profile" element={<UserProfile />} />
 
                     {/* Local Folder Route */}
                     <Route path="/local/:folderPath" element={<LocalFolder />} />

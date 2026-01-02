@@ -535,3 +535,29 @@ export async function updateMediaProgress(mediaId: number, progress: number, sta
     throw err;
   }
 }
+
+/**
+ * Updates manga progress (chapters read). Supports offline queuing.
+ * Uses the same SaveMediaListEntry mutation - AniList uses 'progress' for both anime episodes and manga chapters.
+ */
+export async function updateMangaProgress(mediaId: number, chaptersRead: number, status?: string) {
+  const variables = { mediaId, progress: chaptersRead, status };
+  try {
+    return await executeUpdateMediaProgress(variables);
+  } catch (err) {
+    if (!navigator.onLine) {
+      console.warn("Offline! Queuing manga mutation...", err);
+      addToOfflineQueue('UpdateMediaProgress', variables);
+      // Return fake success for UI
+      return {
+        data: {
+          SaveMediaListEntry: {
+            progress: chaptersRead,
+            status
+          }
+        }
+      };
+    }
+    throw err;
+  }
+}

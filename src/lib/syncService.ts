@@ -6,12 +6,21 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { gql } from '@apollo/client';
+import { apolloClient } from './apollo';
+import { updateMangaProgress } from './localMangaDb';
 import {
     getUnsyncedEntries,
     markAsSynced,
     updateSyncAttempt,
     LocalAnimeEntry
 } from './localAnimeDb';
+import {
+    getUnsyncedMangaEntries,
+    markMangaAsSynced,
+    updateMangaSyncAttempt,
+    LocalMangaEntry
+} from './localMangaDb';
 import { addToOfflineQueue } from './offlineQueue';
 
 /**
@@ -58,7 +67,8 @@ export async function syncEntryToAniList(entry: LocalAnimeEntry): Promise<boolea
             import('../services/notification').then(({ sendDesktopNotification }) => {
                 sendDesktopNotification(
                     'Synced to AniList',
-                    `Updated: ${entry.title} - Ep ${entry.episode}${seasonText}`
+                    `Updated: ${entry.title} - Ep ${entry.episode}${seasonText}`,
+                    entry.coverImage
                 );
             });
         }, 1500);
@@ -83,6 +93,73 @@ export async function syncEntryToAniList(entry: LocalAnimeEntry): Promise<boolea
 }
 
 /**
+ * Sync a single manga entry to AniList
+ */
+export async function syncMangaEntryToAniList(entry: LocalMangaEntry): Promise<boolean> {
+    // Must have AniList ID and token
+    const token = localStorage.getItem('anilist_token') || localStorage.getItem('token');
+
+    if (!token) {
+        console.log('[MangaSync] Not logged in, skipping sync for:', entry.title);
+        return false;
+    }
+
+    if (!entry.anilistId) {
+        console.log('[MangaSync] No AniList ID for:', entry.title);
+        return false;
+    }
+
+    try {
+        console.log(`[MangaSync] Syncing "${entry.title}" Ch ${entry.chapter} to AniList...`);
+
+        // Map local status to AniList status
+        const anilistStatus = mapMangaStatusToAniList(entry.status);
+
+        // Call the Tauri backend command (same as anime, just different media type)
+        const result = await invoke<string>('update_anime_progress_command', {
+            accessToken: token,
+            mediaId: entry.anilistId,
+            progress: entry.chapter,
+            status: anilistStatus,
+        });
+
+        const parsed = JSON.parse(result);
+        console.log('[MangaSync] ✓ Success:', entry.title, parsed);
+
+        // Mark as synced in local DB
+        markMangaAsSynced(entry.id);
+
+        // Notify user of successful sync
+        setTimeout(() => {
+            import('../services/notification').then(({ sendDesktopNotification }) => {
+                sendDesktopNotification(
+                    'Manga Synced to AniList',
+                    `Updated: ${entry.title} - Ch ${entry.chapter}`,
+                    entry.coverImage
+                );
+            });
+        }, 1500);
+
+        return true;
+    } catch (error) {
+        console.error('[MangaSync] ✗ Failed:', entry.title, error);
+
+        // Update sync attempt timestamp
+        updateMangaSyncAttempt(entry.id);
+
+        // Add to offline queue for retry
+        addToOfflineQueue('UpdateMangaProgress', {
+            entryId: entry.id,
+            anilistId: entry.anilistId,
+            chapter: entry.chapter,
+            status: entry.status,
+        });
+
+        return false;
+    }
+}
+
+/**
  * Map local status to AniList MediaListStatus
  */
 function mapStatusToAniList(status: LocalAnimeEntry['status']): string {
@@ -97,23 +174,38 @@ function mapStatusToAniList(status: LocalAnimeEntry['status']): string {
 }
 
 /**
- * Sync all unsynced entries to AniList
+ * Map local manga status to AniList MediaListStatus
+ */
+function mapMangaStatusToAniList(status: LocalMangaEntry['status']): string {
+    const statusMap: Record<LocalMangaEntry['status'], string> = {
+        reading: 'CURRENT',
+        completed: 'COMPLETED',
+        paused: 'PAUSED',
+        dropped: 'DROPPED',
+        planning: 'PLANNING',
+    };
+    return statusMap[status];
+}
+
+/**
+ * Sync all unsynced entries to AniList (both anime and manga)
  */
 export async function syncAllToAniList(): Promise<{ success: number; failed: number }> {
-    const unsynced = getUnsyncedEntries();
+    const unsyncedAnime = getUnsyncedEntries();
+    const unsyncedManga = getUnsyncedMangaEntries();
 
-    if (unsynced.length === 0) {
+    if (unsyncedAnime.length === 0 && unsyncedManga.length === 0) {
         console.log('[Sync] No entries to sync');
         return { success: 0, failed: 0 };
     }
 
-    console.log(`[Sync] Syncing ${unsynced.length} entries...`);
+    console.log(`[Sync] Syncing ${unsyncedAnime.length} anime and ${unsyncedManga.length} manga entries...`);
 
     let success = 0;
     let failed = 0;
 
-    // Sync sequentially to avoid rate limits
-    for (const entry of unsynced) {
+    // Sync anime entries sequentially to avoid rate limits
+    for (const entry of unsyncedAnime) {
         const result = await syncEntryToAniList(entry);
         if (result) {
             success++;
@@ -122,6 +214,18 @@ export async function syncAllToAniList(): Promise<{ success: number; failed: num
         }
 
         // Small delay to avoid hitting rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Sync manga entries
+    for (const entry of unsyncedManga) {
+        const result = await syncMangaEntryToAniList(entry);
+        if (result) {
+            success++;
+        } else {
+            failed++;
+        }
+
         await new Promise(resolve => setTimeout(resolve, 500));
     }
 
@@ -181,4 +285,54 @@ export function startAutoSync(intervalMs: number = 60000): () => void {
         clearInterval(interval);
         window.removeEventListener('online', handleOnline);
     };
+}
+
+/**
+ * Sync progress FROM AniList to local DB
+ */
+export async function syncMangaFromAniList(entry: LocalMangaEntry): Promise<boolean> {
+    if (!entry.anilistId) return false;
+
+    // Check auth
+    const token = localStorage.getItem('anilist_token') || localStorage.getItem('token');
+    if (!token) return false;
+
+    try {
+        console.log(`[MangaSync] Fetching progress for "${entry.title}" from AniList...`);
+
+        const { data } = await apolloClient.query({
+            query: gql`
+                query ($id: Int) {
+                    Media(id: $id) {
+                        id
+                        mediaListEntry {
+                            progress
+                            status
+                            updatedAt
+                        }
+                    }
+                }
+            `,
+            variables: { id: entry.anilistId },
+            fetchPolicy: 'network-only'
+        });
+
+        const listEntry = data?.Media?.mediaListEntry;
+        if (listEntry) {
+            // Update local DB
+            if (listEntry.progress > entry.chapter || listEntry.progress !== entry.chapter) {
+                updateMangaProgress(entry.id, {
+                    title: entry.title,
+                    chapter: listEntry.progress,
+                    anilistId: entry.anilistId,
+                });
+                console.log(`[MangaSync] Updated local "${entry.title}" to Ch ${listEntry.progress}`);
+                return true;
+            }
+        }
+        return true;
+    } catch (e) {
+        console.error('[MangaSync] Failed to fetch from AniList:', e);
+        return false;
+    }
 }
