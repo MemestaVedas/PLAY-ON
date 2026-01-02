@@ -348,6 +348,84 @@ async fn progressive_search_command(title: String) -> Result<String, String> {
     serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))
 }
 
+lazy_static::lazy_static! {
+    static ref IMAGE_CACHE: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
+}
+
+/// Tauri command to download an image and return local file path
+/// Used for Windows notifications which require local file paths
+///
+/// # Arguments
+/// * `url` - HTTP URL of the image to download
+///
+/// # Returns
+/// * Local file path to the cached image
+#[tauri::command]
+async fn download_image_for_notification(url: String) -> Result<String, String> {
+    use std::io::Write;
+    use std::path::PathBuf;
+
+    // Check cache first
+    {
+        let cache = IMAGE_CACHE.lock().map_err(|_| "Cache lock error")?;
+        if let Some(path) = cache.get(&url) {
+            if std::path::Path::new(path).exists() {
+                println!("[ImageCache] Cache hit: {}", url);
+                return Ok(path.clone());
+            }
+        }
+    }
+
+    println!("[ImageCache] Downloading: {}", url);
+
+    // Create cache directory in temp
+    let cache_dir = std::env::temp_dir().join("playon_image_cache");
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create cache dir: {}", e))?;
+
+    // Generate filename from URL hash
+    let hash = format!("{:x}", md5_hash(&url));
+    let extension = url.split('.').last().unwrap_or("jpg");
+    let filename = format!("{}.{}", hash, extension);
+    let file_path: PathBuf = cache_dir.join(&filename);
+
+    // Download image
+    let response = reqwest::get(&url)
+        .await
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    // Save to file
+    let mut file =
+        std::fs::File::create(&file_path).map_err(|e| format!("Failed to create file: {}", e))?;
+    file.write_all(&bytes)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+
+    let path_str = file_path.to_string_lossy().to_string();
+
+    // Update cache
+    {
+        let mut cache = IMAGE_CACHE.lock().map_err(|_| "Cache lock error")?;
+        cache.insert(url, path_str.clone());
+    }
+
+    println!("[ImageCache] Saved to: {}", path_str);
+    Ok(path_str)
+}
+
+/// Simple hash function for cache keys
+fn md5_hash(s: &str) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut hasher = DefaultHasher::new();
+    s.hash(&mut hasher);
+    hasher.finish()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -386,7 +464,8 @@ pub fn run() {
             parse_window_title_command,
             detect_anime_command,
             update_anime_progress_command,
-            progressive_search_command
+            progressive_search_command,
+            download_image_for_notification
         ])
         .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)

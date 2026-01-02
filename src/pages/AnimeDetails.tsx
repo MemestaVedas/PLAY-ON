@@ -2,34 +2,37 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAnimeData, Anime } from '../hooks/useAnimeData';
 import { updateMediaProgress } from '../api/anilistClient';
+import { useFolderMappings } from '../hooks/useFolderMappings';
+import AnimeCard from '../components/ui/AnimeCard';
+import Loading from '../components/ui/Loading';
+import { AnimeStats } from '../components/anime/AnimeStats';
+import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
+import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
 
 function AnimeDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { getAnimeDetails } = useAnimeData();
+    const { getMappingByAnilistId } = useFolderMappings();
     const [anime, setAnime] = useState<Anime | null>(null);
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [updating, setUpdating] = useState(false);
 
+    // Check if this anime is linked to a local folder
+    const folderMapping = anime ? getMappingByAnilistId(anime.id) : undefined;
+
     useEffect(() => {
-        if (!id) {
-            console.log('[AnimeDetails] No ID provided');
-            return;
-        }
+        if (!id) return;
         async function load() {
-            console.log('[AnimeDetails] Loading anime ID:', id);
             setLoading(true);
             try {
                 const data = await getAnimeDetails(parseInt(id!));
-                console.log('[AnimeDetails] Received data:', data);
                 if (data) {
                     setAnime(data);
                     if (data.mediaListEntry) {
                         setProgress(data.mediaListEntry.progress);
                     }
-                } else {
-                    console.log('[AnimeDetails] No data returned');
                 }
             } catch (err) {
                 console.error('[AnimeDetails] Error loading anime:', err);
@@ -52,137 +55,152 @@ function AnimeDetails() {
         }
     };
 
-    if (loading) return <div className="p-10 text-center text-text-secondary">Loading details...</div>;
-    if (!anime) return <div className="p-10 text-center text-red-400">Anime not found.</div>;
+    if (loading) return <Loading />;
 
-    // Use banner or fallback to extra large cover (with null checks)
+    if (!anime) return (
+        <div className="flex h-screen items-center justify-center font-mono text-red-400">
+            SIGNAL_LOST: ANIME_NOT_FOUND
+        </div>
+    );
+
     const heroImage = anime.bannerImage || anime.coverImage?.extraLarge || anime.coverImage?.large || '';
     const title = anime.title?.english || anime.title?.romaji || 'Unknown Title';
+    const recommendations = anime.recommendations?.nodes.map(n => n.mediaRecommendation) || [];
 
     return (
-        <div className="h-full overflow-hidden flex flex-col pt-4 pb-10 px-6 max-w-[1800px] mx-auto">
-            {/* Back Button */}
-            <button
-                onClick={() => navigate(-1)}
-                className="self-start text-text-secondary hover:text-white mb-4 flex items-center gap-2 transition-colors"
-            >
-                ← Back
-            </button>
+        <div className="relative min-h-full font-rounded overflow-hidden pb-20" style={{ color: 'var(--color-text-main)' }}>
+            {/* --- Y2K Glass Background --- */}
+            <div className="fixed inset-0 z-0 select-none pointer-events-none">
+                {/* Blurred Hero Background */}
+                <div
+                    className="absolute inset-0 bg-cover bg-center blur-3xl opacity-20 scale-110"
+                    style={{ backgroundImage: `url(${heroImage})` }}
+                />
+                {/* Mesh Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/80 to-transparent" />
+                {/* Grid Lines Pattern */}
+                <div
+                    className="absolute inset-0 opacity-10"
+                    style={{
+                        backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)',
+                        backgroundSize: '40px 40px'
+                    }}
+                />
+            </div>
 
-            {/* 3-Column Layout: Left+Center (Visual) | Right (Info) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-
-                {/* Visual Section (Spans 2 columns on large screens) */}
-                <div className="lg:col-span-2 relative rounded-2xl overflow-hidden group shadow-2xl h-[50vh] lg:h-auto">
-                    <img
-                        src={heroImage}
-                        alt={title}
-                        className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-shell via-shell/20 to-transparent opacity-90" />
-
-                    {/* Floating Title on Visual (Optional, Netflix style) */}
-                    <div className="absolute bottom-10 left-10 max-w-2xl">
-                        <h1 className="text-4xl md:text-6xl font-black text-white drop-shadow-lg leading-tight mb-4">
-                            {title}
-                        </h1>
-                        <p className="text-lg text-gray-200 line-clamp-3 md:line-clamp-4 max-w-xl drop-shadow-md">
-                            {anime.description?.replace(/<[^>]*>/g, '')}
-                        </p>
-                    </div>
+            <div className="relative z-10 max-w-[1600px] mx-auto p-6 flex flex-col gap-10">
+                {/* Header / Nav */}
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/10 hover:scale-105 transition-all flex items-center gap-2 group"
+                    >
+                        <span className="font-mono text-xs text-lavender-mist group-hover:text-white">&lt; RETURN</span>
+                    </button>
+                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
                 </div>
 
-                {/* Info Panel (Right Column) */}
-                <div className="flex flex-col gap-6 h-full overflow-y-auto pr-2 custom-scrollbar">
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-10 items-start">
 
-                    {/* Metadata Stack */}
-                    <div className="flex flex-col gap-4 p-6 bg-tab rounded-xl border border-white/5">
-                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
-                            <span className="text-sm text-text-secondary uppercase tracking-wider">Format</span>
-                            <span className="font-semibold text-white">{anime.format || 'Unknown'}</span>
+                    {/* Left Column: Cover Art */}
+                    <div className="relative group perspective-1000">
+                        {/* Glowing "Aura" */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-lavender-mist to-sky-blue blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-700" />
+
+                        <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-transform duration-500 group-hover:rotate-y-2 group-hover:scale-[1.02]">
+                            <img
+                                src={anime.coverImage.extraLarge || anime.coverImage.large}
+                                alt={title}
+                                className="w-full h-auto object-cover aspect-[2/3]"
+                            />
+                            {/* Glass Glint */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                         </div>
-                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
-                            <span className="text-sm text-text-secondary uppercase tracking-wider">Year</span>
-                            <span className="font-semibold text-white">{anime.seasonYear || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
-                            <span className="text-sm text-text-secondary uppercase tracking-wider">Episodes</span>
-                            <span className="font-semibold text-white">{anime.episodes || '?'}</span>
-                        </div>
-                        <div className="flex items-baseline justify-between border-b border-white/5 pb-4">
-                            <span className="text-sm text-text-secondary uppercase tracking-wider">Score</span>
-                            <span className="font-bold text-green-400 text-lg">{anime.averageScore ? `${anime.averageScore}%` : 'N/A'}</span>
-                        </div>
-                        <div className="flex items-baseline justify-between pb-2">
-                            <span className="text-sm text-text-secondary uppercase tracking-wider">Status</span>
-                            <span className={`font-semibold px-2 py-1 rounded text-xs ${anime.status === 'RELEASING' ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-400'}`}>
-                                {anime.status}
-                            </span>
+
+                        {/* Status Pill */}
+                        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 shadow-lg flex items-center gap-2 whitespace-nowrap">
+                            <div className={`w-2 h-2 rounded-full ${anime.status === 'RELEASING' ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+                            <span className="font-mono text-xs font-bold tracking-widest uppercase">{anime.status}</span>
                         </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex flex-col gap-3">
-                        {anime.mediaListEntry ? (
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center justify-between bg-white/5 p-4 rounded-lg border border-white/10">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-text-secondary uppercase tracking-wider font-medium">Progress</span>
-                                        <span className="text-2xl font-black text-white">
-                                            {progress} <span className="text-sm font-normal text-text-secondary">/ {anime.episodes || '?'}</span>
-                                        </span>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <button
-                                            disabled={progress <= 0 || updating}
-                                            onClick={() => handleProgressUpdate(progress - 1)}
-                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-50 transition-all active:scale-95 border border-white/5"
-                                            title="Decrement episode"
-                                        >
-                                            <span className="text-xl font-bold">-</span>
-                                        </button>
-                                        <button
-                                            disabled={(anime.episodes && progress >= anime.episodes) || updating}
-                                            onClick={() => handleProgressUpdate(progress + 1)}
-                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-black hover:bg-gray-200 disabled:opacity-50 transition-all active:scale-95 shadow-lg"
-                                            title="Increment episode"
-                                        >
-                                            <span className="text-xl font-bold">+</span>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter ${anime.mediaListEntry.status === 'CURRENT' ? 'bg-green-500/20 text-green-400' : 'bg-gray-700/50 text-gray-400'}`}>
-                                        {anime.mediaListEntry.status}
-                                    </span>
-                                </div>
+                    {/* Right Column: Details */}
+                    <div className="flex flex-col gap-8">
+
+                        {/* Title Block */}
+                        <div>
+                            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
+                                {title}
+                            </h1>
+                            <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
+                                <span>{anime.seasonYear || 'YEAR_UNKNOWN'}</span>
+                                <span>//</span>
+                                <span>{anime.format || 'FORMAT_UNKNOWN'}</span>
+                                <span>//</span>
+                                <span>{anime.episodes ? `${anime.episodes} EPS` : 'EPS_UNKNOWN'}</span>
                             </div>
-                        ) : (
-                            <button
-                                onClick={() => handleProgressUpdate(1)}
-                                className="w-full py-4 bg-white text-black font-bold text-lg rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
-                            >
-                                + Add to List
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Genres */}
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {anime.genres?.map(g => (
-                            <span key={g} className="px-3 py-1 bg-curve text-text-secondary text-xs rounded-full border border-white/5">
-                                {g}
-                            </span>
-                        ))}
-                    </div>
-
-                    {/* Studios */}
-                    {anime.studios?.nodes && anime.studios.nodes.length > 0 && (
-                        <div className="mt-auto pt-6 text-sm text-text-secondary">
-                            Studios: <span className="text-white">{anime.studios.nodes.map(s => s.name).join(', ')}</span>
                         </div>
-                    )}
+
+                        {/* Stats Grid */}
+                        <AnimeStats anime={anime} />
+
+                        {/* Description Box */}
+                        <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
+                            <div
+                                className="text-lg leading-relaxed text-gray-200/90 font-light max-h-[200px] overflow-y-auto custom-scrollbar pr-4"
+                                dangerouslySetInnerHTML={{ __html: anime.description || 'No data available.' }}
+                            />
+                        </div>
+
+                        {/* Resume Button (Separated Action) */}
+                        {folderMapping && (
+                            <AnimeResumeButton
+                                onClick={() => navigate(`/local/${encodeURIComponent(folderMapping.folderPath)}`)}
+                                folderPath={folderMapping.folderPath}
+                            />
+                        )}
+
+                        {/* Progress Control */}
+                        <AnimeProgressCard
+                            anime={anime}
+                            progress={progress}
+                            onUpdate={handleProgressUpdate}
+                            updating={updating}
+                        />
+
+                        {/* Genres */}
+                        <div className="flex flex-wrap gap-2">
+                            {anime.genres?.map(g => (
+                                <span key={g} className="px-4 py-1.5 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-white/80 hover:bg-white/10 hover:border-lavender-mist/50 transition-colors cursor-default">
+                                    #{g.toUpperCase()}
+                                </span>
+                            ))}
+                        </div>
+
+                    </div>
                 </div>
+
+                {/* Related Anime Section */}
+                {recommendations.length > 0 && (
+                    <div className="mt-10">
+                        <div className="flex items-center gap-4 mb-6">
+                            <h2 className="text-2xl font-bold tracking-tight">SIMILAR_SIGNALS</h2>
+                            <div className="h-px flex-1 bg-white/10" />
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                            {recommendations.map((rec) => (
+                                <AnimeCard
+                                    key={rec.id}
+                                    anime={rec as unknown as Anime}
+                                    onClick={(id) => navigate(`/anime/${id}`)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

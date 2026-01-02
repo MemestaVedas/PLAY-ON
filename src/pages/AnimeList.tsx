@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, forwardRef } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import AnimeCard from '../components/ui/AnimeCard';
@@ -44,31 +44,61 @@ function AnimeList() {
     const { user, isAuthenticated, loading: authLoading } = useAuth();
 
     // Use Apollo Query for automatic caching and loading state management
+    // pollInterval refreshes the list every 10 minutes (600000ms)
     const { data, loading: queryLoading, error: queryError } = useQuery(USER_ANIME_COLLECTION_QUERY, {
         variables: { userId: user?.id },
         skip: !user?.id,
-        fetchPolicy: 'cache-first', // Use cache if available, don't flash loading
+        fetchPolicy: 'cache-first', // Fast load from cache if available
+        nextFetchPolicy: 'cache-first', // Ensure we don't hit network unnecessarily on navigation
+        notifyOnNetworkStatusChange: true,
+        pollInterval: 600000, // Refresh every 10 minutes
     });
-
-    const [loading, setLoading] = useState(true); // Keep strictly for trending fallback logic
-    const [fullAnimeList, setFullAnimeList] = useState<AnimeEntry[]>([]);
 
     // Initialize status from URL if present
     const initialStatus = (searchParams.get('status') as ListStatus) || 'All';
     const [selectedStatus, setSelectedStatus] = useState<ListStatus>(initialStatus);
-
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [isTrending, setIsTrending] = useState(false);
 
+    // Trending fallback state (only used if not authenticated)
+    const [trendingList, setTrendingList] = useState<AnimeEntry[]>([]);
+    const [trendingLoading, setTrendingLoading] = useState(false);
+
+    // Effect to load trending only if NOT authenticated
     useEffect(() => {
-        // If we are loading user data via Apollo, sync it to state
-        if (queryLoading) {
-            setLoading(true);
-            return;
+        if (!isAuthenticated && !authLoading) {
+            const loadTrending = async () => {
+                setTrendingLoading(true);
+                try {
+                    const tData = await fetchTrendingAnime();
+                    if (tData.data?.Page?.media) {
+                        // Map trending data to AnimeEntry structure
+                        const mappedTrending = tData.data.Page.media.map((m: any) => ({
+                            id: m.id,
+                            status: 'TRENDING',
+                            score: m.averageScore || 0,
+                            progress: 0,
+                            media: m
+                        }));
+                        setTrendingList(mappedTrending);
+                    }
+                } catch (e) { console.error(e); }
+                setTrendingLoading(false);
+            };
+            loadTrending();
         }
+    }, [isAuthenticated, authLoading]);
 
+    // Update selected status when URL param switches (e.g. navigation from Home)
+    useEffect(() => {
+        const statusFromUrl = (searchParams.get('status') as ListStatus);
+        if (statusFromUrl) {
+            setSelectedStatus(statusFromUrl);
+        }
+    }, [searchParams]);
+
+    // DERIVE LIST DIRECTLY FROM DATA (No useEffect syncing -> No Flash)
+    const fullAnimeList = useMemo(() => {
         if (isAuthenticated && data?.MediaListCollection?.lists) {
-            setLoading(false);
             const lists = data.MediaListCollection.lists;
             // Flatten all lists into one array
             const allEntries = lists.flatMap((list: any) => list.entries);
@@ -80,34 +110,19 @@ function AnimeList() {
                     uniqueEntriesMap.set(entry.id, entry);
                 }
             });
-            const uniqueEntries = Array.from(uniqueEntriesMap.values());
-
-            setFullAnimeList(uniqueEntries as AnimeEntry[]);
-            setIsTrending(false);
-        } else if (!isAuthenticated && !authLoading) {
-            // Fallback to trending if not logged in
-            const loadTrending = async () => {
-                setLoading(true);
-                try {
-                    const tData = await fetchTrendingAnime();
-                    if (tData.data?.Page?.media) {
-                        setIsTrending(true);
-                        setFullAnimeList([]); // Clear user list (we would need to map trending to AnimeEntry if we want to show it, but logic here assumes explicit trending handling or different UI. Actually the original code just set fullAnimeList to empty and set isTrending=true, but didn't populate trending data into fullAnimeList? Re-reading original code... )
-                        // Original code: setFullAnimeList([]); setIsTrending(true);
-                        // It seems the original code MIGHT have had a bug or 'isTrending' is used elsewhere to fetch trending data?
-                        // Checking stats calculation: "if (isTrending) return counts;" -> returns 0 counts.
-                        // Checking render: "if (!isAuthenticated) return <Please Login>" -> So trending data isn't even shown in MAIN render if !auth.
-                        // So the trending fetch in original code was effectively doing nothing visible except stopping loading state?
-                        // I will preserve the behavior: stop loading.
-                    }
-                } catch (e) { }
-                setLoading(false);
-            };
-            loadTrending();
-        } else if (data && !data.MediaListCollection) {
-            setLoading(false); // Loaded but no lists?
+            return Array.from(uniqueEntriesMap.values()) as AnimeEntry[];
         }
-    }, [data, queryLoading, isAuthenticated, authLoading]);
+
+        // Fallback to trending if not authenticated
+        if (!isAuthenticated) return trendingList;
+
+        return [];
+    }, [isAuthenticated, data, trendingList]);
+
+    // Loading state calculation
+    // If authenticated: loading is strictly queryLoading
+    // If not authenticated: loading is authLoading or trendingLoading
+    const isLoading = isAuthenticated ? queryLoading : (authLoading || trendingLoading);
 
     const error = queryError ? "Failed to fetch anime list." : null;
 
@@ -115,61 +130,65 @@ function AnimeList() {
         navigate(`/anime/${id}`);
     };
 
-    // Calculate stats
-    const stats = useMemo(() => {
-        const counts = {
-            All: 0,
-            Watching: 0,
-            Completed: 0,
-            Paused: 0,
-            Dropped: 0,
-            Planning: 0
-        };
 
-        if (isTrending) return counts;
 
-        fullAnimeList.forEach(entry => {
-            counts.All++;
-            switch (entry.status) {
-                case 'CURRENT': counts.Watching++; break;
-                case 'COMPLETED': counts.Completed++; break;
-                case 'PAUSED': counts.Paused++; break;
-                case 'DROPPED': counts.Dropped++; break;
-                case 'PLANNING': counts.Planning++; break;
-                case 'REPEATING': counts.Watching++; break; // Treat repeating as watching?
-            }
-        });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchHovered, setIsSearchHovered] = useState(false);
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-        return counts;
-    }, [fullAnimeList, isTrending]);
+    // Debounce hover to prevent jitter when layout shifts
+    const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = () => {
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+            hoverTimeoutRef.current = null;
+        }
+        setIsSearchHovered(true);
+    };
+
+    const handleMouseLeave = () => {
+        hoverTimeoutRef.current = setTimeout(() => {
+            setIsSearchHovered(false);
+        }, 150); // Small delay to allow for layout shifts or moving to input
+    };
 
     // Filtered list
     const filteredList = useMemo(() => {
-        if (selectedStatus === 'All') return fullAnimeList;
+        let result = fullAnimeList;
 
-        const statusMap: Record<string, string> = {
-            'Watching': 'CURRENT',
-            'Completed': 'COMPLETED',
-            'Paused': 'PAUSED',
-            'Dropped': 'DROPPED',
-            'Planning': 'PLANNING'
-        };
+        // 1. Filter by Status
+        if (selectedStatus !== 'All') {
+            const statusMap: Record<string, string> = {
+                'Watching': 'CURRENT',
+                'Completed': 'COMPLETED',
+                'Paused': 'PAUSED',
+                'Dropped': 'DROPPED',
+                'Planning': 'PLANNING'
+            };
+            const target = statusMap[selectedStatus];
 
-        const target = statusMap[selectedStatus];
+            if (selectedStatus === 'Watching') {
+                result = result.filter(entry => entry.status === 'CURRENT' || entry.status === 'REPEATING');
+            } else {
+                result = result.filter(entry => entry.status === target);
+            }
+        }
 
-        let result: AnimeEntry[] = [];
-        // Handle REPEATING if selected is Watching
-        if (selectedStatus === 'Watching') {
-            result = fullAnimeList.filter(entry => entry.status === 'CURRENT' || entry.status === 'REPEATING');
-        } else {
-            result = fullAnimeList.filter(entry => entry.status === target);
+        // 2. Filter by Search Query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(entry =>
+                (entry.media.title.english && entry.media.title.english.toLowerCase().includes(query)) ||
+                (entry.media.title.romaji && entry.media.title.romaji.toLowerCase().includes(query))
+            );
         }
 
         return result;
-    }, [fullAnimeList, selectedStatus]);
+    }, [fullAnimeList, selectedStatus, searchQuery]);
 
 
-    if (authLoading || loading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center h-full text-text-secondary">
                 <div className="animate-pulse">Loading Anime List...</div>
@@ -196,58 +215,105 @@ function AnimeList() {
 
     return (
         <div className="max-w-[1600px] mx-auto pb-10 px-6 min-h-screen">
+
+
             {/* Header / Stats Bar */}
-            <div className="flex flex-wrap items-center justify-between mb-8 py-4 border-b border-white/5 sticky top-0 z-30 bg-[#0f0f0f]/95 backdrop-blur-md">
-                <div className="flex flex-wrap items-center gap-4">
-                    {(['All', 'Watching', 'Completed', 'Paused', 'Dropped', 'Planning'] as ListStatus[]).map((status) => (
+            {/* Header / Stats Bar */}
+            <div className="sticky top-[-28px] z-30 mx-auto w-full max-w-[950px] h-[52px] relative flex items-center justify-center pointer-events-none -mt-10 mb-10">
+
+                {/* 1. Search Island (Left) - Fixed Position */}
+                <div
+                    className="absolute left-4 pointer-events-auto group bg-black/60 backdrop-blur-2xl border border-white/20 rounded-full shadow-2xl h-[52px] flex items-center transition-all duration-300 w-[52px] hover:w-[340px] focus-within:w-[340px] overflow-hidden hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:border-white/40"
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                >
+                    <div className="absolute left-0 top-0 w-[52px] h-full flex items-center justify-center text-white/70 group-hover:text-white transition-colors pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
+                        placeholder="Search library..."
+                        className="w-full h-full bg-transparent border-none outline-none text-white text-sm font-medium pl-14 pr-4 placeholder-white/30 cursor-pointer focus:cursor-text"
+                        style={{ fontFamily: 'var(--font-rounded)' }}
+                    />
+                </div>
+
+                {/* 2. Main Filter Pill (Right) - Centered */}
+                <div className="absolute right-4 top-0 pointer-events-auto flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl transition-all duration-300">
+                    {/* Status Buttons */}
+                    <div className="flex flex-wrap items-center gap-1">
+                        {(['All', 'Watching', 'Completed', 'Paused', 'Dropped', 'Planning'] as ListStatus[]).map((status) => {
+                            const isCompact = searchQuery || isSearchHovered || isSearchFocused;
+
+                            const getStatusIcon = (s: ListStatus) => {
+                                switch (s) {
+                                    case 'All': return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
+                                    case 'Watching': return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
+                                    case 'Completed': return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+                                    case 'Paused': return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>;
+                                    case 'Dropped': return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+                                    case 'Planning': return <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+                                }
+                            };
+
+                            return (
+                                <button
+                                    key={status}
+                                    onClick={() => setSelectedStatus(status)}
+                                    className={`flex items-center gap-2 rounded-full text-sm font-bold transition-all duration-200 border ${selectedStatus === status
+                                        ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]'
+                                        : 'bg-transparent border-transparent hover:bg-white/10'
+                                        } ${isCompact ? 'p-2' : 'px-4 py-2'}`}
+                                    style={{ fontFamily: 'var(--font-rounded)', color: selectedStatus === status ? 'black' : 'var(--color-text-muted)' }}
+                                    title={isCompact ? status : ''}
+                                >
+                                    {isCompact ? (
+                                        <span>{getStatusIcon(status)}</span>
+                                    ) : (
+                                        <span>{status}</span>
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    {/* Refresh Button */}
+                    <div className="flex items-center pl-2 border-l border-white/10">
                         <button
-                            key={status}
-                            onClick={() => setSelectedStatus(status)}
-                            className={`flex items - center gap - 2 px - 3 py - 1.5 rounded - lg text - sm font - medium transition - all duration - 200 ${selectedStatus === status
-                                ? 'bg-white text-black shadow-lg shadow-white/10 scale-105'
-                                : 'text-text-secondary hover:text-white hover:bg-white/5'
-                                } `}
+                            onClick={() => data?.refetch && data.refetch()}
+                            className={`p-2 rounded-full transition-all hover:bg-white/5 ${queryLoading ? 'animate-spin' : ''}`}
+                            style={{ color: 'var(--color-text-muted)', ...(queryLoading && { color: 'var(--color-text-main)' }) }}
+                            title="Refresh List"
                         >
-                            <span>{status}</span>
-                            <span className={`px - 1.5 rounded - md text - xs font - bold ${selectedStatus === status
-                                ? 'bg-black/10 text-black/70'
-                                : 'bg-white/10 text-text-secondary'
-                                } `}>
-                                {stats[status]}
-                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                         </button>
-                    ))}
-                </div>
+                    </div>
 
-                {/* View Toggle */}
-                <div className="flex items-center bg-white/5 rounded-lg p-1 gap-1">
-                    <button
-                        onClick={() => setViewMode('grid')}
-                        className={`p - 1.5 rounded - md transition - colors ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-white'
-                            } `}
-                        title="Grid View"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    </button>
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className={`p - 1.5 rounded - md transition - colors ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-text-secondary hover:text-white'
-                            } `}
-                        title="List View"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                    </button>
+                    {/* View Toggle - Divider included */}
+                    <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-2 rounded-full transition-all hover:bg-white/5 ${viewMode === 'grid' ? 'bg-white/20 shadow-sm' : ''
+                                } `}
+                            style={{ color: viewMode === 'grid' ? 'var(--color-text-main)' : 'var(--color-text-muted)' }}
+                            title="Grid View"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-2 rounded-full transition-all ${viewMode === 'list' ? 'bg-white/20 text-white shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'
+                                } `}
+                            title="List View"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            {/* Content header for count */}
-            <div className="mb-6">
-                <h2 className="text-xl font-bold text-white">
-                    {selectedStatus} Anime
-                    <span className="text-text-secondary text-sm font-normal ml-3">
-                        ({filteredList.length})
-                    </span>
-                </h2>
             </div>
 
             {/* Main Content Area - Virtualized */}
@@ -294,7 +360,7 @@ function AnimeList() {
                         overscan={200}
                         components={{
                             Header: () => (
-                                <div className="grid grid-cols-[80px_1fr_100px_100px] gap-4 px-4 py-2 text-sm text-text-secondary font-medium uppercase tracking-wider border-b border-white/5 mb-2 bg-[#0f0f0f]">
+                                <div className="grid grid-cols-[80px_1fr_100px_100px] gap-4 px-6 py-4 text-xs font-bold text-white/40 uppercase tracking-widest border-b border-white/5 mb-4 sticky top-[72px] bg-black/40 backdrop-blur-xl z-20 rounded-xl">
                                     <div>Image</div>
                                     <div>Title</div>
                                     <div>Score</div>
@@ -302,39 +368,43 @@ function AnimeList() {
                                 </div>
                             ),
                             List: forwardRef(({ style, children, ...props }: any, ref) => (
-                                <div ref={ref} {...props} style={style} className="flex flex-col gap-2 pb-20">{children}</div>
+                                <div ref={ref} {...props} style={style} className="flex flex-col gap-3 pb-20">{children}</div>
                             ))
                         }}
                         itemContent={(_index, entry) => (
                             <div
                                 onClick={() => handleAnimeClick(entry.media.id)}
-                                className="grid grid-cols-[80px_1fr_100px_100px] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-colors group"
+                                className="glass-panel grid grid-cols-[80px_1fr_100px_100px] gap-4 items-center p-4 rounded-2xl hover:bg-white/10 cursor-pointer transition-all duration-300 group border border-white/5 hover:border-white/20 hover:shadow-lg hover:shadow-purple-500/10"
+                                style={{
+                                    background: 'rgba(20, 20, 25, 0.4)',
+                                    backdropFilter: 'blur(8px)'
+                                }}
                             >
                                 {/* Image */}
-                                <div className="w-12 h-16 rounded-md overflow-hidden bg-surface-light">
+                                <div className="w-12 h-16 rounded-lg overflow-hidden relative shadow-md">
                                     <img
                                         src={entry.media.coverImage.medium}
                                         alt={entry.media.title.english || entry.media.title.romaji}
-                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                         loading="lazy"
                                     />
                                 </div>
                                 {/* Title */}
-                                <div className="font-medium text-white group-hover:text-primary transition-colors">
+                                <div className="font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2" style={{ fontFamily: 'var(--font-rounded)' }}>
                                     {entry.media.title.english || entry.media.title.romaji}
                                 </div>
                                 {/* Score */}
-                                <div className="text-sm">
-                                    <span className={`${(entry.score || 0) >= 7 ? 'text-green-400' : 'text-text-secondary'} `}>
-                                        {entry.score > 0 ? `${entry.score}/10` : '-'}
-                                    </span >
-                                </div >
+                                <div className="text-sm font-mono">
+                                    <span className={`font-bold ${entry.score >= 80 ? 'text-green-400' : 'text-white/60'}`}>
+                                        {entry.score > 0 ? `${entry.score}%` : '-'}
+                                    </span>
+                                </div>
                                 {/* Progress */}
-                                < div className="text-sm text-text-secondary" >
+                                <div className="text-sm text-white/60 font-medium">
                                     <span className="text-white">{entry.progress}</span>
-                                    <span className="opacity-50"> / {entry.media.episodes || '?'}</span>
-                                </div >
-                            </div >
+                                    <span className="opacity-40"> / {entry.media.episodes || '?'}</span>
+                                </div>
+                            </div>
                         )}
                     />
                 )

@@ -108,13 +108,19 @@ export async function updateAnimeActivity(params: {
     anilistId: number;  // Required - must have AniList match
     coverImage?: string | null;
     totalEpisodes?: number | null;
+    privacyLevel?: 'full' | 'minimal' | 'hidden';
 }): Promise<void> {
+    const { animeName, episode, season, anilistId, coverImage, totalEpisodes, privacyLevel = 'full' } = params;
+
+    // hidden: Do not update activity (effectively invisible)
+    if (privacyLevel === 'hidden') {
+        return;
+    }
+
     if (!isInitialized) {
         const success = await initDiscordRPC();
         if (!success) return;
     }
-
-    const { animeName, episode, season, anilistId, coverImage, totalEpisodes } = params;
 
     // Require AniList ID - skip if no match found
     if (!anilistId) {
@@ -135,57 +141,74 @@ export async function updateAnimeActivity(params: {
         // Build the activity
         let activity = new Activity();
 
-        // Set details (main text) - anime name (max 128 chars)
-        const truncatedName = animeName.length > 128 ? animeName.substring(0, 125) + '...' : animeName;
-        activity = activity.setDetails(truncatedName);
+        if (privacyLevel === 'minimal') {
+            // Minimal: Generic text, no episode details
+            activity = activity.setDetails('Watching Anime');
+            activity = activity.setState('Relaxing');
 
-        // Set state (secondary text) - episode info
-        let stateText = '';
-        if (episode !== null && episode !== undefined) {
-            stateText = `Episode ${episode}`;
-            if (totalEpisodes) {
-                stateText += ` of ${totalEpisodes}`;
-            }
-            if (season !== null && season !== undefined && season > 1) {
-                stateText = `S${season} • ${stateText}`;
-            }
+            // Assets: Generic icon
+            const assets = new Assets()
+                .setLargeImage(APP_ICON_ASSET)
+                .setLargeText('PLAY-ON!');
+
+            // No small image/text to keep it clean
+            activity = activity.setAssets(assets);
         } else {
-            stateText = 'Watching';
-        }
-        activity = activity.setState(stateText);
+            // Full: Detailed info
 
-        // Set timestamps (shows elapsed time on Discord)
+            // Set details (main text) - anime name (max 128 chars)
+            const truncatedName = animeName.length > 128 ? animeName.substring(0, 125) + '...' : animeName;
+            activity = activity.setDetails(truncatedName);
+
+            // Set state (secondary text) - episode info
+            let stateText = '';
+            if (episode !== null && episode !== undefined) {
+                stateText = `Episode ${episode}`;
+                if (totalEpisodes) {
+                    stateText += ` of ${totalEpisodes}`;
+                }
+                if (season !== null && season !== undefined && season > 1) {
+                    stateText = `S${season} • ${stateText}`;
+                }
+            } else {
+                stateText = 'Watching';
+            }
+            activity = activity.setState(stateText);
+
+            // Set assets (images)
+            const assets = new Assets();
+
+            // Use AniList cover image as large image (Discord supports external URLs)
+            if (coverImage) {
+                assets.setLargeImage(coverImage);
+                assets.setLargeText(animeName);
+            } else {
+                assets.setLargeImage(APP_ICON_ASSET);
+                assets.setLargeText(animeName);
+            }
+
+            // Use app icon as small image (must be uploaded to Discord Developer Portal)
+            assets.setSmallImage(APP_ICON_ASSET);
+            assets.setSmallText('PLAY-ON!');
+
+            activity = activity.setAssets(assets);
+
+            // Add buttons - Discord allows max 2 buttons
+            activity = activity.setButton([
+                new Button('View on AniList', `https://anilist.co/anime/${anilistId}`),
+                new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+            ]);
+        }
+
+        // Set timestamps (shows elapsed time on Discord) - applies to both modes
         if (watchStartTime) {
             const timestamps = new Timestamps(watchStartTime);
             activity = activity.setTimestamps(timestamps);
         }
 
-        // Set assets (images)
-        const assets = new Assets();
-
-        // Use AniList cover image as large image (Discord supports external URLs)
-        if (coverImage) {
-            assets.setLargeImage(coverImage);
-            assets.setLargeText(animeName);
-        } else {
-            assets.setLargeImage(APP_ICON_ASSET);
-            assets.setLargeText(animeName);
-        }
-
-        // Use app icon as small image (must be uploaded to Discord Developer Portal)
-        assets.setSmallImage(APP_ICON_ASSET);
-        assets.setSmallText('PLAY-ON!');
-
-        activity = activity.setAssets(assets);
-
-        // Add button to view on AniList
-        activity = activity.setButton([
-            new Button('View on AniList', `https://anilist.co/anime/${anilistId}`)
-        ]);
-
         await setActivity(activity);
         const logMsg = episode ? `Ep ${episode}${season ? ` S${season}` : ''}` : 'Activity updated';
-        console.log(`[Discord RPC] ${animeName} - ${logMsg}`);
+        console.log(`[Discord RPC] ${animeName} - ${logMsg} (${privacyLevel})`);
     } catch (err) {
         console.error('[Discord RPC] Failed to update activity:', err);
     }
@@ -194,7 +217,11 @@ export async function updateAnimeActivity(params: {
 /**
  * Set a generic "browsing" activity when not watching anything
  */
-export async function setBrowsingActivity(): Promise<void> {
+export async function setBrowsingActivity(privacyLevel: 'full' | 'minimal' | 'hidden' = 'full'): Promise<void> {
+    if (privacyLevel === 'hidden') {
+        return;
+    }
+
     if (!isInitialized) {
         const success = await initDiscordRPC();
         if (!success) return;
@@ -213,6 +240,11 @@ export async function setBrowsingActivity(): Promise<void> {
             .setLargeText('PLAY-ON!');
 
         activity = activity.setAssets(assets);
+
+        // Add GitHub button for browsing mode
+        activity = activity.setButton([
+            new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
+        ]);
 
         await setActivity(activity);
         currentAnimeId = null;

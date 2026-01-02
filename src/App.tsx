@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import AnimeList from './pages/AnimeList';
+import MangaList from './pages/MangaList';
+import MangaBrowse from './pages/MangaBrowse';
+import MangaSourceDetails from './pages/MangaSourceDetails';
+import MangaReader from './pages/MangaReader';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
@@ -10,7 +14,10 @@ import CounterDemo from './pages/CounterDemo';
 import MainLayout from './layouts/MainLayout';
 import { AuthProvider } from './context/AuthContext';
 import { LocalMediaProvider } from './context/LocalMediaContext';
+import { NowPlayingProvider } from './context/NowPlayingContext';
+import { SettingsProvider } from './context/SettingsContext';
 import LocalFolder from './pages/LocalFolder';
+import Settings from './pages/Settings';
 import "./App.css";
 
 /**
@@ -71,9 +78,12 @@ import "./App.css";
  * 
  * This is called a "route guard" or "protected route"
  */
+import { useSettings } from './context/SettingsContext';
+
 function ProtectedRoute() {
   const [isChecking, setIsChecking] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const { settings } = useSettings();
 
   useEffect(() => {
     // Check if user has completed onboarding
@@ -87,10 +97,10 @@ function ProtectedRoute() {
     return <div>Loading...</div>;
   }
 
-  // If onboarding completed, redirect to home
-  // Navigate component = programmatic redirect
+  // If onboarding completed, redirect to configured default page
   if (hasCompletedOnboarding) {
-    return <Navigate to="/home" replace />;
+    const targetPath = `/${settings.defaultPage}`;
+    return <Navigate to={targetPath} replace />;
   }
 
   // Otherwise, show onboarding
@@ -149,16 +159,12 @@ function ProtectedRoute() {
  * - Tauri window stays open, content inside changes
  */
 import { useOfflineSync } from './lib/offlineQueue';
-import { useDiscordRPC } from './hooks/useDiscordRPC';
 
 import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apollo';
 
 function App() {
   useOfflineSync();
-
-  // Enable Discord Rich Presence - automatically updates based on what you're watching
-  useDiscordRPC(true);
 
   useEffect(() => {
     // DEV: Clear onboarding status to force onboarding every time
@@ -169,31 +175,46 @@ function App() {
 
   return (
     <ApolloProvider client={apolloClient}>
-      <AuthProvider>
-        <LocalMediaProvider>
-          <BrowserRouter>
-            <Routes>
-              {/* Root route - checks if onboarding needed */}
-              <Route path="/" element={<ProtectedRoute />} />
+      <SettingsProvider>
+        <AuthProvider>
+          <LocalMediaProvider>
+            <NowPlayingProvider>
+              <BrowserRouter>
+                <Routes>
+                  {/* Root route - checks if onboarding needed */}
+                  <Route path="/" element={<ProtectedRoute />} />
 
-              {/* Main App Layout */}
-              <Route element={<MainLayout />}>
-                <Route path="/home" element={<Home />} />
-                <Route path="/anime-list" element={<AnimeList />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/statistics" element={<Statistics />} />
+                  {/* Full-screen Manga Reader (outside MainLayout) */}
+                  <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
 
-                {/* Dynamic route for anime details */}
-                <Route path="/anime/:id" element={<AnimeDetails />} />
-                <Route path="/counter-demo" element={<CounterDemo />} />
+                  {/* Main App Layout */}
+                  <Route element={<MainLayout />}>
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/anime-list" element={<AnimeList />} />
+                    <Route path="/manga-list" element={<MangaList />} />
+                    <Route path="/history" element={<History />} />
+                    <Route path="/statistics" element={<Statistics />} />
 
-                {/* Local Folder Route */}
-                <Route path="/local/:folderPath" element={<LocalFolder />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </LocalMediaProvider>
-      </AuthProvider>
+                    {/* Dynamic route for anime details */}
+                    <Route path="/anime/:id" element={<AnimeDetails />} />
+                    <Route path="/counter-demo" element={<CounterDemo />} />
+
+                    {/* Settings Route */}
+                    <Route path="/settings" element={<Settings />} />
+
+                    {/* Local Folder Route */}
+                    <Route path="/local/:folderPath" element={<LocalFolder />} />
+
+                    {/* Manga Source Routes */}
+                    <Route path="/manga-browse" element={<MangaBrowse />} />
+                    <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
+                  </Route>
+                </Routes>
+              </BrowserRouter>
+            </NowPlayingProvider>
+          </LocalMediaProvider>
+        </AuthProvider>
+      </SettingsProvider>
     </ApolloProvider>
   );
 }

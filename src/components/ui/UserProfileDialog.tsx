@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { clearAllCache } from '../../lib/cacheUtils';
@@ -18,6 +18,29 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({
     isAuthenticated
 }) => {
     const { logout } = useAuth();
+    const dialogRef = useRef<HTMLDivElement>(null);
+
+    // Close dialog when clicking outside
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dialogRef.current && !dialogRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+
+        // Add listener with a small delay to prevent immediate closing
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 10);
+
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const handleViewOnAniList = () => {
@@ -28,7 +51,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({
 
     return (
         <>
-            <div style={{
+            <div ref={dialogRef} style={{
                 position: 'fixed',
                 left: '10px',
                 bottom: '85px',

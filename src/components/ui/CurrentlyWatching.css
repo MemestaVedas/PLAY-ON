@@ -1,0 +1,111 @@
+/* src/components/ui/CurrentlyWatching.css */
+.watching-container {
+    padding: 0;
+    margin-bottom: 2rem;
+}
+
+.watching-header {
+    margin-bottom: 1.5rem;
+    color: #fff;
+    font-family: var(--font-rounded);
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.watching-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.watching-card {
+    position: relative;
+    display: flex;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: var(--color-content, rgba(20, 20, 25, 0.65));
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Dark glass border */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden;
+}
+
+.watching-card:hover {
+    transform: translateY(-4px);
+    background: rgba(30, 30, 35, 0.8);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.watching-cover {
+    width: 80px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.watching-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+}
+
+.watching-title {
+    margin: 0 0 0.5rem 0;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: var(--font-rounded);
+    line-height: 1.3;
+}
+
+.watching-progress-wrapper {
+    margin-bottom: 1rem;
+}
+
+.watching-progress-bar-bg {
+    height: 6px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.watching-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-zen-accent) 0%, #9FA5FE 100%);
+    border-radius: 100px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 10px rgba(180, 162, 246, 0.3);
+}
+
+.watching-btn {
+    align-self: flex-start;
+    padding: 0.5rem 1rem;
+    background: rgba(180, 162, 246, 0.15);
+    color: #C7B8EA;
+    border: 1px solid rgba(180, 162, 246, 0.3);
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-rounded);
+}
+
+.watching-btn:hover {
+    background: var(--color-zen-accent);
+    color: #000;
+    border-color: var(--color-zen-accent);
+    box-shadow: 0 0 15px rgba(180, 162, 246, 0.4);
+}

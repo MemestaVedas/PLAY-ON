@@ -16,6 +16,7 @@ const LocalMediaContext = createContext<LocalMediaContextType | undefined>(undef
 
 export function LocalMediaProvider({ children }: { children: React.ReactNode }) {
     const [folders, setFolders] = useState<LocalFolder[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -30,13 +31,15 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
                 console.error("Failed to parse local folders", e);
             }
         }
+        setIsLoaded(true);
     }, []);
 
-    // Save to localStorage whenever folders change
+    // Save to localStorage whenever folders change (but only after initial load)
     useEffect(() => {
+        if (!isLoaded) return; // Don't save until we've loaded
         console.log("LocalMediaContext: Saving to localStorage:", folders);
         localStorage.setItem('local-folders', JSON.stringify(folders));
-    }, [folders]);
+    }, [folders, isLoaded]);
 
     const addFolder = async () => {
         try {

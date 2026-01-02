@@ -28,47 +28,25 @@ const Breadcrumbs: React.FC = () => {
 
             try {
                 const decodedPath = decodeURIComponent(encodedPath);
-                // "D:\Anime\Naruto" or "/home/user/anime"
 
-                // Split logic that handles multiple separators
+                // Get just the last folder name
                 const parts = decodedPath.split(/[\\/]/).filter(Boolean);
+                const folderName = parts[parts.length - 1] || '';
 
-                // Detect system style for reconstruction
-                const isWindows = decodedPath.includes(':') || decodedPath.includes('\\');
-                const separator = isWindows ? '\\' : '/';
+                // Parse and clean the folder name (remove noise like [SubGroup], quality tags, etc.)
+                const parsedName = folderName
+                    .replace(/^\[.*?\]\s*/g, '')          // Remove leading [SubGroup]
+                    .replace(/\[.*?\]/g, '')               // Remove other [tags]
+                    .replace(/\(.*?\)/g, '')               // Remove (stuff in parens)
+                    .replace(/\d{3,4}p/gi, '')             // Remove 1080p, 720p, etc.
+                    .replace(/HEVC|x265|x264|AVC|AAC|FLAC|OPUS|Dual-Audio|10-bit|BD|BluRay|WEB|DL|Rip/gi, '')
+                    .replace(/[_\.]/g, ' ')                // Replace underscores/dots with spaces
+                    .replace(/\s+/g, ' ')                  // Collapse multiple spaces
+                    .trim();
 
-                let currentBuildPath = '';
-
-                // Handle Unix Root if needed
-                if (!isWindows && decodedPath.startsWith('/')) {
-                    currentBuildPath = '/';
-                }
-
-                parts.forEach((part, index) => {
-                    // Rebuild path for this segment
-                    if (index === 0) {
-                        if (isWindows) {
-                            currentBuildPath = part;
-                            // If "D:", ensure we treat it consistently? 
-                            // Usually "D:" alone isn't enough, but "D:\" is. 
-                            // Let's assume the split stripped the trailing slash of the root drive if it existed.
-                            if (part.endsWith(':')) currentBuildPath += '\\';
-                        } else {
-                            if (currentBuildPath === '/') currentBuildPath += part;
-                            else currentBuildPath = part;
-                        }
-                    } else {
-                        // Add separator
-                        if (!currentBuildPath.endsWith(separator)) {
-                            currentBuildPath += separator;
-                        }
-                        currentBuildPath += part;
-                    }
-
-                    crumbs.push({
-                        label: part,
-                        path: `/local/${encodeURIComponent(currentBuildPath)}`
-                    });
+                crumbs.push({
+                    label: parsedName || folderName,  // Fallback to original if parsing removes everything
+                    path: `/local/${encodedPath}`
                 });
 
             } catch (e) {
@@ -96,28 +74,26 @@ const Breadcrumbs: React.FC = () => {
     const crumbs = getCrumbs();
 
     return (
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-20 mt-6">
-            {/* Simple Text Breadcrumbs */}
-            <div className="flex items-center gap-2 text-sm font-medium px-4 py-2">
-                {crumbs.map((crumb, index) => {
-                    const isLast = index === crumbs.length - 1;
-                    const isClickable = !isLast && crumb.path;
+        <div className="glass-panel px-4 py-2 flex items-center gap-2 bg-black/20 rounded-full border border-white/5 backdrop-blur-md">
+            {crumbs.map((crumb, index) => {
+                const isLast = index === crumbs.length - 1;
+                const isClickable = !isLast && crumb.path;
 
-                    return (
-                        <React.Fragment key={index}>
-                            <span
-                                className={`transition-colors ${isClickable ? 'text-gray-400 hover:text-white cursor-pointer' : 'text-gray-500 cursor-default'} ${isLast ? 'text-white font-semibold' : ''}`}
-                                onClick={() => isClickable && crumb.path && navigate(crumb.path)}
-                            >
-                                {crumb.label}
-                            </span>
-                            {!isLast && (
-                                <span className="text-gray-600">/</span>
-                            )}
-                        </React.Fragment>
-                    );
-                })}
-            </div>
+                return (
+                    <React.Fragment key={index}>
+                        <span
+                            className={`transition-colors text-sm font-medium ${isClickable ? 'text-white/50 hover:text-white cursor-pointer' : 'text-white/30 cursor-default'} ${isLast ? 'text-white font-bold shadow-glow-sm' : ''}`}
+                            onClick={() => isClickable && crumb.path && navigate(crumb.path)}
+                            style={{ fontFamily: 'var(--font-rounded)' }}
+                        >
+                            {crumb.label}
+                        </span>
+                        {!isLast && (
+                            <span className="text-white/20 text-xs">/</span>
+                        )}
+                    </React.Fragment>
+                );
+            })}
         </div>
     );
 };

@@ -1,16 +1,14 @@
 /**
  * Shared UI Components
  * 
- * Flat 2D design system with cards and grids
- * Pastel color palette with clean, modern aesthetics
+ * Glassmorphic design system
  */
 
 import React from 'react';
-import colors from '../../styles/colors';
 import Counter from './Counter';
 
 // ============================================================================
-// SKELETON LOADER - Animated loading placeholder
+// SKELETON LOADER
 // ============================================================================
 interface SkeletonProps {
     width?: string | number;
@@ -31,7 +29,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
                 width,
                 height,
                 borderRadius,
-                background: 'linear-gradient(90deg, rgba(75, 75, 110, 0.2) 25%, rgba(100, 100, 140, 0.3) 50%, rgba(75, 75, 110, 0.2) 75%)',
+                background: 'linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%)',
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 1.5s infinite',
                 ...style,
@@ -41,7 +39,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 };
 
 // ============================================================================
-// PAGE TRANSITION - Wrapper for smooth page animations
+// PAGE TRANSITION
 // ============================================================================
 interface PageTransitionProps {
     children: React.ReactNode;
@@ -57,14 +55,8 @@ export const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
             {children}
             <style>{`
                 @keyframes fadeSlideIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
                 @keyframes shimmer {
                     0% { background-position: 200% 0; }
@@ -75,39 +67,47 @@ export const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
     );
 };
 
-
-
-// Card Component - Base building block
+// ============================================================================
+// Card Component - Glassmorphic Base
+// ============================================================================
 interface CardProps {
     children: React.ReactNode;
     onClick?: () => void;
     hover?: boolean;
-    gradient?: string;
+    style?: React.CSSProperties;
+    className?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ children, onClick, hover = false, gradient }) => {
+export const Card: React.FC<CardProps> = ({ children, onClick, hover = false, style, className = '' }) => {
     return (
         <div
             onClick={onClick}
+            className={`glass-panel ${className}`}
             style={{
-                background: gradient || colors.backgroundCard,
+                background: 'rgba(20, 20, 25, 0.6)',
+                backdropFilter: 'blur(12px) saturate(180%)',
                 borderRadius: '16px',
                 padding: '1.5rem',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-                border: '1px solid rgba(255, 181, 197, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
                 cursor: onClick ? 'pointer' : 'default',
-                transition: 'all 0.3s ease',
+                transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                ...style
             }}
             onMouseEnter={(e) => {
                 if (hover) {
                     e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.boxShadow = '0 12px 30px rgba(0, 0, 0, 0.3)';
+                    e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.background = 'rgba(30, 30, 35, 0.7)';
                 }
             }}
             onMouseLeave={(e) => {
                 if (hover) {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)',
+                        e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.background = 'rgba(20, 20, 25, 0.6)';
                 }
             }}
         >
@@ -116,7 +116,9 @@ export const Card: React.FC<CardProps> = ({ children, onClick, hover = false, gr
     );
 };
 
-// Stat Card - For displaying statistics
+// ============================================================================
+// Stat Card
+// ============================================================================
 interface StatCardProps {
     icon: string;
     label: string;
@@ -130,33 +132,32 @@ export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color, o
         <Card hover onClick={onClick}>
             <div style={{ textAlign: 'center' }}>
                 <div style={{
-                    fontSize: '2.5rem',
+                    fontSize: '2rem',
                     marginBottom: '0.5rem',
+                    textShadow: `0 0 20px ${color}40`,
+                    filter: 'grayscale(0.2)',
                 }}>
                     {icon}
                 </div>
-                <div style={{
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    justifyContent: 'center',
-                }}>
+                <div style={{ marginBottom: '0.25rem', display: 'flex', justifyContent: 'center' }}>
                     <Counter
                         value={value}
                         places={value >= 100 ? [100, 10, 1] : [10, 1]}
-                        fontSize={48}
-                        padding={5}
+                        fontSize={36}
+                        padding={4}
                         gap={4}
                         textColor={color}
-                        fontWeight={900}
+                        fontWeight={800}
                         gradientHeight={0}
                     />
                 </div>
                 <div style={{
-                    fontSize: '0.9rem',
-                    color: '#6B7280',
+                    fontSize: '0.75rem',
+                    color: 'rgba(255, 255, 255, 0.5)',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
+                    letterSpacing: '1px',
                     fontWeight: 600,
+                    fontFamily: 'var(--font-mono)',
                 }}>
                     {label}
                 </div>
@@ -165,139 +166,41 @@ export const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color, o
     );
 };
 
-// Anime Card - For anime list items
-interface AnimeCardProps {
-    title: string;
-    episodes: number;
-    status: string;
-    progress?: number;
-    image?: string;
-    onClick?: () => void;
-}
-
-export const AnimeCard: React.FC<AnimeCardProps> = ({
-    title,
-    episodes,
-    status,
-    progress = 0,
-    image,
-    onClick
-}) => {
-    return (
-        <Card onClick={onClick} hover>
-            {/* Image container */}
-            <div style={{
-                width: '100%',
-                height: '240px',
-                background: image ? `url(${image})` : colors.pastelLavender,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                borderRadius: '12px',
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '3rem',
-                position: 'relative',
-                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.2)',
-            }}>
-                {!image && '🎬'}
-
-                {/* Subtle glass overlay at bottom */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: '40%',
-                    background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
-                    borderRadius: '0 0 12px 12px',
-                }} />
-            </div>
-
-            {/* Title */}
-            <h3 style={{
-                fontSize: '1.1rem',
-                fontWeight: '600',
-                color: '#374151',
-                marginBottom: '0.5rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-            }}>
-                {title}
-            </h3>
-
-            {/* Info */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '0.75rem',
-            }}>
-                <span style={{ fontSize: '0.9rem', color: colors.mediumGray }}>
-                    {episodes} episodes
-                </span>
-                <span style={{
-                    fontSize: '0.8rem',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '12px',
-                    background: status === 'Watching' ? colors.pastelGreen : colors.pastelPurple,
-                    color: status === 'Watching' ? colors.greenDark : colors.purpleDark,
-                    fontWeight: '600',
-                }}>
-                    {status}
-                </span>
-            </div>
-
-            {/* Progress bar */}
-            {progress > 0 && (
-                <div style={{
-                    width: '100%',
-                    height: '6px',
-                    background: 'rgba(200, 200, 220, 0.3)',
-                    borderRadius: '3px',
-                    overflow: 'hidden',
-                }}>
-                    <div style={{
-                        width: `${progress}%`,
-                        height: '100%',
-                        background: colors.pastelPurple,
-                        transition: 'width 0.3s ease',
-                    }} />
-                </div>
-            )}
-        </Card>
-    );
-};
-
+// ============================================================================
 // Section Header
+// ============================================================================
 interface SectionHeaderProps {
     title: string;
     subtitle?: string;
     icon?: string;
+    className?: string;
 }
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, icon }) => {
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, icon, className = '' }) => {
     return (
         <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{
-                fontSize: '2rem',
-                fontWeight: '700',
-                color: '#374151',
-                marginBottom: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-            }}>
-                {icon && <span style={{ fontSize: '2.5rem' }}>{icon}</span>}
+            <h2
+                className={className}
+                style={{
+                    fontSize: '2rem',
+                    fontWeight: '700',
+                    color: '#fff',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    fontFamily: className ? undefined : 'var(--font-rounded)',
+                    letterSpacing: '-0.02em',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                }}>
+                {icon && <span style={{ fontSize: '2rem', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.2))' }}>{icon}</span>}
                 {title}
             </h2>
             {subtitle && (
                 <p style={{
                     fontSize: '1rem',
-                    color: '#6B7280',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    fontWeight: 500,
                 }}>
                     {subtitle}
                 </p>
@@ -306,7 +209,9 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, i
     );
 };
 
+// ============================================================================
 // Empty State
+// ============================================================================
 interface EmptyStateProps {
     icon: string;
     title: string;
@@ -315,24 +220,23 @@ interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description }) => {
     return (
-        <div style={{
-            textAlign: 'center',
-            padding: '4rem 2rem',
-        }}>
-            <div style={{ fontSize: '5rem', marginBottom: '1rem', opacity: 0.5 }}>
+        <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1.5rem', opacity: 0.3, filter: 'grayscale(1)' }}>
                 {icon}
             </div>
             <h3 style={{
-                fontSize: '1.5rem',
+                fontSize: '1.25rem',
                 fontWeight: '600',
-                color: '#374151',
+                color: '#fff',
                 marginBottom: '0.5rem',
             }}>
                 {title}
             </h3>
             <p style={{
-                fontSize: '1rem',
-                color: '#6B7280',
+                fontSize: '0.9rem',
+                color: 'rgba(255, 255, 255, 0.4)',
+                maxWidth: '400px',
+                margin: '0 auto',
             }}>
                 {description}
             </p>

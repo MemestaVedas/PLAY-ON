@@ -1,0 +1,307 @@
+/**
+ * Manga Reader Styles
+ * Full-screen immersive reading experience
+ */
+
+.manga-reader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #0a0a0a;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Loading State */
+.manga-reader-loading,
+.manga-reader-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #0a0a0a;
+    color: white;
+    gap: 1rem;
+}
+
+.manga-reader-loading .loader {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--color-lavender, #d4b8ff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.manga-reader-error button {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-lavender, #d4b8ff);
+    color: black;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.manga-reader-error button:hover {
+    transform: scale(1.05);
+}
+
+/* Top Controls */
+.reader-controls-top {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.reader-controls-top.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.back-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.chapter-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.manga-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+    font-family: var(--font-rounded);
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chapter-number {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.reader-settings {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.mode-select {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-select:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.mode-select option {
+    background: #1a1a1a;
+    color: white;
+}
+
+/* Main Content Area */
+.reader-content {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+}
+
+/* Vertical Mode */
+.reader-content.vertical .vertical-scroll {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 0;
+    gap: 0;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.reader-content.vertical .page-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Single Page Mode */
+.reader-content.single .single-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.reader-content.single .page-image {
+    max-height: 100vh;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.nav-area {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 15%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0);
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 10;
+}
+
+.nav-area:hover {
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.4), transparent);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.nav-area.prev {
+    left: 0;
+}
+
+.nav-area.next {
+    right: 0;
+}
+
+.nav-area.next:hover {
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.4), transparent);
+}
+
+/* Bottom Controls */
+.reader-controls-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    gap: 2rem;
+}
+
+.reader-controls-bottom.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.chapter-nav-btn {
+    padding: 0.6rem 1.25rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chapter-nav-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--color-lavender, #d4b8ff);
+}
+
+.chapter-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.page-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: white;
+}
+
+.page-indicator .separator {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Scrollbar styling for reader */
+.reader-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.reader-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.reader-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.reader-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

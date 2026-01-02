@@ -23,8 +23,6 @@ const StatusBar: React.FC = () => {
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         <span className="text-text-secondary">Online</span>
                     </div>
-                    <span className="text-text-secondary opacity-30">|</span>
-                    <span className="text-text-secondary">v0.1.1</span>
                 </div>
             </div>
         </div>

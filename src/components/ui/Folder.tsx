@@ -42,11 +42,14 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
     const paper2 = darkenColor('#ffffff', 0.05);
     const paper3 = '#ffffff';
 
-    const handleClick = () => {
-        setOpen(prev => !prev);
-        if (open) {
-            setPaperOffsets(Array.from({ length: maxItems }, () => ({ x: 0, y: 0 })));
-        }
+    // Open on hover, close on leave
+    const handleMouseEnter = () => {
+        setOpen(true);
+    };
+
+    const handleMouseLeave = () => {
+        setOpen(false);
+        setPaperOffsets(Array.from({ length: maxItems }, () => ({ x: 0, y: 0 })));
     };
 
     const handlePaperMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>, index: number) => {
@@ -97,7 +100,8 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
                     ...folderStyle,
                     transform: open ? 'translateY(-8px)' : undefined
                 }}
-                onClick={handleClick}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
             >
                 <div
                     className="relative w-[100px] h-[80px] rounded-tl-0 rounded-tr-[10px] rounded-br-[10px] rounded-bl-[10px]"

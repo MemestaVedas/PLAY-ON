@@ -11,6 +11,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
 import { USER_MEDIA_LIST_QUERY } from '../../api/anilistClient';
 import { useNavigate } from 'react-router-dom';
+import './CurrentlyWatching.css';
 
 function CurrentlyWatching() {
     const { user, loading: authLoading } = useAuth();
@@ -45,93 +46,56 @@ function CurrentlyWatching() {
     if (!user) return null;
 
     return (
-        <div style={{ padding: '2rem' }}>
-            <h2 style={{ color: '#374151', marginBottom: '1.5rem' }}>
-                📺 Currently Watching - {user.name}
+        <div className="watching-container">
+            <h2 className="watching-header">
+                Currently Watching
             </h2>
 
             {!animeList || animeList.length === 0 ? (
-                <p style={{ color: '#6B7280' }}>No titles currently watching</p>
+                <p style={{ color: '#a1a1aa', fontFamily: 'var(--font-rounded)' }}>No titles currently watching</p>
             ) : (
-                <div style={{ display: 'grid', gap: '1rem' }}>
+                <div className="watching-grid">
                     {animeList.map((entry: any) => (
                         <div
                             key={entry.id}
-                            style={{
-                                display: 'flex',
-                                gap: '1.5rem',
-                                padding: '1.25rem',
-                                background: 'rgba(255, 255, 255, 0.8)',
-                                borderRadius: '16px',
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                backdropFilter: 'blur(10px)',
-                                cursor: 'pointer'
-                            }}
+                            className="watching-card"
                             onClick={() => navigate(`/anime/${entry.media.id}`)}
                         >
                             {/* Poster Cover Image */}
                             <img
                                 src={entry.media.coverImage?.medium || entry.media.coverImage?.large}
                                 alt={entry.media.title?.romaji}
-                                style={{
-                                    width: '80px',
-                                    height: '110px',
-                                    objectFit: 'cover',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                                }}
+                                className="watching-cover"
                             />
 
                             {/* Info */}
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                <h3 style={{ margin: '0 0 0.5rem 0', color: '#1F2937', fontSize: '1.1rem' }}>
+                            <div className="watching-info">
+                                <h3 className="watching-title">
                                     {entry.media.title?.english || entry.media.title?.romaji}
                                 </h3>
 
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <div style={{
-                                        height: '6px',
-                                        width: '100%',
-                                        background: '#E5E7EB',
-                                        borderRadius: '3px',
-                                        overflow: 'hidden',
-                                        marginBottom: '0.5rem',
-                                    }}>
-                                        <div style={{
-                                            height: '100%',
-                                            width: `${(entry.progress / (entry.media.episodes || 1)) * 100}%`,
-                                            background: 'linear-gradient(90deg, #C7B8EA, #FFB5C5)',
-                                            borderRadius: '3px',
-                                            transition: 'width 0.3s ease',
-                                        }} />
+                                <div className="watching-progress-wrapper">
+                                    <div className="flex justify-between text-xs text-gray-400 mb-1 font-medium font-mono">
+                                        <span style={{ color: 'var(--color-zen-accent)' }}>EP {entry.progress}</span>
+                                        <span>{entry.media.episodes ? ` / ${entry.media.episodes}` : ''}</span>
                                     </div>
-                                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#6B7280', fontWeight: '500' }}>
-                                        Progress: <span style={{ color: '#C7B8EA' }}>{entry.progress}</span> / {entry.media.episodes || '?'}
-                                    </p>
+                                    <div className="watching-progress-bar-bg">
+                                        <div
+                                            className="watching-progress-bar-fill"
+                                            style={{
+                                                width: `${(entry.progress / (entry.media.episodes || 1)) * 100}%`,
+                                            }}
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Update Button */}
                                 <button
+                                    className="watching-btn"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleIncrement(entry.media.id, entry.progress);
                                     }}
-                                    style={{
-                                        alignSelf: 'flex-start',
-                                        padding: '0.5rem 1rem',
-                                        background: 'linear-gradient(135deg, #C7B8EA 0%, #B8A4E8 100%)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        fontSize: '0.85rem',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        boxShadow: '0 2px 4px rgba(199, 184, 234, 0.3)',
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                                 >
                                     +1 Episode
                                 </button>

@@ -4,9 +4,9 @@ import { useHistory, HistoryFlatItem } from '../hooks/useHistory';
 import { Virtuoso } from 'react-virtuoso';
 
 function History() {
-    const { flatHistory, loading, error } = useHistory();
+    const { flatHistory, loading, error, refetch } = useHistory();
 
-    if (loading) {
+    if (loading && flatHistory.length === 0) {
         return (
             <div className="max-w-[1000px] mx-auto p-8 text-center text-text-secondary">
                 <div className="animate-pulse">Loading watch history...</div>
@@ -25,12 +25,20 @@ function History() {
 
     return (
         <div className="h-full flex flex-col max-w-[1000px] mx-auto px-6">
-            <div className="pt-4 pb-2">
+            <div className="pt-4 pb-2 flex justify-between items-center">
                 <SectionHeader
                     title="Watch History"
                     subtitle="Your recent anime viewing activity"
-                    icon="🕒"
+                    className="font-planet tracking-[0.2em] text-[#B4A2F6]"
                 />
+                <button
+                    onClick={() => refetch()}
+                    className={`p-2 rounded-full transition-all ${loading ? 'animate-spin' : ''}`}
+                    style={{ color: 'var(--color-text-muted)' }}
+                    title="Refresh History"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                </button>
             </div>
 
             <div className="flex-1 min-h-0">
@@ -42,7 +50,7 @@ function History() {
                         overscan={200}
                         components={{
                             List: forwardRef(({ style, children, ...props }: any, ref) => (
-                                <div ref={ref} {...props} style={style} className="flex flex-col gap-3 pb-20">
+                                <div ref={ref} {...props} style={style} className="flex flex-col gap-4 pb-20">
                                     {children}
                                 </div>
                             ))
@@ -50,44 +58,47 @@ function History() {
                         itemContent={(_index, item: HistoryFlatItem) => {
                             if (item.type === 'header') {
                                 return (
-                                    <h3 className="text-lg font-semibold text-text-secondary uppercase tracking-wider py-4 bg-[#0f0f0f] sticky top-0 z-10">
-                                        {item.date}
-                                    </h3>
+                                    <div className="bg-black/20 backdrop-blur-md rounded-xl py-2 px-4 sticky top-0 z-10 border border-white/5 shadow-sm mt-4 mb-2 w-fit mx-auto">
+                                        <h3 className="text-sm font-bold text-white/50 uppercase tracking-widest font-mono">
+                                            {item.date}
+                                        </h3>
+                                    </div>
                                 );
                             }
 
                             const data = item.data;
                             return (
-                                <Card hover>
+                                <Card hover className="bg-black/20">
                                     <div className="grid grid-cols-[60px_1fr_auto] gap-4 items-center">
                                         {/* Icon/Thumbnail */}
-                                        <div className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-surface-light flex items-center justify-center border border-white/5">
+                                        <div className="w-[60px] h-[60px] rounded-xl overflow-hidden bg-white/5 flex items-center justify-center border border-white/10 shadow-inner relative group">
                                             <img
                                                 src={data.image}
                                                 alt={data.anime}
-                                                className="w-full h-full object-cover"
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                                 onError={(e) => {
                                                     (e.target as HTMLImageElement).src = 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/default.jpg';
                                                 }}
                                             />
+                                            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
                                         </div>
 
                                         {/* Info */}
                                         <div className="min-w-0">
-                                            <div className="font-bold text-white truncate mb-1">
+                                            <div className="font-bold text-white truncate mb-1 text-lg" style={{ fontFamily: 'var(--font-rounded)' }}>
                                                 {data.anime}
                                             </div>
-                                            <div className="text-sm text-text-secondary flex gap-2 items-center">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${data.status === 'COMPLETED' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'
+                                            <div className="text-sm flex gap-3 items-center font-mono">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${data.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                                                     }`}>
                                                     {data.status}
                                                 </span>
-                                                <span className="opacity-70">{data.progress}</span>
+                                                <span className="opacity-40 text-white font-bold">{data.progress}</span>
                                             </div>
                                         </div>
 
                                         {/* Time */}
-                                        <div className="text-sm text-text-secondary font-medium tabular-nums px-3 py-1 bg-white/5 rounded-lg border border-white/5">
+                                        <div className="text-xs text-white/30 font-bold tabular-nums px-3 py-1 bg-white/5 rounded-full border border-white/5 font-mono">
                                             {data.time}
                                         </div>
                                     </div>

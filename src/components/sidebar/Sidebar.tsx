@@ -5,7 +5,7 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { ListIcon, HistoryIcon, HomeIcon } from '../ui/Icons';
+import { ListIcon, HistoryIcon, HomeIcon, FolderIcon, BookIcon, SettingsIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
 
 interface SidebarNavItem {
@@ -18,7 +18,7 @@ interface SidebarProps {
     width: number;
 }
 
-function Sidebar({ width }: SidebarProps) {
+function Sidebar({ width: _width }: SidebarProps) {
     const navigate = useNavigate();
     const location = useLocation();
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -28,70 +28,105 @@ function Sidebar({ width }: SidebarProps) {
     // Fetch local folder data
     const { folders: localItems, addFolder } = useLocalMedia();
 
-    const mainItems: SidebarNavItem[] = [
-        { label: 'Home', path: '/home', icon: <HomeIcon /> },
-        { label: 'Anime List', path: '/anime-list', icon: <ListIcon /> },
-        { label: 'History', path: '/history', icon: <HistoryIcon /> },
+    // Navigation Sections
+    const homeItem: SidebarNavItem = { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> };
+
+    const animeSection: SidebarNavItem[] = [
+        { label: 'Library', path: '/anime-list', icon: <ListIcon size={20} /> },
+    ];
+
+    const mangaSection: SidebarNavItem[] = [
+        { label: 'Library', path: '/manga-list', icon: <BookIcon size={20} /> },
+        { label: 'Browse Sources', path: '/manga-browse', icon: <BookIcon size={20} /> },
+    ];
+
+    const generalSection: SidebarNavItem[] = [
+        { label: 'History', path: '/history', icon: <HistoryIcon size={20} /> },
+        { label: 'Settings', path: '/settings', icon: <SettingsIcon size={20} /> },
     ];
 
     const handleNavClick = (path: string) => {
         navigate(path);
     };
 
-    return (
+    const renderLink = (item: SidebarNavItem) => {
+        const isActive = location.pathname === item.path ||
+            (item.path === '/anime-list' && location.pathname.startsWith('/anime/'));
+
+        return (
+            <SidebarItem
+                key={item.path}
+                label={item.label}
+                icon={item.icon}
+                isActive={isActive}
+                onClick={() => handleNavClick(item.path)}
+            />
+        );
+    };
+
+    const renderSectionHeader = (title: string) => (
         <div style={{
-            width: `${width}px`,
-            height: '100vh',
-            background: 'transparent', // Match shell area (transparent to show background)
-            display: 'flex',
-            flexDirection: 'column',
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            zIndex: 100,
-            paddingTop: '32px', // Space for transparent titlebar
+            padding: '0 0.75rem',
+            marginBottom: '0.5rem',
+            marginTop: '1rem',
+            fontSize: '0.7rem',
+            fontWeight: '800',
+            color: 'var(--color-text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            fontFamily: 'var(--font-rounded)',
+            opacity: 0.7
         }}>
+            {title}
+        </div>
+    );
+
+    return (
+        <div
+            style={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                paddingTop: '40px', // Keep padding for titlebar
+                borderRadius: '0',  // Sidebar shouldn't be rounded
+                border: 'none',     // Remove all borders
+                background: 'transparent', // Unify with shell
+            }}
+        >
             {/* Navigation Items */}
             <div style={{
                 flex: 1,
                 padding: '1rem 0.5rem',
                 overflowY: 'auto',
             }}>
-                {/* Main Group */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                    {mainItems.map((item) => {
-                        const isActive = location.pathname === item.path ||
-                            (item.path === '/anime-list' && location.pathname.startsWith('/anime/'));
+                {/* Home - Top Level */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {renderLink(homeItem)}
+                </div>
 
-                        return (
-                            <SidebarItem
-                                key={item.path}
-                                label={item.label}
-                                icon={item.icon}
-                                isActive={isActive}
-                                onClick={() => handleNavClick(item.path)}
-                            />
-                        );
-                    })}
+                {/* Anime Section */}
+                {renderSectionHeader('Anime')}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {animeSection.map(renderLink)}
+                </div>
+
+                {/* Manga Section */}
+                {renderSectionHeader('Manga')}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {mangaSection.map(renderLink)}
+                </div>
+
+                {/* General Section */}
+                {renderSectionHeader('General')}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {generalSection.map(renderLink)}
                 </div>
 
                 {/* Local Group */}
                 <div>
-                    <div style={{
-                        padding: '0 0.75rem',
-                        marginBottom: '0.5rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        color: '#6B6F76',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                    }}>
-                        <span>Local</span>
-                        <div style={{ flex: 1, height: '1px', background: '#313338' }}></div>
-                    </div>
+                    {renderSectionHeader('Local Sources')}
+                    <div style={{ height: '0.5rem' }}></div>
 
                     {localItems.map((item) => (
                         <div
@@ -100,16 +135,19 @@ function Sidebar({ width }: SidebarProps) {
                             style={{
                                 padding: '0.5rem 0.75rem',
                                 borderRadius: '4px',
-                                color: '#949BA4',
+                                color: 'var(--color-text-muted)',
                                 cursor: 'pointer',
                                 fontSize: '0.9rem',
                                 transition: 'all 0.2s',
                                 marginLeft: '0.5rem'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = '#FFFFFF'}
-                            onMouseLeave={(e) => e.currentTarget.style.color = '#949BA4'}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
                         >
-                            📁 {item.label}
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FolderIcon size={16} />
+                                {item.label}
+                            </span>
                         </div>
                     ))}
 
@@ -117,22 +155,33 @@ function Sidebar({ width }: SidebarProps) {
                     <div
                         onClick={addFolder}
                         style={{
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '4px',
-                            color: colors.lavenderMist, // Accent color
+                            padding: '0.6rem 1rem',
+                            borderRadius: '12px',
+                            background: 'var(--color-bg-glass-hover)',
+                            color: 'var(--color-zen-accent)',
                             cursor: 'pointer',
-                            fontSize: '0.85rem',
-                            transition: 'all 0.2s',
+                            fontSize: '0.8rem',
+                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                             marginLeft: '0.5rem',
-                            marginTop: '0.25rem',
+                            marginTop: '0.75rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            justifyContent: 'center',
+                            gap: '8px',
+                            fontFamily: 'var(--font-rounded)',
+                            fontWeight: '600',
+                            letterSpacing: '0.02em',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--color-border-highlight)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
                     >
-                        + Add folder
+                        <span>+ Add Source</span>
                     </div>
                 </div>
             </div>
@@ -143,7 +192,6 @@ function Sidebar({ width }: SidebarProps) {
                     <button
                         onClick={async () => {
                             try {
-                                // Calls login from AuthContext which handles the deep link redirect
                                 await login();
                             } catch (error) {
                                 console.error('Failed to initiate login:', error);
@@ -151,18 +199,26 @@ function Sidebar({ width }: SidebarProps) {
                         }}
                         style={{
                             width: '100%',
-                            padding: '0.75rem',
-                            borderRadius: '8px',
-                            background: colors.lavenderMist,
-                            color: '#1a1b1e',
-                            fontWeight: '600',
+                            padding: '0.8rem',
+                            borderRadius: '14px',
+                            background: 'linear-gradient(135deg, var(--color-zen-accent) 0%, #9FA5FE 100%)',
+                            color: '#000',
+                            fontWeight: '700',
                             border: 'none',
                             cursor: 'pointer',
                             fontSize: '0.9rem',
-                            transition: 'transform 0.2s',
+                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                            fontFamily: 'var(--font-rounded)',
+                            boxShadow: '0 4px 15px rgba(180, 162, 246, 0.3)',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(180, 162, 246, 0.4)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(180, 162, 246, 0.3)';
+                        }}
                     >
                         Login with AniList
                     </button>
@@ -193,7 +249,7 @@ function Sidebar({ width }: SidebarProps) {
             {/* Profile Section */}
             <div style={{
                 padding: '0.75rem',
-                borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                borderTop: '1px solid var(--color-border-subtle)',
                 background: 'transparent',
             }}>
                 <div style={{
@@ -207,7 +263,7 @@ function Sidebar({ width }: SidebarProps) {
                 }}
                     onClick={() => setShowProfileModal(true)}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#35373C';
+                        e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
                     }}
                     onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
@@ -218,7 +274,7 @@ function Sidebar({ width }: SidebarProps) {
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: loading ? '#404249' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
+                        background: loading ? 'var(--color-bg-glass-hover)' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -231,7 +287,7 @@ function Sidebar({ width }: SidebarProps) {
                             <div style={{
                                 width: '100%',
                                 height: '100%',
-                                backgroundImage: 'linear-gradient(90deg, #404249 0%, #4f5159 50%, #404249 100%)',
+                                backgroundImage: 'linear-gradient(90deg, var(--color-bg-glass-hover) 0%, var(--color-border-subtle) 50%, var(--color-bg-glass-hover) 100%)',
                                 backgroundSize: '200% 100%',
                                 animation: 'pulse 1.5s ease-in-out infinite',
                             }} />
@@ -255,7 +311,7 @@ function Sidebar({ width }: SidebarProps) {
                         <div style={{
                             fontSize: '0.9rem',
                             fontWeight: '600',
-                            color: '#FFFFFF',
+                            color: 'var(--color-text-main)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -264,7 +320,7 @@ function Sidebar({ width }: SidebarProps) {
                         </div>
                         <div style={{
                             fontSize: '0.75rem',
-                            color: '#B5BAC1',
+                            color: 'var(--color-text-muted)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -273,18 +329,7 @@ function Sidebar({ width }: SidebarProps) {
                         </div>
                     </div>
 
-                    {/* Settings Icon */}
-                    <div style={{
-                        width: '20px',
-                        height: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#B5BAC1',
-                        fontSize: '1rem',
-                    }}>
-                        ⚙️
-                    </div>
+
                 </div>
             </div>
 

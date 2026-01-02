@@ -1,0 +1,331 @@
+/**
+ * Manga Source Details Styles
+ */
+
+.manga-source-details {
+    min-height: 100vh;
+    padding-bottom: 4rem;
+}
+
+.manga-source-details-loading,
+.manga-source-details-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    color: white;
+    gap: 1rem;
+}
+
+.manga-source-details-loading .loader {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--color-lavender, #d4b8ff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.manga-source-details-error button {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-lavender, #d4b8ff);
+    color: black;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* Hero Section */
+.hero-section {
+    position: relative;
+    padding: 3rem 2rem 2rem;
+    margin: -2rem -2rem 2rem;
+    overflow: hidden;
+}
+
+.hero-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.3);
+    transform: scale(1.2);
+    z-index: 0;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.cover-image {
+    width: 200px;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
+}
+
+.manga-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+}
+
+.source-badge {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    padding: 0.35rem 0.75rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.manga-info .title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    font-family: var(--font-rounded);
+    line-height: 1.2;
+}
+
+.manga-info .meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.9rem;
+}
+
+.manga-info .author {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.manga-info .status {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.manga-info .status.ongoing {
+    background: rgba(76, 175, 80, 0.2);
+    color: #81c784;
+}
+
+.manga-info .status.completed {
+    background: rgba(33, 150, 243, 0.2);
+    color: #64b5f6;
+}
+
+.manga-info .status.hiatus {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffd54f;
+}
+
+.manga-info .status.cancelled {
+    background: rgba(244, 67, 54, 0.2);
+    color: #e57373;
+}
+
+.genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.genre-tag {
+    padding: 0.3rem 0.6rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.primary-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-lavender, #d4b8ff);
+    color: black;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(212, 184, 255, 0.3);
+}
+
+.secondary-btn {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Description Section */
+.description-section {
+    max-width: 1200px;
+    margin: 0 auto 2rem;
+    padding: 0 2rem;
+}
+
+.description-section h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 0.75rem;
+}
+
+.description-section p {
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+/* Chapters Section */
+.chapters-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.chapters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.chapters-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+}
+
+.chapter-search input {
+    padding: 0.6rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    width: 200px;
+    transition: all 0.2s;
+}
+
+.chapter-search input:focus {
+    outline: none;
+    border-color: var(--color-lavender, #d4b8ff);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.chapter-search input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.chapter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chapter-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chapter-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateX(4px);
+}
+
+.chapter-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.chapter-number {
+    font-weight: 600;
+    color: white;
+    font-size: 0.95rem;
+}
+
+.chapter-title {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+}
+
+.chapter-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.scanlator {
+    padding: 0.2rem 0.5rem;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+}
+
+.no-chapters {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(255, 255, 255, 0.5);
+}

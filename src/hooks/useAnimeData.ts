@@ -35,6 +35,28 @@ export interface Anime {
         progress: number;
         score?: number;
     };
+    recommendations?: {
+        nodes: {
+            mediaRecommendation: {
+                id: number;
+                title: {
+                    english?: string;
+                    romaji: string;
+                    native?: string;
+                };
+                coverImage: {
+                    extraLarge: string;
+                    large: string;
+                    medium: string;
+                    color?: string;
+                };
+                status?: string;
+                averageScore?: number;
+                format?: string;
+                episodes?: number;
+            };
+        }[];
+    };
 }
 
 export function useAnimeData() {

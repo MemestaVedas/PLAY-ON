@@ -8,13 +8,44 @@
   "permissions": [
     "core:default",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
     "core:window:allow-close",
     "core:window:allow-toggle-maximize",
     "core:window:allow-minimize",
     "core:window:allow-start-dragging",
     "deep-link:default",
     "deep-link:allow-register",
-    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://weebcentral.com/*"
+        },
+        {
+          "url": "https://*.weebcentral.com/*"
+        },
+        {
+          "url": "https://temp.compsci88.com/*"
+        },
+        {
+          "url": "https://*.compsci88.com/*"
+        },
+        {
+          "url": "https://planeptune.us/*"
+        },
+        {
+          "url": "https://*.planeptune.us/*"
+        }
+      ],
+      "deny": []
+    },
     "dialog:default",
     "shell:allow-open",
     "process:default",

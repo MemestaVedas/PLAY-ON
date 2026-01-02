@@ -1,0 +1,598 @@
+/* ============================================================================
+   SETTINGS PAGE STYLES
+   Glassmorphic, modern settings interface
+   ============================================================================ */
+
+.settings-container {
+    display: flex;
+    flex-direction: column;
+    /* Changed from row */
+    gap: 24px;
+    min-height: calc(100vh - 200px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================================================
+   TABS TOP BAR
+   ============================================================================ */
+
+.settings-tabs {
+    display: flex;
+    flex-direction: row;
+    /* Changed from column */
+    gap: 8px;
+    /* Slightly increased gap */
+    width: 100%;
+    /* Full width */
+    min-width: auto;
+    padding: 8px;
+    /* Reduced padding */
+    background: var(--color-bg-glass);
+    border-radius: 16px;
+    border: 1px solid var(--color-border-subtle);
+    height: fit-content;
+    position: sticky;
+    top: 0;
+    /* Stick to top */
+    z-index: 10;
+    /* Ensure it stays above content */
+    backdrop-filter: blur(10px);
+    overflow-x: auto;
+    /* Allow scrolling if tabs don't fit */
+    scrollbar-width: none;
+    /* Hide scrollbar for cleaner look */
+}
+
+/* Hide scrollbar for WebKit */
+.settings-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.settings-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Center content */
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    /* Prevent wrapping */
+    flex: 1;
+    /* Distribute space evenly */
+}
+
+.settings-tab:hover {
+    background: var(--color-bg-glass-hover);
+    color: var(--color-text-main);
+}
+
+.settings-tab.active {
+    background: linear-gradient(135deg, rgba(180, 162, 246, 0.15), rgba(165, 219, 248, 0.1));
+    color: #B4A2F6;
+    border: 1px solid rgba(180, 162, 246, 0.2);
+}
+
+.settings-tab-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+/* ============================================================================
+   SETTINGS CONTENT
+   ============================================================================ */
+
+.settings-content {
+    flex: 1;
+    padding: 24px;
+    background: var(--color-bg-glass);
+    border-radius: 20px;
+    border: 1px solid var(--color-border-subtle);
+    backdrop-filter: blur(10px);
+}
+
+.settings-section {
+    animation: slideIn 0.25s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.settings-section-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-text-main);
+    margin-bottom: 8px;
+}
+
+.settings-section-description {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin-bottom: 32px;
+}
+
+/* ============================================================================
+   SETTING ROWS
+   ============================================================================ */
+
+.setting-group {
+    margin-bottom: 32px;
+}
+
+.setting-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    opacity: 0.7;
+    margin-bottom: 16px;
+    padding-left: 4px;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--color-bg-glass);
+    border-radius: 14px;
+    margin-bottom: 8px;
+    transition: background 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.setting-row:hover {
+    background: var(--color-bg-glass-hover);
+    border-color: var(--color-border-subtle);
+}
+
+.setting-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.setting-label {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--color-text-main);
+}
+
+.setting-description {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+/* ============================================================================
+   TOGGLE SWITCH
+   ============================================================================ */
+
+.toggle-switch {
+    position: relative;
+    width: 48px;
+    height: 26px;
+    background: var(--color-border-subtle);
+    border-radius: 13px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.toggle-switch.active {
+    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    border-color: transparent;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active::after {
+    transform: translateX(22px);
+}
+
+/* ============================================================================
+   DROPDOWN
+   ============================================================================ */
+
+.dropdown-select {
+    padding: 10px 36px 10px 14px;
+    background: var(--color-bg-glass-hover);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 10px;
+    color: var(--color-text-main);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    min-width: 140px;
+}
+
+.dropdown-select:hover {
+    background-color: var(--color-border-subtle);
+}
+
+.dropdown-select:focus {
+    outline: none;
+    border-color: #B4A2F6;
+    box-shadow: 0 0 0 3px rgba(180, 162, 246, 0.15);
+}
+
+.dropdown-select option {
+    background: var(--color-bg-card);
+    color: var(--color-text-main);
+}
+
+/* ============================================================================
+   THEME SWITCHER
+   ============================================================================ */
+
+.theme-switcher {
+    display: flex;
+    gap: 8px;
+    background: var(--color-bg-glass-hover);
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theme-option:hover {
+    color: var(--color-text-main);
+    background: var(--color-bg-glass-hover);
+}
+
+.theme-option.active {
+    background: linear-gradient(135deg, rgba(180, 162, 246, 0.2), rgba(165, 219, 248, 0.15));
+    color: var(--color-text-main);
+    /* In dark mode this might need to be white, but let's try text-main */
+}
+
+/* Special case: Active theme option text should probably be highlighted */
+[data-theme="dark"] .theme-option.active {
+    color: #fff;
+}
+
+[data-theme="light"] .theme-option.active {
+    color: #000;
+    font-weight: 600;
+}
+
+
+.theme-icon {
+    font-size: 16px;
+}
+
+/* ============================================================================
+   INPUT FIELD
+   ============================================================================ */
+
+.setting-input {
+    padding: 10px 14px;
+    background: var(--color-bg-glass-hover);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 10px;
+    color: var(--color-text-main);
+    font-size: 14px;
+    width: 200px;
+    transition: all 0.2s ease;
+}
+
+.setting-input:focus {
+    outline: none;
+    border-color: #B4A2F6;
+    box-shadow: 0 0 0 3px rgba(180, 162, 246, 0.15);
+}
+
+.setting-input::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+}
+
+/* ============================================================================
+   SLIDER
+   ============================================================================ */
+
+.setting-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.setting-slider {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 120px;
+    height: 6px;
+    background: var(--color-border-subtle);
+    border-radius: 3px;
+    outline: none;
+}
+
+.setting-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.setting-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+.slider-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #B4A2F6;
+    min-width: 24px;
+}
+
+/* ============================================================================
+   TAGS INPUT (for ignored terms)
+   ============================================================================ */
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: var(--color-bg-glass);
+    border-radius: 12px;
+    border: 1px solid var(--color-border-subtle);
+    min-height: 48px;
+}
+
+.tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(180, 162, 246, 0.15), rgba(165, 219, 248, 0.1));
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--color-text-main);
+}
+
+.tag-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tag-remove:hover {
+    background: rgba(255, 100, 100, 0.3);
+    color: #fff;
+}
+
+.tag-input {
+    flex: 1;
+    min-width: 100px;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-main);
+    font-size: 13px;
+    outline: none;
+}
+
+.tag-input::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.setting-button {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-glass);
+    color: var(--color-text-main);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.setting-button:hover {
+    background: var(--color-bg-glass-hover);
+    border-color: var(--color-border-highlight);
+}
+
+.setting-button.danger {
+    border-color: rgba(255, 100, 100, 0.3);
+    color: #ff6b6b;
+}
+
+.setting-button.danger:hover {
+    background: rgba(255, 100, 100, 0.1);
+    border-color: rgba(255, 100, 100, 0.4);
+}
+
+.setting-button.primary {
+    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    border: none;
+    color: #1a1a1e;
+}
+
+.setting-button.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(180, 162, 246, 0.3);
+}
+
+/* ============================================================================
+   STATUS BADGES
+   ============================================================================ */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-badge.connected {
+    background: rgba(157, 240, 179, 0.15);
+    color: #9DF0B3;
+}
+
+.status-badge.disconnected {
+    background: rgba(255, 100, 100, 0.15);
+    color: #ff6b6b;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/* ============================================================================
+   VERSION INFO
+   ============================================================================ */
+
+.version-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.version-badge {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba(180, 162, 246, 0.1), rgba(165, 219, 248, 0.08));
+    border-radius: 10px;
+    border: 1px solid rgba(180, 162, 246, 0.2);
+}
+
+.version-number {
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #B4A2F6, #A5DBF8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ============================================================================
+   FOLDER LIST
+   ============================================================================ */
+
+.folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--color-bg-glass);
+    border-radius: 10px;
+    border: 1px solid var(--color-border-subtle);
+}
+
+.folder-path {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--color-text-main);
+    opacity: 0.8;
+}
+
+.folder-icon {
+    font-size: 16px;
+    color: #FFBE98;
+}
+
+.folder-remove {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    border-radius: 8px;
+    color: #ff6b6b;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.folder-remove:hover {
+    background: rgba(255, 100, 100, 0.1);
+}
