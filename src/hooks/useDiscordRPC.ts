@@ -97,6 +97,7 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
     const lastDetectionRef = useRef<LastDetection | null>(null);
     const notDetectedCountRef = useRef<number>(0);
     const isWatchingRef = useRef<boolean>(false);
+    const isInitializedRef = useRef<boolean>(false);
 
     // Get manual session from context
     const { manualSession, clearManualSession } = useNowPlaying();
@@ -374,9 +375,10 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
     useEffect(() => {
         if (!enabled) {
             // Ensure we clean up if disabled dynamically
-            if (isInitialized) {
+            if (isInitializedRef.current) {
                 clearDiscordActivity();
                 stopDiscordRPC();
+                isInitializedRef.current = false;
             }
             return;
         }
@@ -384,6 +386,7 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
         // Initialize Discord RPC on mount
         initDiscordRPC().then((success) => {
             if (success) {
+                isInitializedRef.current = true;
                 // Set initial browsing activity
                 setBrowsingActivity(privacyLevel);
 

@@ -268,7 +268,7 @@ function AnimeList() {
                                         ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]'
                                         : 'bg-transparent border-transparent hover:bg-white/10'
                                         } ${isCompact ? 'p-2' : 'px-4 py-2'}`}
-                                    style={{ fontFamily: 'var(--font-rounded)', color: selectedStatus === status ? 'black' : 'var(--color-text-muted)', hoverColor: 'var(--color-text-main)' }}
+                                    style={{ fontFamily: 'var(--font-rounded)', color: selectedStatus === status ? 'black' : 'var(--color-text-muted)' }}
                                     title={isCompact ? status : ''}
                                 >
                                     {isCompact ? (
@@ -286,7 +286,7 @@ function AnimeList() {
                         <button
                             onClick={() => data?.refetch && data.refetch()}
                             className={`p-2 rounded-full transition-all hover:bg-white/5 ${queryLoading ? 'animate-spin' : ''}`}
-                            style={{ color: 'var(--color-text-muted)', hoverColor: 'var(--color-text-main)', ...(queryLoading && { color: 'var(--color-text-main)' }) }}
+                            style={{ color: 'var(--color-text-muted)', ...(queryLoading && { color: 'var(--color-text-main)' }) }}
                             title="Refresh List"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
@@ -299,7 +299,7 @@ function AnimeList() {
                             onClick={() => setViewMode('grid')}
                             className={`p-2 rounded-full transition-all hover:bg-white/5 ${viewMode === 'grid' ? 'bg-white/20 shadow-sm' : ''
                                 } `}
-                            style={{ color: viewMode === 'grid' ? 'var(--color-text-main)' : 'var(--color-text-muted)', hoverColor: 'var(--color-text-main)' }}
+                            style={{ color: viewMode === 'grid' ? 'var(--color-text-main)' : 'var(--color-text-muted)' }}
                             title="Grid View"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>

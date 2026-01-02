@@ -4,6 +4,9 @@ import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import AnimeList from './pages/AnimeList';
 import MangaList from './pages/MangaList';
+import MangaBrowse from './pages/MangaBrowse';
+import MangaSourceDetails from './pages/MangaSourceDetails';
+import MangaReader from './pages/MangaReader';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
@@ -181,6 +184,9 @@ function App() {
                   {/* Root route - checks if onboarding needed */}
                   <Route path="/" element={<ProtectedRoute />} />
 
+                  {/* Full-screen Manga Reader (outside MainLayout) */}
+                  <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
+
                   {/* Main App Layout */}
                   <Route element={<MainLayout />}>
                     <Route path="/home" element={<Home />} />
@@ -198,6 +204,10 @@ function App() {
 
                     {/* Local Folder Route */}
                     <Route path="/local/:folderPath" element={<LocalFolder />} />
+
+                    {/* Manga Source Routes */}
+                    <Route path="/manga-browse" element={<MangaBrowse />} />
+                    <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
                   </Route>
                 </Routes>
               </BrowserRouter>

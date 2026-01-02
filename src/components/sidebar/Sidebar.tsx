@@ -28,10 +28,19 @@ function Sidebar({ width: _width }: SidebarProps) {
     // Fetch local folder data
     const { folders: localItems, addFolder } = useLocalMedia();
 
-    const mainItems: SidebarNavItem[] = [
-        { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> },
-        { label: 'Anime List', path: '/anime-list', icon: <ListIcon size={20} /> },
-        { label: 'Manga List', path: '/manga-list', icon: <BookIcon size={20} /> },
+    // Navigation Sections
+    const homeItem: SidebarNavItem = { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> };
+
+    const animeSection: SidebarNavItem[] = [
+        { label: 'Library', path: '/anime-list', icon: <ListIcon size={20} /> },
+    ];
+
+    const mangaSection: SidebarNavItem[] = [
+        { label: 'Library', path: '/manga-list', icon: <BookIcon size={20} /> },
+        { label: 'Browse Sources', path: '/manga-browse', icon: <BookIcon size={20} /> },
+    ];
+
+    const generalSection: SidebarNavItem[] = [
         { label: 'History', path: '/history', icon: <HistoryIcon size={20} /> },
         { label: 'Settings', path: '/settings', icon: <SettingsIcon size={20} /> },
     ];
@@ -39,6 +48,38 @@ function Sidebar({ width: _width }: SidebarProps) {
     const handleNavClick = (path: string) => {
         navigate(path);
     };
+
+    const renderLink = (item: SidebarNavItem) => {
+        const isActive = location.pathname === item.path ||
+            (item.path === '/anime-list' && location.pathname.startsWith('/anime/'));
+
+        return (
+            <SidebarItem
+                key={item.path}
+                label={item.label}
+                icon={item.icon}
+                isActive={isActive}
+                onClick={() => handleNavClick(item.path)}
+            />
+        );
+    };
+
+    const renderSectionHeader = (title: string) => (
+        <div style={{
+            padding: '0 0.75rem',
+            marginBottom: '0.5rem',
+            marginTop: '1rem',
+            fontSize: '0.7rem',
+            fontWeight: '800',
+            color: 'var(--color-text-secondary)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            fontFamily: 'var(--font-rounded)',
+            opacity: 0.7
+        }}>
+            {title}
+        </div>
+    );
 
     return (
         <div
@@ -59,42 +100,33 @@ function Sidebar({ width: _width }: SidebarProps) {
                 padding: '1rem 0.5rem',
                 overflowY: 'auto',
             }}>
-                {/* Main Group */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                    {mainItems.map((item) => {
-                        const isActive = location.pathname === item.path ||
-                            (item.path === '/anime-list' && location.pathname.startsWith('/anime/'));
+                {/* Home - Top Level */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {renderLink(homeItem)}
+                </div>
 
-                        return (
-                            <SidebarItem
-                                key={item.path}
-                                label={item.label}
-                                icon={item.icon}
-                                isActive={isActive}
-                                onClick={() => handleNavClick(item.path)}
-                            />
-                        );
-                    })}
+                {/* Anime Section */}
+                {renderSectionHeader('Anime')}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {animeSection.map(renderLink)}
+                </div>
+
+                {/* Manga Section */}
+                {renderSectionHeader('Manga')}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {mangaSection.map(renderLink)}
+                </div>
+
+                {/* General Section */}
+                {renderSectionHeader('General')}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {generalSection.map(renderLink)}
                 </div>
 
                 {/* Local Group */}
                 <div>
-                    <div style={{
-                        padding: '0 0.75rem',
-                        marginBottom: '0.75rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '700',
-                        color: 'var(--color-text-secondary)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontFamily: 'var(--font-rounded)',
-                    }}>
-                        <span>Local Sources</span>
-                        <div style={{ flex: 1, height: '1px', background: 'var(--color-border-subtle)' }}></div>
-                    </div>
+                    {renderSectionHeader('Local Sources')}
+                    <div style={{ height: '0.5rem' }}></div>
 
                     {localItems.map((item) => (
                         <div

@@ -285,7 +285,7 @@ function MangaList() {
                                         title: entry.media.title,
                                         coverImage: entry.media.coverImage,
                                         episodes: entry.media.chapters,
-                                        averageScore: entry.score || entry.media.averageScore, // Fallback if entry score missing
+                                        averageScore: entry.score || (entry.media as any).averageScore, // Fallback if entry score missing
                                         format: 'MANGA',
                                         // Add other required props if any, or cast as any if types impede
                                     } as any}
