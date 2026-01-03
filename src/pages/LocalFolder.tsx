@@ -42,12 +42,23 @@ const getFileIcon = (filename: string): string => {
     const audioExts = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'];
     const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
     const subExts = ['srt', 'ass', 'ssa', 'sub', 'vtt'];
+    const mangaExts = ['pdf', 'cbz', 'cbr'];
 
     if (videoExts.includes(ext || '')) return '🎬';
     if (audioExts.includes(ext || '')) return '🎵';
     if (imageExts.includes(ext || '')) return '🖼️';
     if (subExts.includes(ext || '')) return '📝';
+    if (mangaExts.includes(ext || '')) return '📚';
     return '📄';
+};
+
+// Manga file extensions (PDF, CBZ, CBR)
+const MANGA_EXTS = ['pdf', 'cbz', 'cbr'];
+
+// Check if a file is a manga file (PDF, CBZ, CBR)
+const isMangaFile = (filename: string): boolean => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    return MANGA_EXTS.includes(ext || '');
 };
 
 // Video file extensions
@@ -149,6 +160,9 @@ function LocalFolder() {
         if (item.is_dir) {
             // Navigate into subdirectory
             navigate(`/local/${encodeURIComponent(item.path)}`);
+        } else if (isMangaFile(item.name)) {
+            // Navigate to LocalFileReader for PDF/CBZ files
+            navigate(`/read-local?path=${encodeURIComponent(item.path)}`);
         } else {
             // Open file in default application
             try {

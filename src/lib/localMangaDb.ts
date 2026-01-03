@@ -47,6 +47,10 @@ export interface LocalMangaEntry {
     lastReadChapterId?: string;
     /** Title of the last read chapter */
     lastReadChapterTitle?: string;
+    /** List of bookmarked chapter IDs */
+    bookmarkedChapters?: string[];
+    /** List of downloaded chapter IDs */
+    downloadedChapters?: string[];
 }
 
 export interface LibraryCategory {
@@ -439,3 +443,100 @@ export function clearMangaDb(): void {
     localStorage.removeItem(STORAGE_KEY);
     console.log('[LocalMangaDB] Database cleared');
 }
+
+// ============================================================================
+// BOOKMARK FUNCTIONS
+// ============================================================================
+
+/**
+ * Toggle bookmark status for a chapter
+ */
+export function toggleChapterBookmark(entryId: string, chapterId: string): boolean {
+    const db = getLocalMangaDb();
+    const entry = db[entryId];
+    if (!entry) return false;
+
+    const bookmarks = entry.bookmarkedChapters || [];
+    const index = bookmarks.indexOf(chapterId);
+
+    if (index > -1) {
+        // Remove bookmark
+        bookmarks.splice(index, 1);
+        entry.bookmarkedChapters = bookmarks;
+        saveDb(db);
+        console.log('[LocalMangaDB] Removed bookmark for chapter:', chapterId);
+        return false;
+    } else {
+        // Add bookmark
+        entry.bookmarkedChapters = [...bookmarks, chapterId];
+        saveDb(db);
+        console.log('[LocalMangaDB] Added bookmark for chapter:', chapterId);
+        return true;
+    }
+}
+
+/**
+ * Check if a chapter is bookmarked
+ */
+export function isChapterBookmarked(entryId: string, chapterId: string): boolean {
+    const entry = getLocalMangaEntry(entryId);
+    return entry?.bookmarkedChapters?.includes(chapterId) ?? false;
+}
+
+/**
+ * Get all bookmarked chapters for an entry
+ */
+export function getBookmarkedChapters(entryId: string): string[] {
+    const entry = getLocalMangaEntry(entryId);
+    return entry?.bookmarkedChapters ?? [];
+}
+
+// ============================================================================
+// DOWNLOAD TRACKING FUNCTIONS
+// ============================================================================
+
+/**
+ * Mark a chapter as downloaded
+ */
+export function markChapterDownloaded(entryId: string, chapterId: string): void {
+    const db = getLocalMangaDb();
+    const entry = db[entryId];
+    if (!entry) return;
+
+    const downloads = entry.downloadedChapters || [];
+    if (!downloads.includes(chapterId)) {
+        entry.downloadedChapters = [...downloads, chapterId];
+        saveDb(db);
+        console.log('[LocalMangaDB] Marked chapter as downloaded:', chapterId);
+    }
+}
+
+/**
+ * Check if a chapter is downloaded
+ */
+export function isChapterDownloaded(entryId: string, chapterId: string): boolean {
+    const entry = getLocalMangaEntry(entryId);
+    return entry?.downloadedChapters?.includes(chapterId) ?? false;
+}
+
+/**
+ * Get all downloaded chapters for an entry
+ */
+export function getDownloadedChapters(entryId: string): string[] {
+    const entry = getLocalMangaEntry(entryId);
+    return entry?.downloadedChapters ?? [];
+}
+
+/**
+ * Remove downloaded status for a chapter
+ */
+export function removeChapterDownloaded(entryId: string, chapterId: string): void {
+    const db = getLocalMangaDb();
+    const entry = db[entryId];
+    if (!entry || !entry.downloadedChapters) return;
+
+    entry.downloadedChapters = entry.downloadedChapters.filter(id => id !== chapterId);
+    saveDb(db);
+    console.log('[LocalMangaDB] Removed download status for chapter:', chapterId);
+}
+

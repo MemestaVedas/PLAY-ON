@@ -8,6 +8,7 @@ import LocalMangaList from './pages/LocalMangaList';
 import MangaBrowse from './pages/MangaBrowse';
 import MangaSourceDetails from './pages/MangaSourceDetails';
 import MangaReader from './pages/MangaReader';
+import LocalFileReader from './pages/LocalFileReader';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
@@ -166,9 +167,20 @@ import { useOfflineSync } from './lib/offlineQueue';
 
 import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apollo';
+import { checkAndRefreshCache } from './lib/cacheRefresh';
 
 function App() {
   useOfflineSync();
+
+  // Startup cache refresh (v0.3.0)
+  useEffect(() => {
+    // Check if cache needs refresh (6 hour interval)
+    checkAndRefreshCache().then((refreshed) => {
+      if (refreshed) {
+        console.log('[App] Cache was refreshed on startup');
+      }
+    });
+  }, []);
 
   useEffect(() => {
     // DEV: Clear onboarding status to force onboarding every time
@@ -191,6 +203,9 @@ function App() {
 
                     {/* Full-screen Manga Reader (outside MainLayout) */}
                     <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
+
+                    {/* Full-screen Local File Reader (outside MainLayout) */}
+                    <Route path="/read-local" element={<LocalFileReader />} />
 
                     {/* Main App Layout */}
                     <Route element={<MainLayout />}>

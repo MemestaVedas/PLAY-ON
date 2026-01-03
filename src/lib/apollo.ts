@@ -19,6 +19,9 @@ const cache = new InMemoryCache({
                     merge: true,
                 }
             }
+        },
+        Page: {
+            merge: true,
         }
     }
 });

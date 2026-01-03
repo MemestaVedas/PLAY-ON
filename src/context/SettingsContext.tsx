@@ -33,6 +33,10 @@ export interface Settings {
     // Storage
     scanDepth: number;
     ignoredTerms: string[];
+    mangaDownloadPath: string;
+
+    // Manga Reading
+    defaultChapterSort: 'asc' | 'desc';
 
     // Advanced
     developerMode: boolean;
@@ -69,6 +73,10 @@ const DEFAULT_SETTINGS: Settings = {
     // Storage
     scanDepth: 3,
     ignoredTerms: ['SAMPLE', 'Creditless', 'NCOP', 'NCED', 'Preview'],
+    mangaDownloadPath: '',
+
+    // Manga Reading
+    defaultChapterSort: 'desc',
 
     // Advanced
     developerMode: false,

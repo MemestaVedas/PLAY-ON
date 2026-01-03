@@ -9,6 +9,7 @@
  * - AniList linking for tracking
  * - Search/browse chapters
  * - Discord RPC integration (Browsing status)
+ * - Chapter sorting, filtering, and bookmarking
  * ====================================================================
  */
 
@@ -16,6 +17,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ExtensionManager, Manga, Chapter } from '../services/ExtensionManager';
 import { useMangaMappings } from '../hooks/useMangaMappings';
+import { useSettings } from '../context/SettingsContext';
 import {
     getMangaEntryByAnilistId,
     getMangaEntryBySourceId,
@@ -25,10 +27,14 @@ import {
     setMangaCategories,
     getDefaultCategory,
     linkMangaToAniList,
+    toggleChapterBookmark,
+    isChapterBookmarked,
+    isChapterDownloaded,
     LibraryCategory
 } from '../lib/localMangaDb';
 import { syncMangaFromAniList } from '../lib/syncService';
 import { setBrowsingMangaActivity, clearDiscordActivity } from '../services/discordRPC';
+import { queueChapterDownload } from '../services/downloadService';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import './MangaSourceDetails.css';
 
@@ -36,6 +42,7 @@ function MangaSourceDetails() {
     const { sourceId, mangaId } = useParams<{ sourceId: string; mangaId: string }>();
     const navigate = useNavigate();
     const { getMapping, addMapping, removeMapping } = useMangaMappings();
+    const { settings } = useSettings();
 
     const [manga, setManga] = useState<Manga | null>(null);
     const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -46,6 +53,12 @@ function MangaSourceDetails() {
     const [showLibraryDialog, setShowLibraryDialog] = useState(false);
     const [libraryCategories, setLibraryCategories] = useState<LibraryCategory[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+    // Sorting and filtering state
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(settings.defaultChapterSort);
+    const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
+    const [bookmarkFilter, setBookmarkFilter] = useState(false);
+    const [downloadFilter, setDownloadFilter] = useState<'all' | 'downloaded' | 'not-downloaded'>('all');
 
     // Refresh trigger for library status updates
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -108,15 +121,50 @@ function MangaSourceDetails() {
     }, [source, mangaId]);
 
     const filteredChapters = useMemo(() => {
-        if (!searchQuery.trim()) return chapters;
-        const query = searchQuery.toLowerCase();
-        return chapters.filter(
-            (ch) =>
-                ch.number.toString().includes(query) ||
-                ch.title?.toLowerCase().includes(query) ||
-                ch.scanlator?.toLowerCase().includes(query)
-        );
-    }, [chapters, searchQuery]);
+        // Get the entry ID for bookmark/download checks
+        const entryId = localEntry?.id || (sourceId && mangaId ? `${sourceId}:${mangaId}` : '');
+
+        let result = [...chapters];
+
+        // Apply search filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(
+                (ch) =>
+                    ch.number.toString().includes(query) ||
+                    ch.title?.toLowerCase().includes(query) ||
+                    ch.scanlator?.toLowerCase().includes(query)
+            );
+        }
+
+        // Apply read/unread filter
+        if (readFilter !== 'all' && localEntry) {
+            result = result.filter((ch) => {
+                const isRead = ch.number <= localEntry.chapter;
+                return readFilter === 'read' ? isRead : !isRead;
+            });
+        }
+
+        // Apply bookmark filter
+        if (bookmarkFilter && entryId) {
+            result = result.filter((ch) => isChapterBookmarked(entryId, ch.id));
+        }
+
+        // Apply download filter
+        if (downloadFilter !== 'all' && entryId) {
+            result = result.filter((ch) => {
+                const downloaded = isChapterDownloaded(entryId, ch.id);
+                return downloadFilter === 'downloaded' ? downloaded : !downloaded;
+            });
+        }
+
+        // Apply sorting
+        result.sort((a, b) => {
+            return sortOrder === 'asc' ? a.number - b.number : b.number - a.number;
+        });
+
+        return result;
+    }, [chapters, searchQuery, sortOrder, readFilter, bookmarkFilter, downloadFilter, localEntry, sourceId, mangaId, refreshTrigger]);
 
     const handleChapterClick = (chapter: Chapter) => {
         navigate(
@@ -400,13 +448,64 @@ function MangaSourceDetails() {
             <div className="chapters-section">
                 <div className="chapters-header">
                     <h2>Chapters ({chapters.length})</h2>
-                    <div className="chapter-search">
-                        <input
-                            type="text"
-                            placeholder="Search chapters..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                    <div className="chapter-controls">
+                        {/* Sort Toggle */}
+                        <button
+                            className="control-btn"
+                            onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                            title={sortOrder === 'desc' ? 'Sorted: Newest First' : 'Sorted: Oldest First'}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                {sortOrder === 'desc' ? (
+                                    <><path d="M3 8L7 4L11 8" /><path d="M7 4V20" /><path d="M13 12H21" /><path d="M13 16H19" /><path d="M13 20H17" /><path d="M13 8H21" /></>
+                                ) : (
+                                    <><path d="M3 16L7 20L11 16" /><path d="M7 20V4" /><path d="M13 8H21" /><path d="M13 12H19" /><path d="M13 16H17" /><path d="M13 20H21" /></>
+                                )}
+                            </svg>
+                        </button>
+
+                        {/* Read Filter */}
+                        <select
+                            className="filter-select"
+                            value={readFilter}
+                            onChange={(e) => setReadFilter(e.target.value as 'all' | 'read' | 'unread')}
+                        >
+                            <option value="all">All</option>
+                            <option value="read">Read</option>
+                            <option value="unread">Unread</option>
+                        </select>
+
+                        {/* Bookmark Filter Toggle */}
+                        <button
+                            className={`control-btn ${bookmarkFilter ? 'active' : ''}`}
+                            onClick={() => setBookmarkFilter(!bookmarkFilter)}
+                            title={bookmarkFilter ? 'Showing Bookmarked' : 'Show All'}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={bookmarkFilter ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </button>
+
+                        {/* Download Filter */}
+                        <select
+                            className="filter-select"
+                            value={downloadFilter}
+                            onChange={(e) => setDownloadFilter(e.target.value as 'all' | 'downloaded' | 'not-downloaded')}
+                        >
+                            <option value="all">All DL</option>
+                            <option value="downloaded">Downloaded</option>
+                            <option value="not-downloaded">Not Downloaded</option>
+                        </select>
+
+                        {/* Search */}
+                        <div className="chapter-search">
+                            <input
+                                type="text"
+                                placeholder="Search chapters..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -415,23 +514,76 @@ function MangaSourceDetails() {
                         <div className="no-chapters">No chapters found</div>
                     ) : (
                         filteredChapters.map((chapter) => {
+                            const entryId = localEntry?.id || (sourceId && mangaId ? `${sourceId}:${mangaId}` : '');
                             const isRead = localEntry && chapter.number <= localEntry.chapter;
+                            const isBookmarked = entryId ? isChapterBookmarked(entryId, chapter.id) : false;
+                            const isDownloaded = entryId ? isChapterDownloaded(entryId, chapter.id) : false;
+
                             return (
                                 <div
                                     key={chapter.id}
-                                    className={`chapter-item ${isRead ? 'read' : ''}`}
-                                    onClick={() => handleChapterClick(chapter)}
+                                    className={`chapter-item ${isRead ? 'read' : ''} ${isDownloaded ? 'downloaded' : ''}`}
                                 >
-                                    <div className="chapter-main">
+                                    <div className="chapter-main" onClick={() => handleChapterClick(chapter)}>
                                         <span className="chapter-number">
                                             Chapter {chapter.number}
                                         </span>
                                         {chapter.title && (
                                             <span className="chapter-title">{chapter.title}</span>
                                         )}
-                                        {isRead && (
-                                            <span className="chapter-read-badge">✓</span>
+                                        <div className="chapter-badges">
+                                            {isRead && (
+                                                <span className="chapter-read-badge" title="Read">✓</span>
+                                            )}
+                                            {isDownloaded && (
+                                                <span className="chapter-downloaded-badge" title="Downloaded">⬇</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="chapter-actions">
+                                        {/* Download Button */}
+                                        {!isDownloaded && (
+                                            <button
+                                                className="download-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (sourceId && mangaId && manga) {
+                                                        queueChapterDownload({
+                                                            sourceId,
+                                                            mangaId,
+                                                            mangaTitle: manga.title,
+                                                            chapterId: chapter.id,
+                                                            chapterNumber: chapter.number,
+                                                            entryId: entryId || `${sourceId}:${mangaId}`,
+                                                        });
+                                                        setRefreshTrigger(prev => prev + 1);
+                                                    }
+                                                }}
+                                                title="Download Chapter"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                                </svg>
+                                            </button>
                                         )}
+                                        {/* Bookmark Button */}
+                                        <button
+                                            className={`bookmark-btn ${isBookmarked ? 'bookmarked' : ''}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (entryId) {
+                                                    toggleChapterBookmark(entryId, chapter.id);
+                                                    setRefreshTrigger(prev => prev + 1);
+                                                }
+                                            }}
+                                            title={isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                     <div className="chapter-meta">
                                         {chapter.scanlator && (
