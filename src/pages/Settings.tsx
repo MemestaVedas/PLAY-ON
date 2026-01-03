@@ -1,4 +1,4 @@
-import { useState, useCallback, KeyboardEvent } from 'react';
+import { useState, useCallback, KeyboardEvent, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useAuthContext } from '../context/AuthContext';
 import { useLocalMedia } from '../context/LocalMediaContext';
@@ -542,6 +542,14 @@ function StorageSettings() {
 function AdvancedSettings() {
     const { settings, updateSetting, clearCache, resetSettings } = useSettings();
     const [isClearing, setIsClearing] = useState(false);
+    const [appVersion, setAppVersion] = useState('...');
+
+    // Fetch version from Tauri on mount
+    useEffect(() => {
+        import('@tauri-apps/api/app').then(({ getVersion }) => {
+            getVersion().then(setAppVersion).catch(() => setAppVersion('unknown'));
+        });
+    }, []);
 
     const handleClearCache = useCallback(async () => {
         setIsClearing(true);
@@ -592,7 +600,7 @@ function AdvancedSettings() {
                 <SettingRow label="Version" description="Current application version">
                     <div className="version-info">
                         <div className="version-badge">
-                            <span className="version-number">v0.2.0</span>
+                            <span className="version-number">v{appVersion}</span>
                         </div>
                     </div>
                 </SettingRow>
