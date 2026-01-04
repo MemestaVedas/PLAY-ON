@@ -7,6 +7,7 @@ import Folder from '../components/ui/Folder';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { useAnimeData } from '../hooks/useAnimeData';
+import { addMangaToLibrary } from '../lib/localMangaDb';
 import {
     FilmIcon,
     MusicIcon,
@@ -626,6 +627,19 @@ function LocalFolder() {
                 onClose={() => setIsSearchDialogOpen(false)}
                 onSelect={(anime) => {
                     addMapping(currentPath, anime.id, anime.title, anime.coverImage);
+
+                    // For MANGA folders, also add to local manga library
+                    if (mediaType === 'MANGA') {
+                        const entryId = `local:${currentPath}`;
+                        addMangaToLibrary(entryId, {
+                            title: anime.title,
+                            coverImage: anime.coverImage,
+                            sourceId: 'local',
+                            sourceMangaId: currentPath,
+                            anilistId: anime.id,
+                        });
+                    }
+
                     setIsSearchDialogOpen(false);
                 }}
                 initialSearchTerm={folderName}

@@ -46,28 +46,7 @@ function AnimeDetails() {
         load();
     }, [id, getAnimeDetails]);
 
-    // Discord Rich Presence - show browsing this anime
-    useEffect(() => {
-        if (!anime) return;
 
-        let isMounted = true;
-        const title = anime.title?.english || anime.title?.romaji || 'Unknown Anime';
-        const coverImage = anime.coverImage?.extraLarge || anime.coverImage?.large;
-
-        const updateRPC = async () => {
-            const { setBrowsingAnimeActivity } = await import('../services/discordRPC');
-            if (isMounted) {
-                setBrowsingAnimeActivity(title, coverImage, anime.id);
-            }
-        };
-
-        updateRPC();
-
-        // Cleanup on unmount or change
-        return () => {
-            isMounted = false;
-        };
-    }, [anime?.id, anime?.title?.english, anime?.title?.romaji, anime?.coverImage?.extraLarge]);
 
     const handleProgressUpdate = async (newProgress: number) => {
         if (!anime || updating) return;

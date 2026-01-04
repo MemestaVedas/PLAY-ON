@@ -17,7 +17,7 @@
  * - Call stopDiscordRPC() when app closes
  */
 
-import { start, stop, setActivity, clearActivity } from 'tauri-plugin-drpc';
+import { start, stop, setActivity } from 'tauri-plugin-drpc';
 import { Activity, Assets, Timestamps, Button } from 'tauri-plugin-drpc/activity';
 
 // ============================================================================
@@ -38,6 +38,24 @@ let isConnecting = false;
 let currentAnimeId: number | null = null;
 let watchStartTime: number | null = null;
 let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+// Manga reading state - when true, anime detection should not override activity
+let isMangaReadingActive = false;
+
+/**
+ * Set manga reading state - when true, anime detection will not override activity
+ */
+export function setMangaReadingState(isReading: boolean): void {
+    isMangaReadingActive = isReading;
+    console.log('[Discord RPC] Manga reading state:', isReading);
+}
+
+/**
+ * Check if manga is currently being read
+ */
+export function isMangaReading(): boolean {
+    return isMangaReadingActive;
+}
 
 /**
  * Initialize Discord Rich Presence
@@ -215,10 +233,16 @@ export async function updateAnimeActivity(params: {
 }
 
 /**
- * Set a generic "browsing" activity when not watching anything
+ * Set the "Browsing" activity
+ * This is a lower priority status. It will be ignored if the user is
+ * currently Watching (anime) or Reading (manga).
  */
 export async function setBrowsingActivity(privacyLevel: 'full' | 'minimal' | 'hidden' = 'full'): Promise<void> {
-    if (privacyLevel === 'hidden') {
+    if (privacyLevel === 'hidden') return;
+
+    // PRIORITY CHECK: If we are actively watching or reading, DO NOT switch to browsing.
+    if (currentAnimeId || isMangaReadingActive) {
+        // console.log('[Discord RPC] Skipping browsing status - active media in progress');
         return;
     }
 
@@ -229,8 +253,8 @@ export async function setBrowsingActivity(privacyLevel: 'full' | 'minimal' | 'hi
 
     try {
         let activity = new Activity()
-            .setDetails('Browsing anime')
-            .setState('Looking for something to watch');
+            .setDetails('Browsing App for Anime and Manga')
+            .setState('Exploring Library');
 
         const timestamps = new Timestamps(Date.now());
         activity = activity.setTimestamps(timestamps);
@@ -249,7 +273,7 @@ export async function setBrowsingActivity(privacyLevel: 'full' | 'minimal' | 'hi
         await setActivity(activity);
         currentAnimeId = null;
         watchStartTime = null;
-        console.log('[Discord RPC] Set to browsing mode');
+        console.log('[Discord RPC] Set to default browsing mode');
     } catch (err) {
         console.error('[Discord RPC] Failed to set browsing activity:', err);
     }
@@ -257,15 +281,13 @@ export async function setBrowsingActivity(privacyLevel: 'full' | 'minimal' | 'hi
 
 /**
  * Clear the Discord activity
+ * For this "3 Threads" request, clearing implies resetting to default "Browsing App".
  */
 export async function clearDiscordActivity(): Promise<void> {
     try {
-        await clearActivity();
-        currentAnimeId = null;
-        watchStartTime = null;
-        console.log('[Discord RPC] Activity cleared');
+        await setBrowsingActivity();
     } catch (err) {
-        console.error('[Discord RPC] Failed to clear activity:', err);
+        console.error('[Discord RPC] Failed to reset to default activity:', err);
     }
 }
 
@@ -277,59 +299,8 @@ export function isDiscordRPCInitialized(): boolean {
 }
 
 /**
- * Set Discord activity when browsing an anime details page
- */
-export async function setBrowsingAnimeActivity(
-    animeName: string,
-    coverImage?: string | null,
-    anilistId?: number
-): Promise<void> {
-    if (!isInitialized) {
-        const success = await initDiscordRPC();
-        if (!success) return;
-    }
-
-    try {
-        let activity = new Activity()
-            .setDetails(`Browsing: ${animeName.length > 100 ? animeName.substring(0, 97) + '...' : animeName}`)
-            .setState('Checking out details');
-
-        const timestamps = new Timestamps(Date.now());
-        activity = activity.setTimestamps(timestamps);
-
-        const assets = new Assets();
-        if (coverImage) {
-            assets.setLargeImage(coverImage);
-            assets.setLargeText(animeName);
-        } else {
-            assets.setLargeImage(APP_ICON_ASSET);
-            assets.setLargeText(animeName);
-        }
-        assets.setSmallImage(APP_ICON_ASSET);
-        assets.setSmallText('PLAY-ON!');
-        activity = activity.setAssets(assets);
-
-        // Add AniList link if available
-        if (anilistId) {
-            activity = activity.setButton([
-                new Button('View on AniList', `https://anilist.co/anime/${anilistId}`),
-                new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
-            ]);
-        } else {
-            activity = activity.setButton([
-                new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
-            ]);
-        }
-
-        await setActivity(activity);
-        console.log('[Discord RPC] Set to browsing anime:', animeName);
-    } catch (err) {
-        console.error('[Discord RPC] Failed to set browsing anime activity:', err);
-    }
-}
-
-/**
  * Update Discord activity with currently reading manga
+ * Thread 2: READING (MANGA NAME) CHAPTER X
  */
 export async function updateMangaActivity(params: {
     mangaTitle: string;
@@ -414,47 +385,6 @@ export async function updateMangaActivity(params: {
         console.log(`[Discord RPC] ${mangaTitle} - ${logMsg} (${privacyLevel})`);
     } catch (err) {
         console.error('[Discord RPC] Failed to update manga activity:', err);
-    }
-}
-
-/**
- * Set activity when browsing a specific manga's details
- */
-export async function setBrowsingMangaActivity(mangaTitle: string, coverImage?: string | null): Promise<void> {
-    if (!isInitialized) {
-        const success = await initDiscordRPC();
-        if (!success) return;
-    }
-
-    try {
-        let activity = new Activity();
-        const truncatedTitle = mangaTitle.length > 128 ? mangaTitle.substring(0, 125) + '...' : mangaTitle;
-
-        activity = activity
-            .setDetails('Browsing Manga')
-            .setState(truncatedTitle);
-
-        const assets = new Assets();
-        if (coverImage) {
-            assets.setLargeImage(coverImage);
-            assets.setLargeText(mangaTitle);
-        } else {
-            assets.setLargeImage(APP_ICON_ASSET);
-            assets.setLargeText(mangaTitle);
-        }
-        assets.setSmallImage(APP_ICON_ASSET);
-        assets.setSmallText('PLAY-ON!');
-
-        activity = activity.setAssets(assets);
-        activity = activity.setButton([
-            new Button('GitHub', 'https://github.com/MemestaVedas/PLAY-ON')
-        ]);
-
-        await setActivity(activity);
-        // Don't reset generic browsing timestamp/state excessively
-        console.log(`[Discord RPC] Browsing manga: ${mangaTitle}`);
-    } catch (err) {
-        console.error('[Discord RPC] Failed to set browsing manga activity:', err);
     }
 }
 

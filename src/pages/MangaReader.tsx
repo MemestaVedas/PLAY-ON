@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Dropdown } from '../components/ui/Dropdown';
 import { ExtensionManager, Page, Chapter, Manga } from '../services/ExtensionManager';
 import { useMangaMappings } from '../hooks/useMangaMappings';
 import { useMalAuth } from '../context/MalAuthContext';
@@ -22,7 +23,82 @@ import { updateMangaProgress, getMangaEntryByAnilistId, getLocalMangaEntry, getL
 import { syncMangaEntryToAniList } from '../lib/syncService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
+import { updateMangaActivity, clearDiscordActivity, setMangaReadingState } from '../services/discordRPC';
 import './MangaReader.css';
+
+// Helper component to handle image loading (supports both online URLs and local encoded CBZ paths)
+const MangaPageImage = ({ page, alt, className, loading = 'lazy' }: { page: Page; alt: string; className?: string; loading?: 'lazy' | 'eager' }) => {
+    const [src, setSrc] = useState<string>('');
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadSrc = async () => {
+            if (page.imageUrl.startsWith('manga://')) {
+                // Parse manga:// protocol manually since browser support is flaky
+                try {
+                    // Protocol: manga://localhost/<encoded_path>/<encoded_page>
+                    const pathAndQuery = page.imageUrl.replace('manga://localhost/', '');
+                    const parts = pathAndQuery.split('/');
+                    if (parts.length >= 2) {
+                        const encodedPath = parts[0];
+                        const encodedPage = parts.slice(1).join('/');
+
+                        const decodedPath = decodeURIComponent(encodedPath);
+                        const decodedPage = decodeURIComponent(encodedPage);
+
+                        // Fetch base64 data directly via invoke
+                        const dataUrl = await invoke<string>('get_cbz_page', {
+                            path: decodedPath,
+                            pageName: decodedPage
+                        });
+
+                        if (isMounted) {
+                            setSrc(dataUrl);
+                        }
+                    } else {
+                        throw new Error('Invalid manga URL format');
+                    }
+                } catch (e) {
+                    // console.error('Failed to load local page:', e);
+                    if (isMounted) setError(true);
+                }
+            } else {
+                // Standard URL
+                setSrc(page.imageUrl);
+            }
+        };
+
+        loadSrc();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [page.imageUrl]);
+
+    if (error) {
+        return (
+            <div className={`page-error ${className}`} style={{ height: '800px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2a2a2a', color: '#666' }}>
+                <span>Failed to load image</span>
+            </div>
+        );
+    }
+
+    if (!src) {
+        return <div className={`page-placeholder ${className}`} style={{ minHeight: '400px', backgroundColor: '#1a1a1a' }} />;
+    }
+
+    return (
+        <img
+            src={src}
+            alt={alt}
+            className={className}
+            loading={loading}
+            onError={() => setError(true)}
+        />
+    );
+};
 
 type ReadingMode = 'vertical' | 'single' | 'double';
 type SyncStatus = 'idle' | 'tracking' | 'saving' | 'syncing' | 'synced' | 'error';
@@ -165,8 +241,12 @@ function MangaReader() {
                                 return; // Exit early to skip online fetch
                             }
                         } catch (e) {
-                            console.error('Failed to load local CBZ:', e);
-                            // Fallback to online if local fails?
+                            // Only log real errors, not "file not found" (os error 2) which is expected for non-downloaded chapters
+                            const msg = e instanceof Error ? e.message : String(e);
+                            if (!msg.includes('os error 2') && !msg.includes('system cannot find the file')) {
+                                console.warn('Failed to load local CBZ:', e);
+                            }
+                            // Fallback to online if local fails
                         }
                     }
                 }
@@ -224,21 +304,21 @@ function MangaReader() {
     useEffect(() => {
         if (!currentChapter) return;
 
-        import('../services/discordRPC').then(({ updateMangaActivity }) => {
-            updateMangaActivity({
-                mangaTitle: manga?.title || mangaTitle || 'Reading Manga',
-                chapter: currentChapter.number,
-                anilistId: anilistMapping?.anilistId,
-                coverImage: manga?.coverUrl || anilistMapping?.coverImage,
-                totalChapters: anilistMapping?.totalChapters
-            });
+        // Set manga reading state to prevent anime detection from overriding
+        setMangaReadingState(true);
+
+        updateMangaActivity({
+            mangaTitle: manga?.title || mangaTitle || 'Reading Manga',
+            chapter: currentChapter.number,
+            anilistId: anilistMapping?.anilistId,
+            coverImage: manga?.coverUrl || anilistMapping?.coverImage,
+            totalChapters: anilistMapping?.totalChapters
         });
 
         // Cleanup on unmount
         return () => {
-            import('../services/discordRPC').then(({ clearDiscordActivity }) => {
-                clearDiscordActivity();
-            });
+            setMangaReadingState(false);
+            clearDiscordActivity();
         };
     }, [currentChapter, manga, mangaTitle, anilistMapping]);
 
@@ -547,14 +627,15 @@ function MangaReader() {
                     {/* Sync Status Indicator */}
                     {getSyncStatusDisplay()}
 
-                    <select
+                    <Dropdown
                         value={readingMode}
-                        onChange={(e) => setReadingMode(e.target.value as ReadingMode)}
-                        className="mode-select"
-                    >
-                        <option value="vertical">Vertical (Webtoon)</option>
-                        <option value="single">Single Page</option>
-                    </select>
+                        onChange={(val) => setReadingMode(val as ReadingMode)}
+                        options={[
+                            { value: 'vertical', label: 'Vertical (Webtoon)' },
+                            { value: 'single', label: 'Single Page' }
+                        ]}
+                        className="w-48"
+                    />
                 </div>
             </div>
 
@@ -563,9 +644,9 @@ function MangaReader() {
                 {readingMode === 'vertical' ? (
                     <div className="vertical-scroll" ref={scrollContainerRef} style={{ maxWidth: `${zoom}px` }}>
                         {pages.map((page) => (
-                            <img
+                            <MangaPageImage
                                 key={page.index}
-                                src={page.imageUrl}
+                                page={page}
                                 alt={`Page ${page.index + 1}`}
                                 className="page-image"
                                 loading="lazy"
@@ -581,10 +662,11 @@ function MangaReader() {
                         </button>
 
                         {pages[currentPage] && (
-                            <img
-                                src={pages[currentPage].imageUrl}
+                            <MangaPageImage
+                                page={pages[currentPage]}
                                 alt={`Page ${currentPage + 1}`}
                                 className="page-image"
+                                loading="eager"
                             />
                         )}
 

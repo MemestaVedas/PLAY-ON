@@ -7,16 +7,19 @@ interface AnimeCardProps {
     onClick: (id: number) => void;
     progress?: number;
     onResume?: () => void; // Optional resume callback for linked manga
+    isResuming?: boolean; // Optional loading state for resume action
 }
 
-const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResume }) => {
+const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResume, isResuming = false }) => {
     const title = anime.title.english || anime.title.romaji;
     const episodes = anime.episodes || '?';
     const hasProgress = progress !== undefined;
 
     const handleResumeClick = (e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent card click
-        onResume?.();
+        if (!isResuming) {
+            onResume?.();
+        }
     };
 
     return (
@@ -36,13 +39,18 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResum
             {/* Resume Button */}
             {onResume && (
                 <button
-                    className="anime-card__resume-btn"
+                    className={`anime-card__resume-btn ${isResuming ? 'anime-card__resume-btn--loading' : ''}`}
                     onClick={handleResumeClick}
                     title="Resume reading"
+                    disabled={isResuming}
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
+                    {isResuming ? (
+                        <div className="anime-card__resume-spinner" />
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                    )}
                 </button>
             )}
 

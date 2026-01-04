@@ -11,6 +11,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import type { StreamingSource } from '../../services/streamingService';
+import { Dropdown } from './Dropdown'; // Import Dropdown (same folder)
 import './StreamPlayer.css';
 
 interface StreamPlayerProps {
@@ -67,7 +68,7 @@ export default function StreamPlayer({
         if (currentSource.isM3U8 && Hls.isSupported()) {
             // Use HLS.js for HLS streams
             const hls = new Hls({
-                xhrSetup: (xhr) => {
+                xhrSetup: (xhr: XMLHttpRequest) => {
                     if (headers) {
                         Object.entries(headers).forEach(([key, value]) => {
                             xhr.setRequestHeader(key, value);
@@ -87,7 +88,7 @@ export default function StreamPlayer({
                 video.play().catch(console.error);
             });
 
-            hls.on(Hls.Events.ERROR, (_, data) => {
+            hls.on(Hls.Events.ERROR, (_event: string, data: { fatal: boolean }) => {
                 if (data.fatal) {
                     console.error('[StreamPlayer] HLS error:', data);
                     setError('Failed to load video stream');
@@ -377,17 +378,15 @@ export default function StreamPlayer({
                     </div>
 
                     {sources.length > 1 && (
-                        <select
-                            value={selectedQuality}
-                            onChange={(e) => setSelectedQuality(parseInt(e.target.value))}
-                            className="quality-select"
-                        >
-                            {sources.map((src, idx) => (
-                                <option key={idx} value={idx}>
-                                    {src.quality}
-                                </option>
-                            ))}
-                        </select>
+                        <Dropdown
+                            value={String(selectedQuality)}
+                            onChange={(val) => setSelectedQuality(parseInt(val))}
+                            options={sources.map((src, idx) => ({
+                                value: String(idx),
+                                label: src.quality
+                            }))}
+                            className="w-32"
+                        />
                     )}
 
                     <button onClick={toggleFullscreen} className="control-btn">

@@ -19,6 +19,7 @@ import {
 } from '../components/ui/Icons';
 import { DEFAULT_KEYBOARD_SHORTCUTS, ShortcutAction } from '../context/SettingsContext';
 import { formatShortcutFromEvent } from '../hooks/useKeyboardShortcuts';
+import { Dropdown } from '../components/ui/Dropdown';
 import './Settings.css';
 import TrackerConnections from '../components/settings/TrackerConnections';
 
@@ -69,31 +70,7 @@ function Toggle({ checked, onChange }: ToggleProps) {
     );
 }
 
-// ============================================================================
-// COMPONENT: Dropdown Select
-// ============================================================================
 
-interface DropdownProps {
-    value: string;
-    options: { value: string; label: string }[];
-    onChange: (value: string) => void;
-}
-
-function Dropdown({ value, options, onChange }: DropdownProps) {
-    return (
-        <select
-            className="dropdown-select"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-        >
-            {options.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                </option>
-            ))}
-        </select>
-    );
-}
 
 // ============================================================================
 // COMPONENT: Setting Row
@@ -322,19 +299,14 @@ function MangaSettings() {
                         <span className="setting-label">Default Category</span>
                         <span className="setting-description">Category to pre-select when adding manga</span>
                     </div>
-                    <select
-                        className="dropdown-select"
+                    <Dropdown
                         value={defaultCatId}
-                        onChange={(e) => {
-                            const val = e.target.value;
+                        options={currentCategories.map(cat => ({ value: cat.id, label: cat.name }))}
+                        onChange={(val) => {
                             setDefaultCategory(val);
                             setDefaultCatId(val);
                         }}
-                    >
-                        {currentCategories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                    </select>
+                    />
                 </div>
             </div>
 

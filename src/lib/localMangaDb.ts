@@ -449,8 +449,8 @@ export function linkMangaToAniList(
         coverImage: coverImage ?? existingBySource?.coverImage,
         sourceId,
         sourceMangaId,
-        inLibrary: existingBySource?.inLibrary ?? false,
-        categoryIds: existingBySource?.categoryIds,
+        inLibrary: true, // Auto-add to library when linking
+        categoryIds: existingBySource?.categoryIds ?? ['default'],
     };
 
     // If there was an entry by source, remove it (we're consolidating to anilist ID)

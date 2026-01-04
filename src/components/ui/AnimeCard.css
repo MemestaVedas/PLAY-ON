@@ -263,9 +263,29 @@
 
 .anime-card__resume-btn:active {
     transform: scale(0.95) !important;
-}
-
-.anime-card__resume-btn svg {
     margin-left: 2px;
     /* Optical centering for play icon */
+}
+
+/* --- Loading State --- */
+.anime-card__resume-btn--loading {
+    cursor: wait;
+    opacity: 0.8 !important;
+    background: rgba(56, 189, 248, 0.8) !important;
+    transform: scale(1) !important;
+}
+
+.anime-card__resume-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    border-top-color: #000;
+    animation: anime-card-spin 0.8s linear infinite;
+}
+
+@keyframes anime-card-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }

@@ -35,8 +35,9 @@ import {
 } from '../lib/localMangaDb';
 import { sendNotification } from '@tauri-apps/plugin-notification';
 import { syncMangaFromAniList } from '../lib/syncService';
-import { setBrowsingMangaActivity, clearDiscordActivity } from '../services/discordRPC';
-import { queueChapterDownload, onDownloadProgress } from '../services/downloadService';
+import { clearDiscordActivity } from '../services/discordRPC';
+import { queueChapterDownload, queueMultipleChapters, onDownloadProgress } from '../services/downloadService';
+import { Dropdown } from '../components/ui/Dropdown';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import './MangaSourceDetails.css';
 
@@ -155,11 +156,6 @@ function MangaSourceDetails() {
 
                 setManga(mangaData);
                 setChapters(chaptersData);
-
-                // Update Discord RPC
-                if (mangaData) {
-                    setBrowsingMangaActivity(mangaData.title, mangaData.coverUrl);
-                }
 
                 // 2. Update Cache
                 if (localEntry) {
@@ -541,15 +537,16 @@ function MangaSourceDetails() {
                         </button>
 
                         {/* Read Filter */}
-                        <select
-                            className="filter-select"
+                        <Dropdown
                             value={readFilter}
-                            onChange={(e) => setReadFilter(e.target.value as 'all' | 'read' | 'unread')}
-                        >
-                            <option value="all">All</option>
-                            <option value="read">Read</option>
-                            <option value="unread">Unread</option>
-                        </select>
+                            onChange={(val) => setReadFilter(val as 'all' | 'read' | 'unread')}
+                            options={[
+                                { value: 'all', label: 'All' },
+                                { value: 'read', label: 'Read' },
+                                { value: 'unread', label: 'Unread' }
+                            ]}
+                            className="w-32"
+                        />
 
                         {/* Bookmark Filter Toggle */}
                         <button
@@ -563,15 +560,16 @@ function MangaSourceDetails() {
                         </button>
 
                         {/* Download Filter */}
-                        <select
-                            className="filter-select"
+                        <Dropdown
                             value={downloadFilter}
-                            onChange={(e) => setDownloadFilter(e.target.value as 'all' | 'downloaded' | 'not-downloaded')}
-                        >
-                            <option value="all">All DL</option>
-                            <option value="downloaded">Downloaded</option>
-                            <option value="not-downloaded">Not Downloaded</option>
-                        </select>
+                            onChange={(val) => setDownloadFilter(val as 'all' | 'downloaded' | 'not-downloaded')}
+                            options={[
+                                { value: 'all', label: 'All DL' },
+                                { value: 'downloaded', label: 'Downloaded' },
+                                { value: 'not-downloaded', label: 'Not Downloaded' }
+                            ]}
+                            className="w-40"
+                        />
 
                         {/* Search */}
                         <div className="chapter-search">
@@ -582,6 +580,59 @@ function MangaSourceDetails() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
+
+                        {/* Bulk Download Button */}
+                        <div className="bulk-download-dropdown">
+                            <Dropdown
+                                value=""
+                                placeholder="⬇ Download"
+                                options={[
+                                    { value: 'all', label: 'All Chapters' },
+                                    { value: 'unread', label: 'Unread Only' },
+                                ]}
+                                onChange={(value) => {
+                                    if (!value || !sourceId || !mangaId || !manga) return;
+
+                                    const entryId = localEntry?.id || `${sourceId}:${mangaId}`;
+                                    let chaptersToDownload = chapters;
+
+                                    if (value === 'unread') {
+                                        chaptersToDownload = chapters.filter(ch =>
+                                            !(localEntry && ch.number <= localEntry.chapter)
+                                        );
+                                    }
+
+                                    chaptersToDownload = chaptersToDownload.filter(ch =>
+                                        !isChapterDownloaded(entryId, ch.id)
+                                    );
+
+                                    if (chaptersToDownload.length === 0) {
+                                        sendNotification({ title: 'Download', body: 'No chapters to download' });
+                                        return;
+                                    }
+
+                                    const sorted = [...chaptersToDownload].sort((a, b) => a.number - b.number);
+
+                                    // Mark all as downloading (optimistic)
+                                    const downloadingMap: Record<string, boolean> = {};
+                                    sorted.forEach(ch => { downloadingMap[ch.id] = true; });
+                                    setDownloadingChapters(prev => ({ ...prev, ...downloadingMap }));
+
+                                    const tasks = sorted.map(ch => ({
+                                        sourceId: sourceId!,
+                                        mangaId: mangaId!,
+                                        mangaTitle: manga.title,
+                                        chapterId: ch.id,
+                                        chapterNumber: ch.number,
+                                        entryId,
+                                    }));
+
+                                    queueMultipleChapters(tasks);
+                                    sendNotification({ title: 'Download Started', body: `Queued ${tasks.length} chapters` });
+                                }}
+                                className="w-40"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -590,6 +641,7 @@ function MangaSourceDetails() {
                         <div className="no-chapters">No chapters found</div>
                     ) : (
                         filteredChapters.map((chapter) => {
+                            // Re-evaluate on refreshTrigger changes (included in component scope)
                             const entryId = localEntry?.id || (sourceId && mangaId ? `${sourceId}:${mangaId}` : '');
                             const isRead = localEntry && chapter.number <= localEntry.chapter;
                             const isBookmarked = entryId ? isChapterBookmarked(entryId, chapter.id) : false;
@@ -597,7 +649,7 @@ function MangaSourceDetails() {
 
                             return (
                                 <div
-                                    key={chapter.id}
+                                    key={`${chapter.id}-${refreshTrigger}`}
                                     className={`chapter-item ${isRead ? 'read' : ''} ${isDownloaded ? 'downloaded' : ''}`}
                                 >
                                     <div className="chapter-main" onClick={() => handleChapterClick(chapter)}>

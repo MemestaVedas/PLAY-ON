@@ -18,6 +18,7 @@ import {
     updateAnimeActivity,
     setBrowsingActivity,
     clearDiscordActivity,
+    isMangaReading,
 } from '../services/discordRPC';
 import { sendDesktopNotification } from '../services/notification';
 import { useNowPlaying } from '../context/NowPlayingContext';
@@ -107,6 +108,12 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
 
     // Function to check for media and update Discord
     const checkAndUpdateActivity = useCallback(async () => {
+        // Skip anime detection when manga is actively being read
+        if (isMangaReading()) {
+            console.log('[useDiscordRPC] Skipping - manga reading is active');
+            return;
+        }
+
         try {
             // Run detection to get window info (we need this even for manual sessions to parse episode)
             const result = await invoke<string>('detect_anime_command');
@@ -350,6 +357,7 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                     '/', BROWSING_DEBOUNCE_COUNT);
 
                 // Only switch to browsing after many consecutive failures AND we were watching
+                // If we weren't watching (and not detecting), we are already in browsing (or idle) state.
                 if (notDetectedCountRef.current >= BROWSING_DEBOUNCE_COUNT && isWatchingRef.current) {
                     console.log('[useDiscordRPC] Switching to browsing mode after debounce');
                     isWatchingRef.current = false;
@@ -361,9 +369,11 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                         clearManualSession();
                     }
 
+                    // Reset to default "Browsing App" status
                     await setBrowsingActivity(privacyLevel);
                 }
-                // Otherwise, keep showing the current anime (the debounce is protecting us)
+                // If count < debounce, we keep showing whatever status we had (Watching).
+                // If count >= debounce but !isWatching, we are already browsing/idle.
             }
         } catch (err) {
             console.error('[useDiscordRPC] Error checking media:', err);

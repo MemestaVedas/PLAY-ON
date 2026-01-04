@@ -8,13 +8,15 @@ import { useQuery } from '@apollo/client';
 import { USER_MEDIA_LIST_QUERY, USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY } from '../api/anilistClient';
 import { useMangaMappings } from '../hooks/useMangaMappings';
 import { useFolderMappings } from '../hooks/useFolderMappings';
-import { getMangaEntryByAnilistId } from '../lib/localMangaDb';
+import { getMangaEntryByAnilistId, updateMangaCache } from '../lib/localMangaDb';
+import { ExtensionManager } from '../services/ExtensionManager';
 
 function Home() {
     const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
     const { mappings: mangaMappings } = useMangaMappings();
     const { mappings: folderMappings } = useFolderMappings();
+    const [resumingMangaId, setResumingMangaId] = useState<number | null>(null);
 
     // Fetch Anime Data with useQuery for instant cache access
     const { data: userData, loading: userLoading, refetch: refetchUser } = useQuery(USER_MEDIA_LIST_QUERY, {
@@ -110,16 +112,69 @@ function Home() {
         navigate(`/manga-details/${id}`);
     };
 
-    const handleMangaResume = useCallback((manga: any) => {
+    const handleMangaResume = useCallback(async (manga: any) => {
         if (manga.sourceId && manga.sourceMangaId) {
-            // If we have a last read chapter ID, open the reader directly at that chapter
-            // (The reader will let user continue or go to next chapter)
-            if (manga.lastReadChapterId) {
-                const title = manga.title.english || manga.title.romaji || '';
-                navigate(`/read/${manga.sourceId}/${manga.lastReadChapterId}?mangaId=${manga.sourceMangaId}&title=${encodeURIComponent(title)}`);
-            } else {
-                // No chapter history, go to manga source details to pick a chapter
+            // 1. Optimistic: If we have a specific last read chapter ID from the list item, try that first?
+            // Actually, querying the DB for the FULL entry is safer to get the chapter list.
+
+            setResumingMangaId(manga.id);
+            try {
+                // Fetch full local entry to access cached chapters
+                const localEntry = getMangaEntryByAnilistId(manga.id);
+                let chapters = localEntry?.chapters;
+
+                // If no cached chapters, we must fetch
+                if (!chapters || chapters.length === 0) {
+                    const source = ExtensionManager.getSource(manga.sourceId);
+                    if (!source) throw new Error('Source not found');
+
+                    const chaptersData = await source.getChapters(manga.sourceMangaId);
+                    chapters = chaptersData;
+
+                    // Update cache so next time it's instant
+                    if (localEntry) {
+                        updateMangaCache(localEntry.id, {
+                            chapters: chaptersData
+                        });
+                    }
+                }
+
+                if (chapters && chapters.length > 0) {
+                    // Smart Resume Logic: Find first chapter with number > current progress
+                    // Ensure chapters are sorted ASC for finding 'next'
+                    const sorted = [...chapters].sort((a, b) => a.number - b.number);
+
+                    // Current progress (chapters read)
+                    const progress = manga.progress || 0;
+
+                    // Find the first chapter that is AFTER the progress
+                    // e.g. read ch 1 (progress 1). Next is 2. (2 > 1)
+                    let targetChapter = sorted.find(c => c.number > progress);
+
+                    // If no "next" chapter found (caught up?), maybe open the last one?
+                    if (!targetChapter) {
+                        // If progress is 0, start at beginning
+                        if (progress === 0) targetChapter = sorted[0];
+                        // Else open the last available chapter (caught up)
+                        else targetChapter = sorted[sorted.length - 1];
+                    }
+
+                    if (targetChapter) {
+                        const title = manga.title.english || manga.title.romaji || '';
+                        navigate(`/read/${manga.sourceId}/${targetChapter.id}?mangaId=${manga.sourceMangaId}&title=${encodeURIComponent(title)}`);
+                        return; // Success
+                    }
+                }
+
+                // Fallback to details if logic fails
                 navigate(`/manga/${manga.sourceId}/${manga.sourceMangaId}`);
+
+            } catch (err) {
+                console.error('Smart resume failed:', err);
+                // Fallback to details on error
+                navigate(`/manga/${manga.sourceId}/${manga.sourceMangaId}`);
+            } finally {
+                setResumingMangaId(null);
             }
         }
     }, [navigate]);
@@ -257,6 +312,7 @@ function Home() {
                                             progress={manga.progress}
                                             onClick={() => handleMangaClick(manga.id)}
                                             onResume={manga.hasMapping ? () => handleMangaResume(manga) : undefined}
+                                            isResuming={resumingMangaId === manga.id}
                                         />
                                     ))}
                                 </div>

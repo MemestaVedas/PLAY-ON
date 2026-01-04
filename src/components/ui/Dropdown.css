@@ -1,0 +1,137 @@
+/* Dropdown.css - Glassmorphic Design */
+
+.glass-dropdown-container {
+    position: relative;
+    display: inline-block;
+    min-width: 140px;
+    font-family: var(--font-rounded, sans-serif);
+}
+
+.glass-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+}
+
+.glass-dropdown-trigger:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.glass-dropdown-trigger.is-open {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(180, 162, 246, 0.5);
+    /* Lavender accent */
+    box-shadow: 0 0 15px rgba(180, 162, 246, 0.15);
+}
+
+.glass-dropdown-arrow {
+    margin-left: 0.5rem;
+    transition: transform 0.3s ease;
+    opacity: 0.6;
+}
+
+.glass-dropdown-trigger.is-open .glass-dropdown-arrow {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+.glass-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    min-width: 180px;
+    background: #1a1a20;
+    /* Solid dark background to prevent transparency overlap issues */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.5rem;
+    z-index: 100;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06),
+        0 10px 30px rgba(0, 0, 0, 0.5);
+
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-dropdown-menu.is-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.glass-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+
+.glass-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.glass-dropdown-item.is-selected {
+    background: rgba(180, 162, 246, 0.15);
+    color: #B4A2F6;
+    /* Lavender */
+    font-weight: 600;
+}
+
+.glass-dropdown-item-check {
+    margin-right: 0.5rem;
+    width: 16px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Backdrop for clicking outside */
+.glass-dropdown-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    cursor: default;
+}
+
+/* Scrollbar for long lists */
+.glass-dropdown-menu {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.glass-dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.glass-dropdown-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.glass-dropdown-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.glass-dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

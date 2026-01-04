@@ -118,28 +118,7 @@ function MangaDetails() {
         load();
     }, [id]);
 
-    // Discord Rich Presence - show browsing this manga
-    useEffect(() => {
-        if (!manga) return;
 
-        let isMounted = true;
-        const title = manga.title?.english || manga.title?.romaji || 'Unknown Manga';
-        const coverImage = manga.coverImage?.extraLarge || manga.coverImage?.large;
-
-        const updateRPC = async () => {
-            const { setBrowsingMangaActivity } = await import('../services/discordRPC');
-            if (isMounted) {
-                setBrowsingMangaActivity(title, coverImage);
-            }
-        };
-
-        updateRPC();
-
-        // Cleanup on unmount or change
-        return () => {
-            isMounted = false;
-        };
-    }, [manga?.id, manga?.title?.english, manga?.title?.romaji, manga?.coverImage?.extraLarge]);
 
     const handleProgressUpdate = async (newProgress: number) => {
         if (!manga || updating) return;

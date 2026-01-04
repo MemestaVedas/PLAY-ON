@@ -10,6 +10,7 @@ import { useMalAuth } from '../context/MalAuthContext';
 import * as malClient from '../api/malClient';
 import { updateMangaProgress } from '../lib/localMangaDb';
 import { syncMangaEntryToAniList } from '../lib/syncService';
+import { updateMangaActivity, clearDiscordActivity, setMangaReadingState } from '../services/discordRPC';
 import './MangaReader.css';
 
 type SyncStatus = 'idle' | 'tracking' | 'saving' | 'syncing' | 'synced' | 'error';
@@ -72,6 +73,28 @@ function LocalFileReader() {
         setChapterNumber(parseChapter(fileName));
 
     }, [filePath, fileName, getMappingForFilePath]);
+
+    // Discord Rich Presence - set when reading linked manga
+    useEffect(() => {
+        if (!mapping) return;
+
+        // Set manga reading state to prevent anime detection from overriding
+        setMangaReadingState(true);
+
+        // Set Discord activity for reading manga
+        updateMangaActivity({
+            mangaTitle: mapping.animeName,
+            chapter: chapterNumber,
+            anilistId: mapping.anilistId,
+            coverImage: mapping.coverImage,
+        });
+
+        // Clear activity and manga reading state when leaving the reader
+        return () => {
+            setMangaReadingState(false);
+            clearDiscordActivity();
+        };
+    }, [mapping, chapterNumber]);
 
     // Load file pages
     useEffect(() => {

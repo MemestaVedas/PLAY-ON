@@ -269,7 +269,10 @@ function LocalMangaList() {
                             <div
                                 key={entry.id}
                                 onClick={() => {
-                                    if (entry.sourceId && entry.sourceMangaId) {
+                                    if (entry.sourceId === 'local' && entry.sourceMangaId) {
+                                        // Navigate to local folder view
+                                        navigate(`/local/${encodeURIComponent(entry.sourceMangaId)}`, { state: { type: 'MANGA' } });
+                                    } else if (entry.sourceId && entry.sourceMangaId) {
                                         navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
                                     }
                                 }}
@@ -309,7 +312,10 @@ function LocalMangaList() {
                             <div
                                 key={entry.id}
                                 onClick={() => {
-                                    if (entry.sourceId && entry.sourceMangaId) {
+                                    if (entry.sourceId === 'local' && entry.sourceMangaId) {
+                                        // Navigate to local folder view
+                                        navigate(`/local/${encodeURIComponent(entry.sourceMangaId)}`, { state: { type: 'MANGA' } });
+                                    } else if (entry.sourceId && entry.sourceMangaId) {
                                         navigate(`/manga/${entry.sourceId}/${entry.sourceMangaId}`);
                                     }
                                 }}
