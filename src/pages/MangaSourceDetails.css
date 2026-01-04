@@ -648,3 +648,21 @@
 .download-btn:active {
     transform: scale(0.95);
 }
+
+/* Download Spinner */
+.download-spinner {
+    width: 20px;
+    height: 20px;
+    animation: download-spin 1s linear infinite;
+    color: #60A5FA;
+}
+
+@keyframes download-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

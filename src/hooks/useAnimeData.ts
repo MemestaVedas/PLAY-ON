@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchTrendingAnime, fetchAnimeDetails } from '../api/anilistClient';
+import { fetchTrendingAnime, fetchAnimeDetails, fetchMangaDetails } from '../api/anilistClient';
 
 export interface Anime {
     id: number;
@@ -41,6 +41,7 @@ export interface Anime {
         id: number;
         status: string;
         progress: number;
+        progressVolumes?: number;
         score?: number;
     };
     recommendations?: {
@@ -103,5 +104,17 @@ export function useAnimeData() {
         }
     }, []);
 
-    return { trending, loading, error, getAnimeDetails };
+    const getMangaDetails = useCallback(async (id: number): Promise<Anime | null> => {
+        try {
+            console.log('[useAnimeData] Fetching details for manga ID:', id);
+            const data = await fetchMangaDetails(id);
+            console.log('[useAnimeData] Got manga data:', data.data?.Media);
+            return data.data?.Media as Anime;
+        } catch (err) {
+            console.error(`[useAnimeData] Failed to fetch details for manga ${id}:`, err);
+            return null;
+        }
+    }, []);
+
+    return { trending, loading, error, getAnimeDetails, getMangaDetails };
 }

@@ -134,6 +134,38 @@
     "process:default",
     "drpc:default",
     "notification:default",
-    "shell:default"
+    "fs:default",
+    {
+      "identifier": "fs:allow-read",
+      "allow": [
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
+        },
+        {
+          "path": "$DOCUMENT/**"
+        },
+        {
+          "path": "$DESKTOP/**"
+        },
+        {
+          "path": "C:/**"
+        },
+        {
+          "path": "D:/**"
+        },
+        {
+          "path": "E:/**"
+        },
+        {
+          "path": "F:/**"
+        },
+        {
+          "path": "**"
+        }
+      ]
+    }
   ]
 }

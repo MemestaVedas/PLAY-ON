@@ -4,12 +4,15 @@ import { open } from '@tauri-apps/plugin-dialog';
 export interface LocalFolder {
     path: string;
     label: string;
+    type: 'anime' | 'manga';
 }
 
 interface LocalMediaContextType {
     folders: LocalFolder[];
-    addFolder: () => Promise<void>;
+    addFolder: (type: 'anime' | 'manga') => Promise<void>;
     removeFolder: (path: string) => void;
+    animeFolders: LocalFolder[];
+    mangaFolders: LocalFolder[];
 }
 
 const LocalMediaContext = createContext<LocalMediaContextType | undefined>(undefined);
@@ -26,7 +29,14 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
             try {
                 const parsed = JSON.parse(saved);
                 console.log("LocalMediaContext: Parsed folders:", parsed);
-                setFolders(parsed);
+
+                // Migration: valid existing folders that barely have path/label to type='anime'
+                const migrated = parsed.map((f: any) => ({
+                    ...f,
+                    type: f.type || 'anime'
+                }));
+
+                setFolders(migrated);
             } catch (e) {
                 console.error("Failed to parse local folders", e);
             }
@@ -41,13 +51,13 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
         localStorage.setItem('local-folders', JSON.stringify(folders));
     }, [folders, isLoaded]);
 
-    const addFolder = async () => {
+    const addFolder = async (type: 'anime' | 'manga') => {
         try {
             const selected = await open({
                 directory: true,
                 multiple: false,
                 recursive: true,
-                title: 'Select a folder to add'
+                title: `Select a ${type} folder to add`
             });
 
             if (selected) {
@@ -56,10 +66,17 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
                 // Extract last part of path as label (simple heuristic)
                 // Handle both windows and unix separators
                 const name = path.split(/[\\/]/).pop() || path;
+                console.log(`LocalMediaContext: Adding folder: ${path}, label: ${name}, type: ${type}`);
 
                 // Check if already exists
                 if (!folders.some(f => f.path === path)) {
-                    setFolders(prev => [...prev, { path, label: name }]);
+                    setFolders(prev => {
+                        const newState = [...prev, { path, label: name, type }];
+                        console.log("LocalMediaContext: New folders state:", newState);
+                        return newState;
+                    });
+                } else {
+                    console.log("LocalMediaContext: Folder already exists");
                 }
             }
         } catch (err) {
@@ -71,8 +88,11 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
         setFolders(prev => prev.filter(f => f.path !== path));
     };
 
+    const animeFolders = folders.filter(f => f.type === 'anime' || !f.type);
+    const mangaFolders = folders.filter(f => f.type === 'manga');
+
     return (
-        <LocalMediaContext.Provider value={{ folders, addFolder, removeFolder }}>
+        <LocalMediaContext.Provider value={{ folders, addFolder, removeFolder, animeFolders, mangaFolders }}>
             {children}
         </LocalMediaContext.Provider>
     );

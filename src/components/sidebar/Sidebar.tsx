@@ -26,7 +26,8 @@ function Sidebar({ width: _width }: SidebarProps) {
     // Fetch public user data from global context
     const { user, loading, error, isAuthenticated, login, loginWithCode } = useAuth();
     // Fetch local folder data
-    const { folders: localItems, addFolder } = useLocalMedia();
+    const { addFolder, animeFolders, mangaFolders } = useLocalMedia();
+    console.log("Sidebar: animeFolders:", animeFolders, "mangaFolders:", mangaFolders);
 
     // Navigation Sections
     const homeItem: SidebarNavItem = { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> };
@@ -42,8 +43,8 @@ function Sidebar({ width: _width }: SidebarProps) {
     ];
 
 
-    const handleNavClick = (path: string) => {
-        navigate(path);
+    const handleNavClick = (path: string, state?: any) => {
+        navigate(path, { state });
     };
 
     const renderLink = (item: SidebarNavItem) => {
@@ -108,38 +109,32 @@ function Sidebar({ width: _width }: SidebarProps) {
                     {animeSection.map(renderLink)}
                 </div>
 
-                {/* Manga Section */}
-                {renderSectionHeader('Manga')}
-                <div style={{ marginBottom: '0.5rem' }}>
-                    {mangaSection.map(renderLink)}
-                </div>
-
-                {/* Local Section Header with + button */}
+                {/* Local Anime Folders */}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0 0.75rem',
-                    marginBottom: '0.5rem',
-                    marginTop: '1rem',
+                    marginBottom: '0.25rem',
+                    marginTop: '0.5rem',
                 }}>
                     <span style={{
-                        fontSize: '0.7rem',
-                        fontWeight: '800',
-                        color: 'var(--color-text-secondary)',
+                        fontSize: '0.65rem',
+                        fontWeight: '700',
+                        color: 'var(--color-text-muted)',
                         textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
+                        letterSpacing: '0.05em',
                         fontFamily: 'var(--font-rounded)',
-                        opacity: 0.7
-                    }}>Local</span>
+                        opacity: 0.6
+                    }}>Local Anime</span>
                     <button
-                        onClick={addFolder}
+                        onClick={() => addFolder('anime')}
                         style={{
                             background: 'transparent',
                             border: 'none',
                             color: 'var(--color-text-muted)',
                             cursor: 'pointer',
-                            padding: '2px 6px',
+                            padding: '0 4px',
                             fontSize: '1rem',
                             lineHeight: 1,
                             borderRadius: '4px',
@@ -153,35 +148,88 @@ function Sidebar({ width: _width }: SidebarProps) {
                             e.currentTarget.style.color = 'var(--color-text-muted)';
                             e.currentTarget.style.background = 'transparent';
                         }}
-                        title="Add Folder"
+                        title="Add Anime Folder"
                     >
                         +
                     </button>
                 </div>
-                <div style={{ height: '0.25rem' }}></div>
+                {animeFolders.map((item) => {
+                    const path = `/local/${encodeURIComponent(item.path)}`;
+                    const isActive = location.pathname === path;
+                    return (
+                        <SidebarItem
+                            key={item.path}
+                            label={item.label}
+                            icon={<FolderIcon size={16} />}
+                            isActive={isActive}
+                            onClick={() => handleNavClick(path, { type: 'ANIME' })}
+                        />
+                    );
+                })}
 
-                {localItems.map((item) => (
-                    <div
-                        key={item.path}
-                        onClick={() => handleNavClick(`/local/${encodeURIComponent(item.path)}`)}
+                {/* Manga Section */}
+                {renderSectionHeader('Manga')}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {mangaSection.map(renderLink)}
+                </div>
+
+                {/* Local Manga Folders */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 0.75rem',
+                    marginBottom: '0.25rem',
+                    marginTop: '0.5rem',
+                }}>
+                    <span style={{
+                        fontSize: '0.65rem',
+                        fontWeight: '700',
+                        color: 'var(--color-text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        fontFamily: 'var(--font-rounded)',
+                        opacity: 0.6
+                    }}>Local Manga</span>
+                    <button
+                        onClick={() => addFolder('manga')}
                         style={{
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '4px',
+                            background: 'transparent',
+                            border: 'none',
                             color: 'var(--color-text-muted)',
                             cursor: 'pointer',
-                            fontSize: '0.9rem',
+                            padding: '0 4px',
+                            fontSize: '1rem',
+                            lineHeight: 1,
+                            borderRadius: '4px',
                             transition: 'all 0.2s',
-                            marginLeft: '0.5rem'
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-text-main)'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--color-text-main)';
+                            e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--color-text-muted)';
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                        title="Add Manga Folder"
                     >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FolderIcon size={16} />
-                            {item.label}
-                        </span>
-                    </div>
-                ))}
+                        +
+                    </button>
+                </div>
+                {mangaFolders.map((item) => {
+                    const path = `/local/${encodeURIComponent(item.path)}`;
+                    const isActive = location.pathname === path;
+                    return (
+                        <SidebarItem
+                            key={item.path}
+                            label={item.label}
+                            icon={<FolderIcon size={16} />}
+                            isActive={isActive}
+                            onClick={() => handleNavClick(path, { type: 'MANGA' })}
+                        />
+                    );
+                })}
             </div>
 
             {/* Login Button (Visible if not authenticated) */}

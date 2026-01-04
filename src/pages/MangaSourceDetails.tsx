@@ -30,11 +30,13 @@ import {
     toggleChapterBookmark,
     isChapterBookmarked,
     isChapterDownloaded,
+    updateMangaCache,
     LibraryCategory
 } from '../lib/localMangaDb';
+import { sendNotification } from '@tauri-apps/plugin-notification';
 import { syncMangaFromAniList } from '../lib/syncService';
 import { setBrowsingMangaActivity, clearDiscordActivity } from '../services/discordRPC';
-import { queueChapterDownload } from '../services/downloadService';
+import { queueChapterDownload, onDownloadProgress } from '../services/downloadService';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import './MangaSourceDetails.css';
 
@@ -59,6 +61,8 @@ function MangaSourceDetails() {
     const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
     const [bookmarkFilter, setBookmarkFilter] = useState(false);
     const [downloadFilter, setDownloadFilter] = useState<'all' | 'downloaded' | 'not-downloaded'>('all');
+    // Track downloading chapters: chapterId -> boolean
+    const [downloadingChapters, setDownloadingChapters] = useState<Record<string, boolean>>({});
 
     // Refresh trigger for library status updates
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -85,6 +89,33 @@ function MangaSourceDetails() {
 
     const inLibrary = localEntry?.inLibrary ?? false;
 
+    useEffect(() => {
+        // Listen for download progress to update UI
+        const unsubscribe = onDownloadProgress((chapterId, current, total, _status) => {
+            if (chapterId) {
+                // If starting or in progress
+                if (current < total) {
+                    setDownloadingChapters(prev => ({ ...prev, [chapterId]: true }));
+                }
+                // If complete
+                else if (current === total && current > 0) {
+                    setDownloadingChapters(prev => {
+                        const next = { ...prev };
+                        delete next[chapterId];
+                        return next;
+                    });
+                    setRefreshTrigger(prev => prev + 1);
+
+                    sendNotification({
+                        title: 'Download Complete',
+                        body: 'Chapter downloaded successfully!',
+                    });
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
     // Load manga details and chapters
     useEffect(() => {
         if (!source || !mangaId) return;
@@ -93,11 +124,35 @@ function MangaSourceDetails() {
             setLoading(true);
             setError(null);
 
+            // 1. Load from cache immediately if available
+            if (localEntry) {
+                if (localEntry.description || localEntry.chapters) {
+                    console.log('[MangaDetails] Loading from cache');
+                    setManga({
+                        id: mangaId,
+                        title: localEntry.title,
+                        coverUrl: localEntry.coverImage || '',
+                        description: localEntry.description || '',
+                        author: localEntry.author || '',
+                        genres: localEntry.genres || [],
+                        status: 'unknown', // Status might be stale, but better than nothing
+                        url: '',
+                    });
+                    if (localEntry.chapters) {
+                        setChapters(localEntry.chapters);
+                    }
+                    // Don't unset loading yet if we want to try fetching fresh data
+                    // But for UX, showing cached data immediately is better.
+                    setLoading(false);
+                }
+            }
+
             try {
                 const [mangaData, chaptersData] = await Promise.all([
                     source.getMangaDetails(mangaId),
                     source.getChapters(mangaId),
                 ]);
+
                 setManga(mangaData);
                 setChapters(chaptersData);
 
@@ -105,8 +160,29 @@ function MangaSourceDetails() {
                 if (mangaData) {
                     setBrowsingMangaActivity(mangaData.title, mangaData.coverUrl);
                 }
+
+                // 2. Update Cache
+                if (localEntry) {
+                    updateMangaCache(localEntry.id, {
+                        description: mangaData.description,
+                        genres: mangaData.genres,
+                        author: mangaData.author,
+                        chapters: chaptersData,
+                        coverImage: mangaData.coverUrl
+                    });
+                }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load manga');
+                console.error('Failed to load fresh data:', err);
+
+                // If we have cached data, don't show error page, just show toast/log
+                const hasCachedData = localEntry && (localEntry.description || localEntry.chapters);
+
+                if (!hasCachedData) {
+                    setError(err instanceof Error ? err.message : 'Failed to load manga');
+                } else {
+                    // Maybe show a "Offline Mode" toast here?
+                    console.log('Using cached data due to error');
+                }
             } finally {
                 setLoading(false);
             }
@@ -544,10 +620,15 @@ function MangaSourceDetails() {
                                         {/* Download Button */}
                                         {!isDownloaded && (
                                             <button
-                                                className="download-btn"
+                                                className={`download-btn ${downloadingChapters[chapter.id] ? 'downloading' : ''}`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    if (downloadingChapters[chapter.id]) return; // Prevent duplicate clicks
+
                                                     if (sourceId && mangaId && manga) {
+                                                        // Optimistic UI update
+                                                        setDownloadingChapters(prev => ({ ...prev, [chapter.id]: true }));
+
                                                         queueChapterDownload({
                                                             sourceId,
                                                             mangaId,
@@ -556,16 +637,25 @@ function MangaSourceDetails() {
                                                             chapterNumber: chapter.number,
                                                             entryId: entryId || `${sourceId}:${mangaId}`,
                                                         });
-                                                        setRefreshTrigger(prev => prev + 1);
                                                     }
                                                 }}
-                                                title="Download Chapter"
+                                                title={downloadingChapters[chapter.id] ? "Downloading..." : "Download Chapter"}
+                                                disabled={!!downloadingChapters[chapter.id]}
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                                </svg>
+                                                {downloadingChapters[chapter.id] ? (
+                                                    <div className="download-spinner">
+                                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeOpacity="0.3" />
+                                                            <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                                                        </svg>
+                                                    </div>
+                                                ) : (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                                    </svg>
+                                                )}
                                             </button>
                                         )}
                                         {/* Bookmark Button */}

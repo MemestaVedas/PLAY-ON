@@ -17,6 +17,8 @@ mod file_system;
 mod title_parser;
 // Import CBZ reader module
 mod cbz_reader;
+// Import downloader module
+mod downloader;
 
 // Platform-conditional imports for unified interface
 #[cfg(windows)]
@@ -350,6 +352,42 @@ async fn progressive_search_command(title: String) -> Result<String, String> {
     serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))
 }
 
+/// Tauri command to download a chapter as CBZ
+///
+/// # Arguments
+/// * `chapter_title` - Title of the chapter (e.g., "Chapter 1")
+/// * `manga_title` - Title of the manga
+/// * `urls` - List of image URLs to download
+/// * `download_dir` - Directory to save the file in
+///
+/// # Returns
+/// * Path to the downloaded CBZ file
+#[tauri::command]
+async fn download_chapter_command(
+    chapter_title: String,
+    manga_title: String,
+    urls: Vec<String>,
+    download_dir: String,
+) -> Result<String, String> {
+    println!(
+        "[Downloader] Received command: {} - {} ({} pages)",
+        manga_title,
+        chapter_title,
+        urls.len()
+    );
+    println!("[Downloader] Download dir: {}", download_dir);
+
+    let result =
+        downloader::download_chapter_to_cbz(chapter_title, manga_title, urls, download_dir).await;
+
+    match &result {
+        Ok(path) => println!("[Downloader] Success! CBZ saved to: {}", path),
+        Err(e) => println!("[Downloader] Error: {}", e),
+    }
+
+    result
+}
+
 lazy_static::lazy_static! {
     static ref IMAGE_CACHE: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
 }
@@ -439,6 +477,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             println!("{}, {argv:?}, {_cwd}", app.package_info().name);
 
@@ -471,7 +510,8 @@ pub fn run() {
             download_image_for_notification,
             cbz_reader::get_cbz_info,
             cbz_reader::get_cbz_page,
-            cbz_reader::is_valid_cbz
+            cbz_reader::is_valid_cbz,
+            download_chapter_command
         ])
         .setup(|_app| {
             // Register deep links at runtime for development mode (Windows/Linux)
@@ -502,10 +542,10 @@ pub fn run() {
 
             let segments: Vec<&str> = path_and_query.split('/').collect();
             if segments.len() < 2 {
-                return http::Response::builder()
+                return tauri::http::Response::builder()
                     .status(400)
                     .body(Vec::new())
-                    .unwrap_or_else(|_| http::Response::new(Vec::new()));
+                    .unwrap();
             }
 
             let encoded_path = segments[0];
@@ -515,35 +555,35 @@ pub fn run() {
             let decoded_path = match urlencoding::decode(encoded_path) {
                 Ok(p) => p.to_string(),
                 Err(_) => {
-                    return http::Response::builder()
+                    return tauri::http::Response::builder()
                         .status(400)
                         .body(Vec::new())
-                        .unwrap_or_else(|_| http::Response::new(Vec::new()));
+                        .unwrap()
                 }
             };
 
             let decoded_page = match urlencoding::decode(&encoded_page) {
                 Ok(p) => p.to_string(),
                 Err(_) => {
-                    return http::Response::builder()
+                    return tauri::http::Response::builder()
                         .status(400)
                         .body(Vec::new())
-                        .unwrap_or_else(|_| http::Response::new(Vec::new()));
+                        .unwrap()
                 }
             };
 
             match cbz_reader::read_cbz_page_bytes(&decoded_path, &decoded_page) {
-                Ok((bytes, mime)) => http::Response::builder()
+                Ok((bytes, mime)) => tauri::http::Response::builder()
                     .header("Content-Type", mime)
                     .header("Access-Control-Allow-Origin", "*")
                     .body(bytes)
-                    .unwrap_or_else(|_| http::Response::new(Vec::new())),
+                    .unwrap(),
                 Err(e) => {
                     eprintln!("Manga protocol error: {}", e);
-                    http::Response::builder()
+                    tauri::http::Response::builder()
                         .status(404)
                         .body(Vec::new())
-                        .unwrap_or_else(|_| http::Response::new(Vec::new()))
+                        .unwrap()
                 }
             }
         })

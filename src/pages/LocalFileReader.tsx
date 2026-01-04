@@ -1,23 +1,23 @@
-/**
- * Local File Reader Page
- * 
- * Handles viewing local manga files (CBZ, PDF).
- * Reuses styling from MangaReader for consistent UX.
- */
-
-import { useState, useEffect, useRef } from 'react';
-import { Virtuoso } from 'react-virtuoso';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { getCbzInfo } from '../services/localFileReader';
+import { getCbzInfo, getCbzPage } from '../services/localFileReader';
 import { loadPdf, renderPdfPage } from '../lib/pdfReader';
+import { readFile } from '@tauri-apps/plugin-fs';
+import { useFolderMappings } from '../hooks/useFolderMappings';
+import { updateMangaProgress } from '../lib/localMangaDb';
+import { syncMangaEntryToAniList } from '../lib/syncService';
 import './MangaReader.css';
+
+type SyncStatus = 'idle' | 'tracking' | 'saving' | 'syncing' | 'synced' | 'error';
 
 function LocalFileReader() {
     const [searchParams] = useSearchParams();
     const filePath = searchParams.get('path') || '';
     const fileName = filePath.split(/[/\\]/).pop() || 'Unknown';
     const navigate = useNavigate();
+    const { getMappingForFilePath } = useFolderMappings();
 
     const [pages, setPages] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -27,13 +27,51 @@ function LocalFileReader() {
     const [zoom, setZoom] = useState(100);
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const virtuosoRef = useRef<VirtuosoHandle>(null);
 
     const [showControls, setShowControls] = useState(true);
 
+    // Tracking
+    const [mapping, setMapping] = useState<ReturnType<typeof getMappingForFilePath>>(undefined);
+    const [chapterNumber, setChapterNumber] = useState<number | null>(null);
+    const [scrollProgress, setScrollProgress] = useState(0);
+    const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+    const syncedRef = useRef(false);
+
+    // 80% threshold for syncing
+    const SYNC_THRESHOLD = 0.8;
+
+    // Detect mapping and chapter number on mount
+    useEffect(() => {
+        if (!filePath) return;
+
+        // Find if this file belongs to a mapped folder
+        const foundMapping = getMappingForFilePath(filePath);
+        setMapping(foundMapping);
+
+        // Parse chapter number
+        const parseChapter = (fname: string): number | null => {
+            const patterns = [
+                /(?:^|[_\W])(?:C|Ch|Chapter)\.?\s*(\d+)/i,  // Ch. 1, Chapter 1
+                /(?:^|[_\W])(?:Vol|Volume)\.?\s*\d+\s*(?:C|Ch|Chapter)\.?\s*(\d+)/i, // Vol. 1 Ch. 1
+                /(?:^|[\s_\-\(\[])(\d{1,4})(?:v\d)?(?:[\s_\-\)\]\.]|$)/, // 001, [001]
+            ];
+
+            for (const pattern of patterns) {
+                const match = fname.match(pattern);
+                if (match && match[1]) {
+                    return parseInt(match[1], 10);
+                }
+            }
+            return null;
+        };
+
+        setChapterNumber(parseChapter(fileName));
+
+    }, [filePath, fileName, getMappingForFilePath]);
+
     // Load file pages
     useEffect(() => {
-        // Flag to track if the effect is still active
-        // This prevents state updates if the component unmounts or if filePath changes
         let isMounted = true;
 
         if (!filePath) {
@@ -45,55 +83,63 @@ function LocalFileReader() {
         const loadFile = async () => {
             setLoading(true);
             setError(null);
-            setPages([]); // Reset pages
+            setPages([]);
 
             try {
-                // Moved getFileType here to avoid re-importing in the new CBZ logic
                 const getFileType = (path: string): 'cbz' | 'pdf' | 'unsupported' => {
                     const ext = path.split('.').pop()?.toLowerCase();
-                    if (ext === 'cbz') return 'cbz';
+                    if (ext === 'cbz' || ext === 'cbr') return 'cbz';
                     if (ext === 'pdf') return 'pdf';
                     return 'unsupported';
                 };
                 const fileType = getFileType(filePath);
 
                 if (fileType === 'cbz') {
-                    // Load CBZ file info first
                     const info = await getCbzInfo(filePath);
                     if (!isMounted) return;
 
-                    // Generate URLs via custom protocol
-                    // Format: manga://localhost/<encoded_path>/<encoded_page_name>
-                    const pageUrls = info.pages.map(pageName => {
-                        const encodedPath = encodeURIComponent(filePath);
-                        const encodedPage = encodeURIComponent(pageName);
-                        return `manga://localhost/${encodedPath}/${encodedPage}`;
-                    });
-
-                    setPages(pageUrls);
+                    const placeholders = new Array(info.pages.length).fill('');
+                    setPages(placeholders);
                     setLoading(false);
 
+                    const currentPages = [...placeholders];
+                    const UPDATE_BATCH_SIZE = 5;
+
+                    for (let i = 0; i < info.pages.length; i++) {
+                        if (!isMounted) break;
+
+                        try {
+                            const pageData = await getCbzPage(filePath, info.pages[i]);
+                            if (!isMounted) break;
+                            currentPages[i] = pageData;
+
+                            if (i === 0 || (i + 1) % UPDATE_BATCH_SIZE === 0 || i === info.pages.length - 1) {
+                                setPages([...currentPages]);
+                                setLoadingProgress({ current: i + 1, total: info.pages.length });
+                            }
+                        } catch (err) {
+                            console.error(`Failed to load page ${i + 1}:`, err);
+                        }
+                    }
+
                 } else if (fileType === 'pdf') {
-                    // Load PDF document
-                    const pdfDoc = await loadPdf(`file://${filePath}`);
+                    const fileData = await readFile(filePath);
+                    const pdfDoc = await loadPdf(fileData.buffer);
+
                     if (!isMounted) return;
 
-                    // Initialize placeholders
                     const placeholders = new Array(pdfDoc.pageCount).fill('');
                     setPages(placeholders);
                     setLoading(false);
 
                     const currentPages = [...placeholders];
-                    const UPDATE_BATCH_SIZE = 3; // PDFs are slower to render
+                    const UPDATE_BATCH_SIZE = 3;
 
-                    // Load pages progressively
                     for (let i = 1; i <= pdfDoc.pageCount; i++) {
                         if (!isMounted) break;
-
                         try {
                             const pageUrl = await renderPdfPage(pdfDoc, i);
                             if (!isMounted) break;
-
                             currentPages[i - 1] = pageUrl;
 
                             if (i === 1 || i % UPDATE_BATCH_SIZE === 0 || i === pdfDoc.pageCount) {
@@ -117,12 +163,60 @@ function LocalFileReader() {
         };
 
         loadFile();
-
-        // Cleanup function
-        return () => {
-            isMounted = false;
-        };
+        return () => { isMounted = false; };
     }, [filePath]);
+
+    // Handle scroll for 80% completion
+    const handleScroll = useCallback((e: React.UIEvent<HTMLElement>) => {
+        const target = e.currentTarget as HTMLElement;
+        const progress = target.scrollTop / (target.scrollHeight - target.clientHeight);
+        setScrollProgress(progress);
+    }, []);
+
+    // Sync effect
+    useEffect(() => {
+        if (!mapping || chapterNumber === null || syncedRef.current) return;
+
+        if (scrollProgress < SYNC_THRESHOLD) {
+            if (syncStatus === 'idle') {
+                setSyncStatus('tracking');
+            }
+            return;
+        }
+
+        // Threshold reached
+        syncedRef.current = true;
+        setSyncStatus('saving');
+
+        const syncChapter = async () => {
+            console.log(`[LocalReader] 80% threshold reached for Ch ${chapterNumber}`);
+
+            try {
+                // Update local DB
+                const entry = updateMangaProgress(String(mapping.anilistId), {
+                    title: mapping.animeName, // Using mapped anime name
+                    chapter: chapterNumber,
+                    anilistId: mapping.anilistId,
+                    coverImage: mapping.coverImage,
+                    // We don't have sourceId for local folders exactly as 'source', but we can format it
+                    sourceId: 'local',
+                    sourceMangaId: filePath
+                });
+
+                console.log('[LocalReader] Saved to local DB:', entry.title, 'Ch', entry.chapter);
+
+                // Sync to AniList
+                setSyncStatus('syncing');
+                const synced = await syncMangaEntryToAniList(entry);
+                setSyncStatus(synced ? 'synced' : 'error');
+            } catch (err) {
+                console.error('[LocalReader] Sync error:', err);
+                setSyncStatus('error');
+            }
+        };
+
+        syncChapter();
+    }, [scrollProgress, mapping, chapterNumber]);
 
     // Keyboard navigation
     useEffect(() => {
@@ -151,16 +245,40 @@ function LocalFileReader() {
         setIsFullscreen(!fullscreen);
     };
 
+    // Sync Status UI
+    const getSyncStatusDisplay = () => {
+        if (!mapping && syncStatus !== 'synced') return null;
+
+        switch (syncStatus) {
+            case 'tracking':
+                return (
+                    <div className="sync-status tracking">
+                        <span className="sync-icon">📖</span>
+                        <span>{Math.round(scrollProgress * 100)}%</span>
+                        <div className="sync-progress-bar">
+                            <div className="sync-progress-fill" style={{ width: `${(scrollProgress / SYNC_THRESHOLD) * 100}%` }} />
+                        </div>
+                    </div>
+                );
+            case 'saving':
+                return <div className="sync-status saving"><span className="sync-icon">💾</span><span>Saving...</span></div>;
+            case 'syncing':
+                return <div className="sync-status syncing"><span className="sync-icon spinning">🔄</span><span>Syncing...</span></div>;
+            case 'synced':
+                return <div className="sync-status synced"><span className="sync-icon">✓</span><span>Synced</span></div>;
+            case 'error':
+                return <div className="sync-status error"><span className="sync-icon">⚠️</span><span>Sync failed</span></div>;
+            default:
+                return null;
+        }
+    };
+
     if (loading) {
         return (
             <div className="manga-reader-loading">
                 <div className="loader"></div>
                 <p>Loading {fileName}...</p>
-                {loadingProgress.total > 0 && (
-                    <p className="loading-progress">
-                        Page {loadingProgress.current} / {loadingProgress.total}
-                    </p>
-                )}
+                {loadingProgress.total > 0 && <p className="loading-progress">Page {loadingProgress.current} / {loadingProgress.total}</p>}
             </div>
         );
     }
@@ -185,16 +303,20 @@ function LocalFileReader() {
                 </button>
 
                 <div className="chapter-info">
-                    <h1 className="manga-title">{fileName}</h1>
+                    <h1 className="manga-title">{mapping ? mapping.animeName : fileName}</h1>
                     <span className="chapter-number">
-                        {pages.length} pages
+                        {chapterNumber ? `Chapter ${chapterNumber}` : `${pages.length} pages`}
                     </span>
                 </div>
 
                 <div className="reader-settings">
-                    <button className="control-btn" onClick={() => setZoom(prev => Math.max(prev - 10, 50))}>−</button>
-                    <span className="zoom-level">{zoom}%</span>
-                    <button className="control-btn" onClick={() => setZoom(prev => Math.min(prev + 10, 200))}>+</button>
+                    {getSyncStatusDisplay()}
+
+                    <div className="zoom-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '4px 8px', borderRadius: '8px' }}>
+                        <button className="control-btn" onClick={() => setZoom(prev => Math.max(prev - 10, 50))} title="Zoom Out">−</button>
+                        <span className="zoom-level" style={{ minWidth: '40px', textAlign: 'center' }}>{zoom}%</span>
+                        <button className="control-btn" onClick={() => setZoom(prev => Math.min(prev + 10, 200))} title="Zoom In">+</button>
+                    </div>
                 </div>
             </div>
 
@@ -202,32 +324,23 @@ function LocalFileReader() {
             <div className="reader-content vertical" onClick={() => setShowControls(prev => !prev)}>
                 <div className="vertical-scroll" style={{ maxWidth: `${zoom}%`, width: '100%' }}>
                     <Virtuoso
+                        ref={virtuosoRef}
                         style={{ height: '100%', width: '100%' }}
                         data={pages}
+                        atBottomThreshold={200}
+                        onScroll={handleScroll}
                         itemContent={(index: number, pageUrl: string) => (
-                            <div style={{ display: 'flex', justifyContent: 'center', width: '100%', minHeight: '200px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
                                 {pageUrl ? (
                                     <img
                                         src={pageUrl}
                                         alt={`Page ${index + 1}`}
                                         className="page-image"
-                                        style={{ width: '100%', minHeight: '200px', display: 'block' }}
+                                        style={{ width: '100%', height: 'auto', display: 'block' }}
                                         loading="lazy"
                                     />
                                 ) : (
-                                    <div
-                                        className="page-placeholder"
-                                        style={{
-                                            height: '800px',
-                                            width: '100%',
-                                            background: '#1a1a1a',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: '#666',
-                                            marginBottom: '10px'
-                                        }}
-                                    >
+                                    <div className="page-placeholder" style={{ height: '600px', width: '100%', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
                                         Loading Page {index + 1}...
                                     </div>
                                 )}
@@ -237,8 +350,17 @@ function LocalFileReader() {
                 </div>
             </div>
 
-            {/* Bottom Controls (Fullscreen) */}
+            {/* Bottom Controls */}
             <div className={`reader-controls-bottom ${showControls ? 'visible' : ''}`}>
+                {/* Page Indicator */}
+                <div className="control-group center">
+                    <div className="page-indicator">
+                        <span>{Math.round(scrollProgress * 100)}%</span>
+                        <span className="separator">•</span>
+                        <span>{pages.length} Pages</span>
+                    </div>
+                </div>
+
                 <div className="control-group right">
                     <button className="control-btn" onClick={toggleFullscreen} title="Toggle Fullscreen">
                         {isFullscreen ? (

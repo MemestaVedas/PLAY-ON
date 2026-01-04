@@ -16,9 +16,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ExtensionManager, Page, Chapter, Manga } from '../services/ExtensionManager';
 import { useMangaMappings } from '../hooks/useMangaMappings';
-import { updateMangaProgress, getMangaEntryByAnilistId, getLocalMangaEntry } from '../lib/localMangaDb';
+import { updateMangaProgress, getMangaEntryByAnilistId, getLocalMangaEntry, getLocalMangaDb, isChapterDownloaded, LocalMangaEntry } from '../lib/localMangaDb';
 import { syncMangaEntryToAniList } from '../lib/syncService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
 import './MangaReader.css';
 
 type ReadingMode = 'vertical' | 'single' | 'double';
@@ -74,17 +75,100 @@ function MangaReader() {
             setError(null);
             setScrollProgress(0);
 
-            // Default to idle, but might update to synced if already read
+            // Default to idle
             setSyncStatus('idle');
 
-            // Reset scroll position immediately
+            // Reset scroll position
             if (scrollContainerRef.current) {
                 scrollContainerRef.current.scrollTop = 0;
             }
-            // Also reset window scroll just in case
             window.scrollTo(0, 0);
 
             try {
+                // 1. Check for Local Offline Data
+                const allEntries = getLocalMangaDb();
+                const localEntry = Object.values(allEntries).find(e =>
+                    (e.sourceId === sourceId && e.sourceMangaId === mangaId) ||
+                    (anilistMapping?.anilistId && e.anilistId === anilistMapping.anilistId)
+                ) as LocalMangaEntry | undefined;
+
+                // If we found a local entry, use its data first
+                if (localEntry) {
+                    if (localEntry.chapters) {
+                        setChapters(localEntry.chapters);
+                    }
+                }
+
+                // Check if chapter is downloaded
+                const isDownloaded = isChapterDownloaded(localEntry?.id || '', chapterId);
+
+                if (isDownloaded && localEntry && localEntry.chapters) {
+                    console.log('[MangaReader] Chapter is downloaded, reading from disk');
+
+                    const chapter = localEntry.chapters.find((c: Chapter) => c.id === chapterId);
+                    if (chapter) {
+                        try {
+                            // Get settings for path
+                            const settingsJson = localStorage.getItem('app-settings');
+                            let downloadDir = '';
+                            if (settingsJson) {
+                                downloadDir = JSON.parse(settingsJson).mangaDownloadPath || '';
+                            }
+
+                            if (downloadDir) {
+                                // Construct Path matches Rust logic
+                                // Sanitize: replace specific chars with _ and trim
+                                const sanitize = (s: string) => s.replace(/[<>:"/\\|?*]/g, '_').trim();
+
+                                const mangaDir = sanitize(localEntry.title);
+                                const chapterFile = `${sanitize(chapter.title)}.cbz`;
+
+                                // We need full path. Assuming Windows/Standard separators. 
+                                // Better to join properly or just use slashes which usually work.
+                                const cbzPath = `${downloadDir}\\${mangaDir}\\${chapterFile}`.replace(/\\\\/g, '\\');
+
+                                // Get CBZ info
+                                const info = await invoke<{ page_count: number, pages: string[] }>('get_cbz_info', { path: cbzPath });
+
+                                // Generate Page URLs
+                                const cbzPages: Page[] = info.pages.map((filename: string, index: number) => ({
+                                    index,
+                                    imageUrl: `manga://localhost/${encodeURIComponent(cbzPath)}/${encodeURIComponent(filename)}`
+                                }));
+
+                                setPages(cbzPages);
+
+                                // If we successfully loaded from CBZ, we still need basic manga info
+                                if (localEntry) {
+                                    setManga({
+                                        id: localEntry.id,
+                                        title: localEntry.title,
+                                        coverUrl: localEntry.coverImage || '',
+                                        description: localEntry.description || '',
+                                        author: localEntry.author || '',
+                                        genres: localEntry.genres || [],
+                                        status: 'unknown',
+                                        url: '',
+                                    });
+                                    if (localEntry.chapters) {
+                                        setChapters(localEntry.chapters);
+                                        // Find current chapter
+                                        const current = localEntry.chapters.find((c: Chapter) => c.id === chapterId);
+                                        setCurrentChapter(current || null);
+                                    }
+                                }
+
+                                setLoading(false);
+                                return; // Exit early to skip online fetch
+                            }
+                        } catch (e) {
+                            console.error('Failed to load local CBZ:', e);
+                            // Fallback to online if local fails?
+                        }
+                    }
+                }
+
+                // ... fetch online logic ...
                 const source = ExtensionManager.getSource(sourceId);
                 if (!source) {
                     throw new Error(`Source '${sourceId}' not found`);

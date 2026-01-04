@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { openPath } from '@tauri-apps/plugin-opener';
+import { motion } from 'framer-motion';
 import Folder from '../components/ui/Folder';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { useAnimeData } from '../hooks/useAnimeData';
+import {
+    FilmIcon,
+    MusicIcon,
+    ImageIcon,
+    FileTextIcon,
+    BookOpenIcon,
+    FileIcon,
+    FolderIcon
+} from '../components/ui/Icons';
 
 interface FileItem {
     name: string;
@@ -35,7 +45,7 @@ const formatDate = (timestamp?: number): string => {
 };
 
 // Get file icon based on extension
-const getFileIcon = (filename: string): string => {
+const getFileIcon = (filename: string, size: number = 24) => {
     const ext = filename.split('.').pop()?.toLowerCase();
     const videoExts = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm'];
     const audioExts = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'];
@@ -43,12 +53,12 @@ const getFileIcon = (filename: string): string => {
     const subExts = ['srt', 'ass', 'ssa', 'sub', 'vtt'];
     const mangaExts = ['pdf', 'cbz', 'cbr'];
 
-    if (videoExts.includes(ext || '')) return '🎬';
-    if (audioExts.includes(ext || '')) return '🎵';
-    if (imageExts.includes(ext || '')) return '🖼️';
-    if (subExts.includes(ext || '')) return '📝';
-    if (mangaExts.includes(ext || '')) return '📚';
-    return '📄';
+    if (videoExts.includes(ext || '')) return <FilmIcon size={size} />;
+    if (audioExts.includes(ext || '')) return <MusicIcon size={size} />;
+    if (imageExts.includes(ext || '')) return <ImageIcon size={size} />;
+    if (subExts.includes(ext || '')) return <FileTextIcon size={size} />;
+    if (mangaExts.includes(ext || '')) return <BookOpenIcon size={size} />;
+    return <FileIcon size={size} />;
 };
 
 // Manga file extensions (PDF, CBZ, CBR)
@@ -90,18 +100,24 @@ const isVideoFile = (filename: string): boolean => {
 function LocalFolder() {
     const { folderPath } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [files, setFiles] = useState<FileItem[]>([]);
+
+    // Get media type from navigation state (passed from Sidebar)
+    const mediaType = location.state?.type as 'ANIME' | 'MANGA' | undefined;
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [watchedProgress, setWatchedProgress] = useState<number>(0);
+    const [watchedVolumes, setWatchedVolumes] = useState<number>(0);
 
     // Folder-to-AniList mapping hook
     const { getMappingByPath, addMapping, removeMapping } = useFolderMappings();
 
     // Anime Data hook
-    const { getAnimeDetails } = useAnimeData();
+    const { getAnimeDetails, getMangaDetails } = useAnimeData();
 
     // Decode the path from URL
     const currentPath = folderPath ? decodeURIComponent(folderPath) : '';
@@ -135,27 +151,37 @@ function LocalFolder() {
         async function fetchProgress() {
             if (currentMapping?.anilistId) {
                 try {
-                    const details = await getAnimeDetails(currentMapping.anilistId);
-                    if (details?.mediaListEntry?.progress) {
-                        setWatchedProgress(details.mediaListEntry.progress);
+                    let details;
+                    if (mediaType === 'MANGA') {
+                        details = await getMangaDetails(currentMapping.anilistId);
+                    } else {
+                        // Default to Anime if not specified or specified as ANIME
+                        details = await getAnimeDetails(currentMapping.anilistId);
+                    }
+
+                    if (details?.mediaListEntry) {
+                        setWatchedProgress(details.mediaListEntry.progress || 0);
+                        setWatchedVolumes(details.mediaListEntry.progressVolumes || 0);
                     } else {
                         setWatchedProgress(0);
+                        setWatchedVolumes(0);
                     }
                 } catch (err) {
-                    console.error("Failed to fetch anime progress:", err);
+                    console.error("Failed to fetch media progress:", err);
                 }
             } else {
                 setWatchedProgress(0);
+                setWatchedVolumes(0);
             }
         }
         fetchProgress();
-    }, [currentMapping, getAnimeDetails]);
+    }, [currentMapping, getAnimeDetails, getMangaDetails, mediaType]);
 
 
     const handleItemClick = async (item: FileItem) => {
         if (item.is_dir) {
-            // Navigate into subdirectory
-            navigate(`/local/${encodeURIComponent(item.path)}`);
+            // Navigate into subdirectory, preserving the media type state
+            navigate(`/local/${encodeURIComponent(item.path)}`, { state: location.state });
         } else if (isMangaFile(item.name)) {
             // Navigate to LocalFileReader for PDF/CBZ files
             navigate(`/read-local?path=${encodeURIComponent(item.path)}`);
@@ -172,6 +198,7 @@ function LocalFolder() {
     // Find the video file for the next episode to watch
     const getNextEpisodeFile = (): FileItem | null => {
         if (!currentMapping) return null;
+        if (mediaType === 'MANGA') return null; // No "next episode" prediction for manga yet
 
         const nextEpisode = watchedProgress + 1;
         const videoFiles = files.filter(f => !f.is_dir && isVideoFile(f.name));
@@ -231,10 +258,6 @@ function LocalFolder() {
         );
     }
 
-
-
-    // ... (existing code)
-
     const filteredFiles = files.filter(file =>
         file.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -242,47 +265,197 @@ function LocalFolder() {
     const directories = filteredFiles.filter(f => f.is_dir);
     const regularFiles = filteredFiles.filter(f => !f.is_dir);
 
+    // Group files
+    const VOL_REGEX = /(?:^|[_\W])(?:Vol|Volume)(?:\.|)\s*(\d+)/i;
+    const CH_REGEX = /(?:^|[_\W])(?:Ch|Chapter)(?:\.|)\s*(\d+)/i;
+
+    const mangaFiles = regularFiles.filter(f => isMangaFile(f.name));
+    const otherFiles = regularFiles.filter(f => !isMangaFile(f.name));
+
+    const volumeFiles = mangaFiles.filter(f => VOL_REGEX.test(f.name) && !CH_REGEX.test(f.name));
+    const chapterFiles = mangaFiles.filter(f => !volumeFiles.includes(f));
+
+    // Sort logic handled by backend (natord), but groups maintain relative order
+
     // Mock items to put "inside" the folders
     const mockFolderItems = [
-        <div key="1" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">🎬</div>,
-        <div key="2" className="w-full h-full bg-gray-300 flex items-center justify-center text-xs text-gray-600">📁</div>,
-        <div key="3" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">📄</div>
+        <div key="1" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500"><FilmIcon size={12} /></div>,
+        <div key="2" className="w-full h-full bg-gray-300 flex items-center justify-center text-xs text-gray-600"><FolderIcon size={12} /></div>,
+        <div key="3" className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500"><FileIcon size={12} /></div>
     ];
 
     // Helper to check if file is watched
     const isFileWatched = (filename: string): boolean => {
-        if (!currentMapping || watchedProgress === 0) return false;
+        if (!currentMapping) return false;
 
         const ext = filename.split('.').pop()?.toLowerCase();
-        const videoExts = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm'];
 
-        if (!videoExts.includes(ext || '')) return false;
+        // Check for video (Anime)
+        if (VIDEO_EXTS.includes(ext || '')) {
+            if (watchedProgress === 0) return false;
+            const localParseEpisode = (fname: string): number | null => {
+                const patterns = [
+                    /[sS]\d+[eE](\d+)/,
+                    /\d+x(\d+)/,
+                    /(?:^|[_\W])(?:E|EP|Episode)\.?\s*(\d+)/i,
+                    /(?:^|[\s_\-\(\[])(\d{1,3})(?:v\d)?(?:[\s_\-\)\]\.]|$)/
+                ];
 
-        const parseEpisode = (fname: string): number | null => {
-            const patterns = [
-                /[sS]\d+[eE](\d+)/,                 // S01E01
-                /\d+x(\d+)/,                        // 1x01
-                /(?:^|[_\W])(?:E|EP|Episode)\.?\s*(\d+)/i,  // E01, EP01, Episode 1
-                /(?:^|[\s_\-\(\[])(\d{1,3})(?:v\d)?(?:[\s_\-\)\]\.]|$)/ // - 01 -, [01], _01_, 01.mkv
-            ];
+                for (const pattern of patterns) {
+                    const match = fname.match(pattern);
+                    if (match && match[1]) {
+                        return parseInt(match[1], 10);
+                    }
+                }
+                return null;
+            };
 
-            for (const pattern of patterns) {
-                const match = fname.match(pattern);
+            const episode = localParseEpisode(filename);
+            if (episode !== null) {
+                return episode <= watchedProgress;
+            }
+        }
+
+        // Check for manga
+        if (MANGA_EXTS.includes(ext || '')) {
+            // Determine if it's a volume or chapter
+            const isVolume = VOL_REGEX.test(filename) && !CH_REGEX.test(filename);
+
+            if (isVolume) {
+                // Check against volume progress
+                if (watchedVolumes === 0) return false;
+                const match = filename.match(VOL_REGEX);
                 if (match && match[1]) {
-                    return parseInt(match[1], 10);
+                    const volume = parseInt(match[1], 10);
+                    return volume <= watchedVolumes;
+                }
+            } else {
+                // Check against chapter progress
+                if (watchedProgress === 0) return false;
+                const localParseChapter = (fname: string): number | null => {
+                    const patterns = [
+                        /(?:^|[_\W])(?:C|Ch|Chapter)\.?\s*(\d+)/i,  // Ch. 1, Chapter 1
+                        /(?:^|[_\W])(?:Vol|Volume)\.?\s*\d+\s*(?:C|Ch|Chapter)\.?\s*(\d+)/i, // Vol. 1 Ch. 1
+                        /(?:^|[\s_\-\(\[])(\d{1,4})(?:v\d)?(?:[\s_\-\)\]\.]|$)/, // 001, [001]
+                    ];
+
+                    for (const pattern of patterns) {
+                        const match = fname.match(pattern);
+                        if (match && match[1]) {
+                            return parseInt(match[1], 10);
+                        }
+                    }
+                    return null;
+                };
+
+                const chapter = localParseChapter(filename);
+                if (chapter !== null) {
+                    return chapter <= watchedProgress;
                 }
             }
-            return null;
-        };
-
-        const episode = parseEpisode(filename);
-
-        if (episode !== null) {
-            return episode <= watchedProgress;
         }
 
         return false;
     };
+
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.05
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 10 },
+        show: { opacity: 1, y: 0 }
+    };
+
+    const renderFileGrid = (fileList: FileItem[], title: string, color: string) => (
+        <div className="mb-10">
+            <h3
+                className="text-lg font-bold text-white mb-6 px-2 flex items-center gap-3"
+                style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}
+            >
+                <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_${color}]`} style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}></div>
+                {title}
+            </h3>
+            <motion.div
+                className="flex flex-col gap-2"
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+            >
+                {fileList.map((file, index) => {
+                    const isWatched = isFileWatched(file.name);
+                    const isMedia = isMangaFile(file.name) || isVideoFile(file.name);
+
+                    return (
+                        <motion.div
+                            key={file.path}
+                            variants={itemVariants}
+                            onClick={() => handleItemClick(file)}
+                            className={`group grid grid-cols-[40px_1fr_120px_100px] gap-4 items-center p-4 rounded-xl cursor-pointer transition-all duration-300 border border-transparent hover:border-white/10 hover:bg-white/5 
+                                ${isWatched ? 'opacity-50 grayscale hover:opacity-100 hover:grayscale-0' : ''}`}
+                            style={{
+                                background: index % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'
+                            }}
+                        >
+                            {/* Icon */}
+                            <div
+                                className={`flex items-center justify-center transition-all duration-300 ${!isWatched && isMedia ? 'text-[var(--color-zen-accent)]' : 'opacity-70 group-hover:opacity-100'}`}
+                                style={!isWatched && isMedia ? { filter: 'drop-shadow(0 0 8px var(--color-zen-accent))' } : {}}
+                            >
+                                {getFileIcon(file.name)}
+                            </div>
+
+                            {/* Name */}
+                            <div className="flex items-center min-w-0 pr-4">
+                                <span
+                                    className="font-medium text-white/80 group-hover:text-white truncate transition-colors"
+                                    style={{ fontFamily: 'var(--font-rounded)' }}
+                                    title={file.name}
+                                >
+                                    {file.name}
+                                </span>
+                                {isWatched && (
+                                    <span
+                                        className="ml-3 shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full border border-[var(--color-mint-tonic)] text-[var(--color-mint-tonic)] relative z-10"
+                                        style={{
+                                            boxShadow: '0 0 10px var(--color-mint-tonic), inset 0 0 5px rgba(0,0,0,0.2)',
+                                            textShadow: '0 0 5px var(--color-mint-tonic)',
+                                            backgroundColor: 'rgba(0,0,0,0.4)'
+                                        }}
+                                    >
+                                        {isMangaFile(file.name) ? 'READ' : 'WATCHED'}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Date */}
+                            <div
+                                className="text-sm text-white/30 group-hover:text-white/50 transition-colors"
+                                style={{ fontFamily: 'var(--font-mono)' }}
+                            >
+                                {formatDate(file.last_modified)}
+                            </div>
+
+                            {/* Size */}
+                            <div
+                                className="text-sm text-white/30 group-hover:text-white/50 text-right transition-colors"
+                                style={{ fontFamily: 'var(--font-mono)' }}
+                            >
+                                {formatSize(file.size)}
+                            </div>
+                        </motion.div>
+                    );
+                })}
+            </motion.div>
+        </div>
+    );
 
     return (
         <div className="max-w-[1400px] mx-auto pb-10 px-6 min-h-screen">
@@ -308,7 +481,6 @@ function LocalFolder() {
 
                     {/* AniList Tracking Section */}
                     {currentMapping ? (
-                        // Linked state: show anime info with unlink button
                         <div
                             className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10"
                             style={{ background: 'rgba(180, 162, 246, 0.1)' }}
@@ -358,12 +530,10 @@ function LocalFolder() {
                             </button>
                         </div>
                     ) : (
-                        // Not linked: show track button
                         <button
                             onClick={() => setIsSearchDialogOpen(true)}
                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-105"
                             style={{
-                                fontFamily: 'var(--font-rounded)',
                                 background: 'linear-gradient(135deg, var(--color-zen-accent), #9c7cf0)',
                                 color: 'white',
                                 boxShadow: '0 4px 15px rgba(180, 162, 246, 0.3)'
@@ -401,10 +571,16 @@ function LocalFolder() {
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-zen-accent)] shadow-[0_0_8px_var(--color-zen-accent)]"></div>
                         FOLDERS
                     </h3>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-8">
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="show"
+                        className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-8"
+                    >
                         {directories.map((dir) => (
-                            <div
+                            <motion.div
                                 key={dir.path}
+                                variants={itemVariants}
                                 className="flex flex-col items-center gap-3 group cursor-pointer"
                                 onClick={() => handleItemClick(dir)}
                             >
@@ -420,70 +596,20 @@ function LocalFolder() {
                                 >
                                     {dir.name}
                                 </span>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 </div>
             )}
 
-            {/* Files Section */}
-            {regularFiles.length > 0 && (
-                <div className="mb-10">
-                    <h3
-                        className="text-lg font-bold text-white mb-6 px-2 flex items-center gap-3"
-                        style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}
-                    >
-                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-mint-tonic)] shadow-[0_0_8px_var(--color-mint-tonic)]"></div>
-                        FILES
-                    </h3>
-                    <div className="flex flex-col gap-2">
-                        {regularFiles.map((file, index) => {
-                            const isWatched = isFileWatched(file.name);
-                            return (
-                                <div
-                                    key={file.path}
-                                    onClick={() => handleItemClick(file)}
-                                    className={`group grid grid-cols-[40px_1fr_120px_100px] gap-4 items-center p-4 rounded-xl cursor-pointer transition-all duration-300 border border-transparent hover:border-white/10 hover:bg-white/5 
-                                        ${isWatched ? 'opacity-40 grayscale hover:opacity-100 hover:grayscale-0' : ''}`}
-                                    style={{
-                                        background: index % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)'
-                                    }}
-                                >
-                                    {/* Icon */}
-                                    <div className="text-2xl text-center opacity-70 group-hover:opacity-100 transition-opacity">
-                                        {getFileIcon(file.name)}
-                                    </div>
+            {/* VOLUMES Section */}
+            {volumeFiles.length > 0 && renderFileGrid(volumeFiles, "VOLUMES", "var(--color-zen-accent)")}
 
-                                    {/* Name */}
-                                    <div
-                                        className="font-medium text-white/80 group-hover:text-white truncate transition-colors"
-                                        style={{ fontFamily: 'var(--font-rounded)' }}
-                                    >
-                                        {file.name}
-                                        {isWatched && <span className="ml-2 text-xs text-brand-green bg-brand-green/10 px-1.5 py-0.5 rounded">WATCHED</span>}
-                                    </div>
+            {/* CHAPTERS Section */}
+            {chapterFiles.length > 0 && renderFileGrid(chapterFiles, "CHAPTERS", "var(--color-mint-tonic)")}
 
-                                    {/* Date */}
-                                    <div
-                                        className="text-sm text-white/30 group-hover:text-white/50 transition-colors"
-                                        style={{ fontFamily: 'var(--font-mono)' }}
-                                    >
-                                        {formatDate(file.last_modified)}
-                                    </div>
-
-                                    {/* Size */}
-                                    <div
-                                        className="text-sm text-white/30 group-hover:text-white/50 text-right transition-colors"
-                                        style={{ fontFamily: 'var(--font-mono)' }}
-                                    >
-                                        {formatSize(file.size)}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            {/* OTHER FILES Section (Videos, etc) */}
+            {otherFiles.length > 0 && renderFileGrid(otherFiles, "FILES", "#fbbf24")}
 
             {/* Empty State */}
             {files.length === 0 && (
@@ -503,6 +629,7 @@ function LocalFolder() {
                     setIsSearchDialogOpen(false);
                 }}
                 initialSearchTerm={folderName}
+                mediaType={mediaType}
             />
         </div>
     );

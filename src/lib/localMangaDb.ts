@@ -51,6 +51,16 @@ export interface LocalMangaEntry {
     bookmarkedChapters?: string[];
     /** List of downloaded chapter IDs */
     downloadedChapters?: string[];
+    /** Cached Description */
+    description?: string;
+    /** Cached Genres */
+    genres?: string[];
+    /** Cached Author */
+    author?: string;
+    /** Cached Chapter List (for offline viewing) */
+    chapters?: any[]; // using any[] to avoid circular dependency with ExtensionManager, but realistically it mimics Chapter interface
+    /** Timestamp of last details cache update */
+    lastCacheUpdate?: number;
 }
 
 export interface LibraryCategory {
@@ -220,6 +230,10 @@ export function updateMangaProgress(
         sourceMangaId?: string;
         chapterId?: string;
         chapterTitle?: string;
+        description?: string;
+        genres?: string[];
+        author?: string;
+        chapters?: any[];
     }
 ): LocalMangaEntry {
     const db = getLocalMangaDb();
@@ -248,6 +262,14 @@ export function updateMangaProgress(
         categoryIds: existing?.categoryIds,
         lastReadChapterId: data.chapterId ?? existing?.lastReadChapterId,
         lastReadChapterTitle: data.chapterTitle ?? existing?.lastReadChapterTitle,
+        // Cache updates
+        description: data.description ?? existing?.description,
+        genres: data.genres ?? existing?.genres,
+        author: data.author ?? existing?.author,
+        chapters: data.chapters ?? existing?.chapters,
+        lastCacheUpdate: (data.chapters || data.description) ? Date.now() : existing?.lastCacheUpdate,
+        bookmarkedChapters: existing?.bookmarkedChapters,
+        downloadedChapters: existing?.downloadedChapters,
     };
 
     db[id] = entry;
@@ -268,6 +290,9 @@ export function addMangaToLibrary(
         sourceId?: string;
         sourceMangaId?: string;
         anilistId?: number;
+        description?: string;
+        genres?: string[];
+        author?: string;
     }
 ): LocalMangaEntry {
     const db = getLocalMangaDb();
@@ -289,6 +314,10 @@ export function addMangaToLibrary(
         anilistId: data.anilistId ?? existing?.anilistId ?? null,
         inLibrary: true,
         categoryIds: existing?.categoryIds ?? ['default'], // Default to 'default' category if new
+        // Cache initial details if provided
+        description: data.description ?? existing?.description,
+        genres: data.genres ?? existing?.genres,
+        author: data.author ?? existing?.author,
     };
 
     db[id] = entry;
@@ -430,10 +459,48 @@ export function linkMangaToAniList(
     }
 
     db[id] = entry;
+    // Preserve cache if linking
+    if (existingBySource) {
+        entry.description = existingBySource.description;
+        entry.genres = existingBySource.genres;
+        entry.author = existingBySource.author;
+        entry.chapters = existingBySource.chapters;
+        entry.lastCacheUpdate = existingBySource.lastCacheUpdate;
+        entry.bookmarkedChapters = existingBySource.bookmarkedChapters;
+        entry.downloadedChapters = existingBySource.downloadedChapters;
+    }
+
     saveDb(db);
 
     console.log('[LocalMangaDB] Linked manga:', title, 'to AniList ID:', anilistId);
     return entry;
+}
+
+/**
+ * Update cached details for an entry
+ */
+export function updateMangaCache(
+    id: string,
+    data: {
+        description?: string;
+        genres?: string[];
+        author?: string;
+        chapters?: any[];
+        coverImage?: string;
+    }
+): void {
+    const db = getLocalMangaDb();
+    const entry = db[id];
+    if (entry) {
+        if (data.description) entry.description = data.description;
+        if (data.genres) entry.genres = data.genres;
+        if (data.author) entry.author = data.author;
+        if (data.chapters) entry.chapters = data.chapters;
+        if (data.coverImage) entry.coverImage = data.coverImage;
+        entry.lastCacheUpdate = Date.now();
+        saveDb(db);
+        // console.log('[LocalMangaDB] Cache updated for:', entry.title);
+    }
 }
 
 /**

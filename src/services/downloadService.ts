@@ -5,12 +5,12 @@
  * Uses Tauri's HTTP plugin to fetch images and stores them in the configured download folder.
  */
 
-import { fetch } from '@tauri-apps/plugin-http';
+import { invoke } from '@tauri-apps/api/core';
 import { markChapterDownloaded } from '../lib/localMangaDb';
 import { ExtensionManager, Page } from './ExtensionManager';
 
 // Download progress callback type
-type ProgressCallback = (current: number, total: number, status: string) => void;
+type ProgressCallback = (chapterId: string | null, current: number, total: number, status: string) => void;
 
 // Download state
 interface DownloadState {
@@ -52,8 +52,8 @@ export function onDownloadProgress(callback: ProgressCallback): () => void {
 /**
  * Notify all listeners of progress
  */
-function notifyProgress(current: number, total: number, status: string): void {
-    progressListeners.forEach(cb => cb(current, total, status));
+function notifyProgress(chapterId: string | null, current: number, total: number, status: string): void {
+    progressListeners.forEach(cb => cb(chapterId, current, total, status));
 }
 
 /**
@@ -65,35 +65,6 @@ async function getChapterPages(sourceId: string, chapterId: string): Promise<Pag
         throw new Error(`Source not found: ${sourceId}`);
     }
     return source.getPages(chapterId);
-}
-
-/**
- * Download a single image
- * Note: In a full implementation, this would save to the filesystem using Tauri's FS plugin.
- * For now, we'll just fetch and mark as downloaded (images stay in browser cache).
- */
-async function downloadImage(url: string, _savePath: string): Promise<boolean> {
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Referer': url,
-            },
-        });
-
-        if (!response.ok) {
-            console.error('[DownloadService] Failed to fetch image:', url);
-            return false;
-        }
-
-        // In a full implementation, we'd write to disk here using Tauri FS
-        // For now, the image is fetched and cached by the browser
-        console.log('[DownloadService] Image fetched:', url);
-        return true;
-    } catch (error) {
-        console.error('[DownloadService] Error downloading image:', error);
-        return false;
-    }
 }
 
 /**
@@ -111,6 +82,24 @@ export async function downloadChapter(
     try {
         console.log('[DownloadService] Starting download for chapter:', chapterNumber);
 
+        // Get download path from settings
+        const settingsJson = localStorage.getItem('app-settings');
+        let downloadDir = '';
+        if (settingsJson) {
+            try {
+                const settings = JSON.parse(settingsJson);
+                downloadDir = settings.mangaDownloadPath;
+            } catch (e) {
+                console.error('Failed to parse settings for download path');
+            }
+        }
+
+        if (!downloadDir) {
+            console.error('[DownloadService] No download directory configured');
+            notifyProgress(chapterId, 0, 0, 'Error: No download folder set');
+            return false;
+        }
+
         // Get pages
         const pages = await getChapterPages(sourceId, chapterId);
 
@@ -119,31 +108,37 @@ export async function downloadChapter(
             return false;
         }
 
-        // Create folder path (sanitize manga title)
-        const sanitizedTitle = mangaTitle.replace(/[<>:"/\\|?*]/g, '_');
-        const folderPath = `${sanitizedTitle}/Chapter_${chapterNumber.toString().padStart(4, '0')}`;
+        // Extract URLs
+        const urls = pages.map(p => p.imageUrl);
 
-        // Download each page
-        for (let i = 0; i < pages.length; i++) {
-            const page = pages[i];
-            const fileName = `${(i + 1).toString().padStart(3, '0')}.jpg`;
-            const filePath = `${folderPath}/${fileName}`;
+        // Notify start
+        if (onProgress) onProgress(0, pages.length);
+        notifyProgress(chapterId, 0, pages.length, `Downloading ${pages.length} pages...`);
 
-            await downloadImage(page.imageUrl, filePath);
+        // Invoke Rust Backend
+        const chapterTitle = `Chapter ${chapterNumber}`; // Simple title for file name
 
-            if (onProgress) {
-                onProgress(i + 1, pages.length);
-            }
-            notifyProgress(i + 1, pages.length, `Downloading page ${i + 1}/${pages.length}`);
-        }
+        await invoke('download_chapter_command', {
+            chapterTitle,
+            mangaTitle,
+            urls,
+            downloadDir
+        });
 
         // Mark chapter as downloaded in local DB
+        // We also store the path potentially? 
+        // For now, markChapterDownloaded just adds ID to list
         markChapterDownloaded(entryId, chapterId);
 
         console.log('[DownloadService] Chapter download complete:', chapterNumber);
+
+        if (onProgress) onProgress(pages.length, pages.length);
+        notifyProgress(chapterId, pages.length, pages.length, 'Complete');
+
         return true;
     } catch (error) {
         console.error('[DownloadService] Error downloading chapter:', error);
+        notifyProgress(chapterId, 0, 0, `Error: ${error}`);
         return false;
     }
 }
@@ -187,7 +182,7 @@ async function processQueue(): Promise<void> {
         const task = downloadState.queue.shift()!;
         downloadState.currentTask = task;
 
-        notifyProgress(0, 1, `Starting Chapter ${task.chapterNumber}`);
+        notifyProgress(task.chapterId, 0, 1, `Starting Chapter ${task.chapterNumber}`);
 
         await downloadChapter(
             task.sourceId,
@@ -200,8 +195,9 @@ async function processQueue(): Promise<void> {
     }
 
     downloadState.isDownloading = false;
+    downloadState.isDownloading = false;
     downloadState.currentTask = null;
-    notifyProgress(0, 0, 'Download complete');
+    notifyProgress(null, 0, 0, 'Download complete');
     console.log('[DownloadService] Queue processing complete');
 }
 

@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "PLAY-ON!",
         "width": 1200,
         "height": 800,
@@ -22,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' asset: http: https: ws: wss: blob: data: manga: tauri:;"
     }
   },
   "bundle": {

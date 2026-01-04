@@ -80,13 +80,14 @@ pub fn get_folder_contents(path: String) -> Result<Vec<FileItem>, String> {
     }
 
     // Sort: Directories first, then alphabetical
+    // Sort: Directories first, then natural sort order
     files.sort_by(|a, b| {
         if a.is_dir && !b.is_dir {
             std::cmp::Ordering::Less
         } else if !a.is_dir && b.is_dir {
             std::cmp::Ordering::Greater
         } else {
-            a.name.to_lowercase().cmp(&b.name.to_lowercase())
+            natord::compare(&a.name, &b.name)
         }
     });
 
