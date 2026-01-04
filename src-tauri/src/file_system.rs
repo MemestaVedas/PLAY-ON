@@ -51,7 +51,10 @@ pub fn get_folder_contents(path: String) -> Result<Vec<FileItem>, String> {
                 if let Some(ext) = path_buf.extension() {
                     let ext_str = ext.to_string_lossy().to_lowercase();
                     match ext_str.as_str() {
-                        "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" => {
+                        // Video files
+                        "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" |
+                        // Manga/Comic files
+                        "pdf" | "cbz" | "cbr" => {
                             files.push(FileItem {
                                 name,
                                 path: path_buf.to_string_lossy().to_string(),
@@ -60,7 +63,7 @@ pub fn get_folder_contents(path: String) -> Result<Vec<FileItem>, String> {
                                 last_modified,
                             });
                         }
-                        _ => continue, // Skip non-video files
+                        _ => continue, // Skip other files
                     }
                 }
             } else {

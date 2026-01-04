@@ -18,6 +18,14 @@ export interface Anime {
     episodes?: number;
     status?: string;
     format?: string;
+    source?: string;
+    popularity?: number;
+    rankings?: {
+        rank: number;
+        type: string;
+        context: string;
+        allTime: boolean;
+    }[];
     averageScore?: number;
     seasonYear?: number;
     genres?: string[];

@@ -116,6 +116,7 @@ query ($userId: Int) {
   User (id: $userId) {
     id
     name
+    about(asHtml: false)
     statistics {
       anime {
         count
@@ -126,6 +127,63 @@ query ($userId: Int) {
         statuses {
           count
           status
+        }
+      }
+      manga {
+        count
+        meanScore
+        standardDeviation
+        chaptersRead
+        volumesRead
+        statuses {
+          count
+          status
+        }
+      }
+    }
+    favourites {
+      anime {
+        nodes {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            large
+            medium
+          }
+          format
+          status
+          averageScore
+        }
+      }
+      manga {
+        nodes {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            large
+            medium
+          }
+          format
+          status
+          averageScore
+        }
+      }
+      characters {
+        nodes {
+          id
+          name {
+            full
+          }
+          image {
+            large
+            medium
+          }
         }
       }
     }
@@ -279,6 +337,14 @@ query ($id: Int) {
     volumes
     status
     format
+    source
+    popularity
+    rankings {
+      rank
+      type
+      context
+      allTime
+    }
     averageScore
     meanScore
     startDate {
@@ -343,6 +409,14 @@ query ($id: Int) {
     episodes
     status
     format
+    source
+    popularity
+    rankings {
+      rank
+      type
+      context
+      allTime
+    }
     averageScore
     meanScore
     seasonYear

@@ -2,39 +2,38 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import { USER_STATS_QUERY } from '../api/anilistClient';
-import { clearAllCache } from '../lib/cacheUtils';
-import { relaunch } from '@tauri-apps/plugin-process';
+import { FilmIcon, BookOpenIcon } from '../components/ui/Icons';
 
 const STATUS_COLORS: Record<string, { color: string, gradient: string, glow: string }> = {
     'COMPLETED': {
-        color: '#10b981',
-        gradient: 'linear-gradient(90deg, #059669 0%, #10b981 100%)',
-        glow: 'rgba(16, 185, 129, 0.3)'
+        color: '#6ee7b7', // emerald-300
+        gradient: 'linear-gradient(90deg, #34d399 0%, #6ee7b7 100%)',
+        glow: 'rgba(110, 231, 183, 0.3)'
     },
     'PLANNING': {
-        color: '#3b82f6',
-        gradient: 'linear-gradient(90deg, #2563eb 0%, #3b82f6 100%)',
-        glow: 'rgba(59, 130, 246, 0.3)'
+        color: '#93c5fd', // blue-300
+        gradient: 'linear-gradient(90deg, #60a5fa 0%, #93c5fd 100%)',
+        glow: 'rgba(147, 197, 253, 0.3)'
     },
     'CURRENT': {
-        color: '#8b5cf6',
-        gradient: 'linear-gradient(90deg, #7c3aed 0%, #8b5cf6 100%)',
-        glow: 'rgba(139, 92, 246, 0.3)'
+        color: '#c4b5fd', // violet-300
+        gradient: 'linear-gradient(90deg, #a78bfa 0%, #c4b5fd 100%)',
+        glow: 'rgba(196, 181, 253, 0.3)'
     },
     'PAUSED': {
-        color: '#f59e0b',
-        gradient: 'linear-gradient(90deg, #d97706 0%, #f59e0b 100%)',
-        glow: 'rgba(245, 158, 11, 0.3)'
+        color: '#fcd34d', // amber-300
+        gradient: 'linear-gradient(90deg, #fbbf24 0%, #fcd34d 100%)',
+        glow: 'rgba(252, 211, 77, 0.3)'
     },
     'DROPPED': {
-        color: '#ef4444',
-        gradient: 'linear-gradient(90deg, #dc2626 0%, #ef4444 100%)',
-        glow: 'rgba(239, 68, 68, 0.3)'
+        color: '#fca5a5', // red-300
+        gradient: 'linear-gradient(90deg, #f87171 0%, #fca5a5 100%)',
+        glow: 'rgba(252, 165, 165, 0.3)'
     }
 };
 
 function UserProfile() {
-    const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
     const navigate = useNavigate();
 
     const { data: statsData, loading: statsLoading } = useQuery(USER_STATS_QUERY, {
@@ -43,20 +42,6 @@ function UserProfile() {
     });
 
     const stats = statsData?.User?.statistics?.anime;
-
-    const handleDeleteCache = async () => {
-        if (confirm('Are you sure you want to delete the local cache? This will log you out but keep your media library settings.')) {
-            await clearAllCache();
-            window.location.reload();
-        }
-    };
-
-    const handleDeleteCacheAndRelaunch = async () => {
-        if (confirm('This will delete all local cache and restart the application. Continue?')) {
-            await clearAllCache();
-            await relaunch();
-        }
-    };
 
     if (authLoading) {
         return (
@@ -139,143 +124,265 @@ function UserProfile() {
 
             {/* Content Area with padding */}
             <div className="max-w-[1100px] mx-auto px-10 pb-12">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                    <div className="flex items-center gap-3">
+
+                {/* Bio Section */}
+                {statsData?.User?.about && (
+                    <div className="mb-12">
+                        <h2 className="text-2xl font-black text-white mb-4 tracking-tight" style={{ fontFamily: 'var(--font-rounded)' }}>About</h2>
+                        <div className="bg-[#1a1a1f]/50 backdrop-blur-xl rounded-[2rem] p-8 border border-white/5 shadow-xl text-white/80 leading-relaxed whitespace-pre-line">
+                            {statsData.User.about}
+                        </div>
+                    </div>
+                )}
+
+                {/* Stats Section */}
+                <div className="mb-12">
+                    <h2 className="text-2xl font-black text-white mb-6 tracking-tight flex items-center gap-3" style={{ fontFamily: 'var(--font-rounded)' }}>
                         <div className="w-1 h-8 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
-                        <h2 className="text-2xl font-black text-white tracking-tight" style={{ fontFamily: 'var(--font-rounded)' }}>Statistics</h2>
+                        Statistics
+                    </h2>
+
+                    {/* Anime & Manga Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Anime Stats */}
+                        <div className="space-y-6">
+                            <h3 className="text-lg font-bold text-white/60 uppercase tracking-widest px-2">Anime</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <StatCard
+                                    label="Watched"
+                                    value={stats?.count || 0}
+                                    loading={statsLoading}
+                                    icon={<FilmIcon />}
+                                    variant="indigo"
+                                />
+                                <StatCard
+                                    label="Episodes"
+                                    value={stats?.episodesWatched || 0}
+                                    loading={statsLoading}
+                                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>}
+                                    variant="purple"
+                                />
+                                <StatCard
+                                    label="Days"
+                                    value={stats?.minutesWatched ? (stats.minutesWatched / 60 / 24).toFixed(1) : 0}
+                                    loading={statsLoading}
+                                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+                                    variant="pink"
+                                />
+                                <StatCard
+                                    label="Mean Score"
+                                    value={stats?.meanScore ? `${stats.meanScore}%` : '-'}
+                                    loading={statsLoading}
+                                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>}
+                                    variant="emerald"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Manga Stats */}
+                        <div className="space-y-6">
+                            <h3 className="text-lg font-bold text-white/60 uppercase tracking-widest px-2">Manga</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <StatCard
+                                    label="Read"
+                                    value={statsData?.User?.statistics?.manga?.count || 0}
+                                    loading={statsLoading}
+                                    icon={<BookOpenIcon />}
+                                    variant="blue"
+                                />
+                                <StatCard
+                                    label="Chapters"
+                                    value={statsData?.User?.statistics?.manga?.chaptersRead || 0}
+                                    loading={statsLoading}
+                                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>}
+                                    variant="cyan"
+                                />
+                                <StatCard
+                                    label="Volumes"
+                                    value={statsData?.User?.statistics?.manga?.volumesRead || 0}
+                                    loading={statsLoading}
+                                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>}
+                                    variant="teal"
+                                />
+                                <StatCard
+                                    label="Mean Score"
+                                    value={statsData?.User?.statistics?.manga?.meanScore ? `${statsData.User.statistics.manga.meanScore}%` : '-'}
+                                    loading={statsLoading}
+                                    icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>}
+                                    variant="emerald"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    <StatCard
-                        label="Anime Watched"
-                        value={stats?.count || 0}
-                        loading={statsLoading}
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19.82 2H4.18C2.97 2 2 2.97 2 4.18v15.64C2 21.03 2.97 22 4.18 22h15.64c1.21 0 2.18-.97 2.18-2.18V4.18C22 2.97 21.03 2 19.82 2z" /><path d="M7 2v20" /><path d="M17 2v20" /><path d="M2 12h5" /><path d="M2 7h5" /><path d="M2 17h5" /><path d="M17 12h5" /><path d="M17 7h5" /><path d="M17 17h5" /></svg>}
-                    />
-                    <StatCard
-                        label="Episodes"
-                        value={stats?.episodesWatched || 0}
-                        loading={statsLoading}
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>}
-                    />
-                    <StatCard
-                        label="Days Watched"
-                        value={stats?.minutesWatched ? Math.round(stats.minutesWatched / 60 / 24) : 0}
-                        loading={statsLoading}
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
-                    />
-                    <StatCard
-                        label="Mean Score"
-                        value={stats?.meanScore ? `${stats.meanScore.toFixed(1)}%` : '-'}
-                        loading={statsLoading}
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>}
-                    />
-                </div>
+                {/* Favorites Section */}
+                {(statsData?.User?.favourites?.anime?.nodes?.length > 0 || statsData?.User?.favourites?.manga?.nodes?.length > 0) && (
+                    <div className="mb-12">
+                        <h2 className="text-2xl font-black text-white mb-6 tracking-tight flex items-center gap-3" style={{ fontFamily: 'var(--font-rounded)' }}>
+                            <div className="w-1 h-8 bg-pink-500 rounded-full shadow-[0_0_10px_rgba(236,72,153,0.5)]" />
+                            Favorites
+                        </h2>
 
-                {/* Main Content Sections */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-12">
-                    {/* Status Breakdown */}
-                    {stats?.statuses && (
-                        <div className="lg:col-span-2 bg-[#1a1a1f]/50 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white/5 shadow-2xl relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none group-hover:text-white/10 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
-                            </div>
-
-                            <h3 className="text-xl font-black text-white mb-8 flex items-center gap-3" style={{ fontFamily: 'var(--font-rounded)' }}>
-                                <div className="p-2 bg-white/5 rounded-xl border border-white/10">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                        {/* Favorite Anime */}
+                        {statsData?.User?.favourites?.anime?.nodes?.length > 0 && (
+                            <div className="mb-8">
+                                <div className="flex items-center justify-between mb-4 px-2">
+                                    <h3 className="text-lg font-bold text-white/60 uppercase tracking-widest">Anime</h3>
+                                    <a
+                                        href={`https://anilist.co/user/${user?.name}/favorites`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-bold text-pink-400 hover:text-pink-300 uppercase tracking-wider hover:underline transition-all"
+                                    >
+                                        View More
+                                    </a>
                                 </div>
-                                Status Breakdown
-                            </h3>
-
-                            <div className="space-y-6">
-                                {stats.statuses.map((s: any) => {
-                                    const style = STATUS_COLORS[s.status] || { color: '#888', gradient: '#444', glow: 'transparent' };
-                                    return (
-                                        <div key={s.status} className="group/item">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-white/70 font-bold capitalize text-sm tracking-wide">{s.status.toLowerCase().replace('_', ' ')}</span>
-                                                <span className="text-white font-black text-lg" style={{ color: style.color }}>{s.count}</span>
-                                            </div>
-                                            <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
-                                                <div
-                                                    className="h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(0,0,0,0.5)]"
-                                                    style={{
-                                                        width: `${(s.count / (stats.count || 1)) * 100}%`,
-                                                        background: style.gradient,
-                                                        boxShadow: `0 0 20px -5px ${style.glow}`
-                                                    }}
-                                                />
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    {statsData.User.favourites.anime.nodes.slice(0, 5).map((anime: any) => (
+                                        <div key={anime.id} className="relative aspect-[2/3] rounded-xl overflow-hidden group cursor-pointer" onClick={() => navigate(`/anime/${anime.id}`)}>
+                                            <img src={anime.coverImage.large} alt={anime.title.english || anime.title.romaji} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <div className="absolute bottom-0 left-0 p-3 w-full">
+                                                    <div className="text-white font-bold text-sm truncate">{anime.title.english || anime.title.romaji}</div>
+                                                </div>
                                             </div>
                                         </div>
-                                    );
-                                })}
+                                    ))}
+                                </div>
                             </div>
+                        )}
+
+                        {/* Favorite Manga */}
+                        {statsData?.User?.favourites?.manga?.nodes?.length > 0 && (
+                            <div className="mb-8">
+                                <div className="flex items-center justify-between mb-4 px-2">
+                                    <h3 className="text-lg font-bold text-white/60 uppercase tracking-widest">Manga</h3>
+                                    <a
+                                        href={`https://anilist.co/user/${user?.name}/favorites`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-bold text-pink-400 hover:text-pink-300 uppercase tracking-wider hover:underline transition-all"
+                                    >
+                                        View More
+                                    </a>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    {statsData.User.favourites.manga.nodes.slice(0, 5).map((manga: any) => (
+                                        <div key={manga.id} className="relative aspect-[2/3] rounded-xl overflow-hidden group cursor-pointer" onClick={() => navigate(`/manga-details/${manga.id}`)}>
+                                            <img src={manga.coverImage.large} alt={manga.title.english || manga.title.romaji} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <div className="absolute bottom-0 left-0 p-3 w-full">
+                                                    <div className="text-white font-bold text-sm truncate">{manga.title.english || manga.title.romaji}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Favorite Characters */}
+                        {statsData?.User?.favourites?.characters?.nodes?.length > 0 && (
+                            <div>
+                                <div className="flex items-center justify-between mb-4 px-2">
+                                    <h3 className="text-lg font-bold text-white/60 uppercase tracking-widest">Characters</h3>
+                                    <a
+                                        href={`https://anilist.co/user/${user?.name}/favorites`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-bold text-pink-400 hover:text-pink-300 uppercase tracking-wider hover:underline transition-all"
+                                    >
+                                        View More
+                                    </a>
+                                </div>
+                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                                    {statsData.User.favourites.characters.nodes.slice(0, 5).map((char: any) => (
+                                        <div key={char.id} className="relative w-32 flex-shrink-0 group">
+                                            <div className="aspect-square rounded-full overflow-hidden border-2 border-white/10 group-hover:border-pink-500/50 transition-colors">
+                                                <img src={char.image.large} alt={char.name.full} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            </div>
+                                            <div className="text-center mt-2 text-sm text-white/80 font-medium truncate px-1 group-hover:text-pink-400 transition-colors">
+                                                {char.name.full}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+
+                {/* Status Breakdown (Anime) */}
+                {stats?.statuses && (
+                    <div className="lg:col-span-3 bg-[#1a1a1f]/50 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white/5 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 text-white/5 pointer-events-none group-hover:text-white/10 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
                         </div>
-                    )}
 
-                    {/* Actions Column */}
-                    <div className="flex flex-col gap-6">
-                        <div className="bg-[#1a1a1f]/50 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white/5 shadow-2xl flex flex-col gap-5 h-full relative overflow-hidden group">
-                            <div className="absolute -bottom-10 -right-10 text-white/5 pointer-events-none group-hover:text-white/10 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <h3 className="text-xl font-black text-white mb-8 flex items-center gap-3" style={{ fontFamily: 'var(--font-rounded)' }}>
+                            <div className="p-2 bg-white/5 rounded-xl border border-white/10">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
                             </div>
+                            Anime Status Distribution
+                        </h3>
 
-                            <h3 className="text-xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-rounded)' }}>Account Control</h3>
-
-                            <button
-                                onClick={() => navigate('/settings')}
-                                className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-white font-bold transition-all border border-white/5 hover:border-white/10 flex items-center justify-center gap-3 group/btn"
-                            >
-                                <svg className="group-hover/btn:rotate-45 transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                Settings
-                            </button>
-
-                            <button
-                                onClick={handleDeleteCache}
-                                className="w-full py-4 bg-orange-500/10 hover:bg-orange-500/20 rounded-2xl text-orange-400 font-bold transition-all border border-orange-500/10 hover:border-orange-500/30 flex items-center justify-center gap-3 group/btn shadow-[0_0_20px_rgba(249,115,22,0.05)] hover:shadow-[0_0_30px_rgba(249,115,22,0.15)]"
-                            >
-                                <svg className="group-hover/btn:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 6L5 20"></path><path d="M5 6l14 14"></path></svg>
-                                Delete Cache
-                            </button>
-
-                            <button
-                                onClick={handleDeleteCacheAndRelaunch}
-                                className="w-full py-4 bg-gradient-to-r from-red-500/20 to-rose-600/20 hover:from-red-500/30 hover:to-rose-600/30 rounded-2xl text-red-400 font-bold transition-all border border-red-500/20 hover:border-red-500/40 flex items-center justify-center gap-3 group/btn shadow-[0_0_30px_rgba(239,68,68,0.1)] hover:shadow-[0_0_40px_rgba(239,68,68,0.25)]"
-                            >
-                                <svg className="group-hover/btn:rotate-180 transition-transform duration-500" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                                Delete & Relaunch
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    logout();
-                                    navigate('/home');
-                                }}
-                                className="w-full mt-auto py-4 bg-white/5 hover:bg-red-500/10 rounded-2xl text-white/50 hover:text-red-400 font-bold transition-all border border-white/5 hover:border-red-500/20 flex items-center justify-center gap-3 group/btn"
-                            >
-                                <svg className="group-hover/btn:-translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                                Logout
-                            </button>
+                        <div className="space-y-6">
+                            {stats.statuses.map((s: any) => {
+                                const style = STATUS_COLORS[s.status] || { color: '#888', gradient: '#444', glow: 'transparent' };
+                                return (
+                                    <div key={s.status} className="group/item">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-white/70 font-bold capitalize text-sm tracking-wide">{s.status.toLowerCase().replace('_', ' ')}</span>
+                                            <span className="text-white font-black text-lg" style={{ color: style.color }}>{s.count}</span>
+                                        </div>
+                                        <div className="w-full bg-white/5 h-5 rounded-full overflow-hidden border border-white/5">
+                                            <div
+                                                className="h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(0,0,0,0.5)]"
+                                                style={{
+                                                    width: `${(s.count / (stats.count || 1)) * 100}%`,
+                                                    background: style.gradient,
+                                                    boxShadow: `0 0 20px -5px ${style.glow}`
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
 }
 
-function StatCard({ label, value, loading, icon }: { label: string; value: string | number; loading?: boolean; icon?: React.ReactNode }) {
+function StatCard({ label, value, loading, icon, variant = 'purple' }: { label: string; value: string | number; loading?: boolean; icon?: React.ReactNode; variant?: string }) {
+    const variants: Record<string, string> = {
+        purple: 'from-purple-300/20 to-purple-400/5 hover:to-purple-300/10 text-purple-200',
+        indigo: 'from-indigo-300/20 to-indigo-400/5 hover:to-indigo-300/10 text-indigo-200',
+        pink: 'from-pink-300/20 to-pink-400/5 hover:to-pink-300/10 text-pink-200',
+        blue: 'from-blue-300/20 to-blue-400/5 hover:to-blue-300/10 text-blue-200',
+        cyan: 'from-cyan-300/20 to-cyan-400/5 hover:to-cyan-300/10 text-cyan-200',
+        teal: 'from-teal-300/20 to-teal-400/5 hover:to-teal-300/10 text-teal-200',
+        emerald: 'from-emerald-300/20 to-emerald-400/5 hover:to-emerald-300/10 text-emerald-200',
+    };
+
+    const gradientClass = variants[variant] || variants.purple;
+
     return (
-        <div className="bg-[#1a1a1f]/50 backdrop-blur-xl rounded-[2rem] p-8 border border-white/5 shadow-xl group hover:bg-[#25252b]/60 transition-all duration-500 relative overflow-hidden flex flex-col justify-between h-36">
-            <div className="absolute top-0 right-0 p-4 text-white/5 pointer-events-none group-hover:text-purple-500/10 transition-colors transform translate-x-1 translate-y-[-5px]">
+        <div className={`
+            bg-gradient-to-br ${gradientClass} backdrop-blur-xl 
+            rounded-[2rem] p-6 border border-white/5 shadow-xl 
+            group transition-all duration-500 relative overflow-hidden flex flex-col justify-between h-32
+        `}>
+            <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-all transform translate-x-1 translate-y-[-5px] scale-125`}>
                 {icon}
             </div>
 
-            <div className="text-white/40 text-xs uppercase tracking-[0.2em] font-black group-hover:text-purple-400/60 transition-colors">{label}</div>
-            <div className="text-4xl font-black text-white tracking-tighter" style={{ fontFamily: 'var(--font-rounded)' }}>
+            <div className="text-white/40 text-xs uppercase tracking-[0.2em] font-black group-hover:text-white/60 transition-colors z-10">{label}</div>
+            <div className="text-3xl font-black text-white tracking-tighter z-10 relative drop-shadow-sm" style={{ fontFamily: 'var(--font-rounded)' }}>
                 {loading ? <div className="h-10 w-20 bg-white/5 animate-pulse rounded-full" /> : value}
             </div>
         </div>

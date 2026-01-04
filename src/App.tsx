@@ -8,6 +8,7 @@ import LocalMangaList from './pages/LocalMangaList';
 import MangaBrowse from './pages/MangaBrowse';
 import MangaSourceDetails from './pages/MangaSourceDetails';
 import MangaReader from './pages/MangaReader';
+import LocalFileReader from './pages/LocalFileReader';
 import History from './pages/History';
 import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
@@ -18,6 +19,7 @@ import { AuthProvider } from './context/AuthContext';
 import { LocalMediaProvider } from './context/LocalMediaContext';
 import { NowPlayingProvider } from './context/NowPlayingContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { SearchBarProvider } from './context/SearchBarContext';
 import LocalFolder from './pages/LocalFolder';
 import Settings from './pages/Settings';
 import StreamPage from './pages/StreamPage';
@@ -166,9 +168,20 @@ import { useOfflineSync } from './lib/offlineQueue';
 
 import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './lib/apollo';
+import { checkAndRefreshCache } from './lib/cacheRefresh';
 
 function App() {
   useOfflineSync();
+
+  // Startup cache refresh (v0.3.0)
+  useEffect(() => {
+    // Check if cache needs refresh (6 hour interval)
+    checkAndRefreshCache().then((refreshed) => {
+      if (refreshed) {
+        console.log('[App] Cache was refreshed on startup');
+      }
+    });
+  }, []);
 
   useEffect(() => {
     // DEV: Clear onboarding status to force onboarding every time
@@ -183,45 +196,47 @@ function App() {
         <AuthProvider>
           <LocalMediaProvider>
             <NowPlayingProvider>
-              <BrowserRouter>
-                <Routes>
-                  {/* Root route - checks if onboarding needed */}
-                  <Route path="/" element={<ProtectedRoute />} />
+              <SearchBarProvider>
+                <BrowserRouter>
+                  <Routes>
+                    {/* Root route - checks if onboarding needed */}
+                    <Route path="/" element={<ProtectedRoute />} />
 
-                  {/* Full-screen Manga Reader (outside MainLayout) */}
-                  <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
+                    {/* Full-screen Manga Reader (outside MainLayout) */}
+                    <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
 
-                  {/* Full-screen Streaming Player (outside MainLayout) */}
-                  <Route path="/stream/:provider/:episodeId" element={<StreamPage />} />
+                    {/* Full-screen Local File Reader (outside MainLayout) */}
+                    <Route path="/read-local" element={<LocalFileReader />} />
 
-                  {/* Main App Layout */}
-                  <Route element={<MainLayout />}>
-                    <Route path="/home" element={<Home />} />
-                    <Route path="/anime-list" element={<AnimeList />} />
-                    <Route path="/manga-list" element={<MangaList />} />
-                    <Route path="/local-manga" element={<LocalMangaList />} />
-                    <Route path="/history" element={<History />} />
-                    <Route path="/statistics" element={<Statistics />} />
+                    {/* Main App Layout */}
+                    <Route element={<MainLayout />}>
+                      <Route path="/home" element={<Home />} />
+                      <Route path="/anime-list" element={<AnimeList />} />
+                      <Route path="/manga-list" element={<MangaList />} />
+                      <Route path="/local-manga" element={<LocalMangaList />} />
+                      <Route path="/history" element={<History />} />
+                      <Route path="/statistics" element={<Statistics />} />
 
-                    {/* Dynamic route for anime details */}
-                    <Route path="/anime/:id" element={<AnimeDetails />} />
-                    {/* Dynamic route for manga details */}
-                    <Route path="/manga-details/:id" element={<MangaDetails />} />
-                    <Route path="/counter-demo" element={<CounterDemo />} />
+                      {/* Dynamic route for anime details */}
+                      <Route path="/anime/:id" element={<AnimeDetails />} />
+                      {/* Dynamic route for manga details */}
+                      <Route path="/manga-details/:id" element={<MangaDetails />} />
+                      <Route path="/counter-demo" element={<CounterDemo />} />
 
-                    {/* Settings Route */}
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/profile" element={<UserProfile />} />
+                      {/* Settings Route */}
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/profile" element={<UserProfile />} />
 
-                    {/* Local Folder Route */}
-                    <Route path="/local/:folderPath" element={<LocalFolder />} />
+                      {/* Local Folder Route */}
+                      <Route path="/local/:folderPath" element={<LocalFolder />} />
 
-                    {/* Manga Source Routes */}
-                    <Route path="/manga-browse" element={<MangaBrowse />} />
-                    <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
-                  </Route>
-                </Routes>
-              </BrowserRouter>
+                      {/* Manga Source Routes */}
+                      <Route path="/manga-browse" element={<MangaBrowse />} />
+                      <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
+                    </Route>
+                  </Routes>
+                </BrowserRouter>
+              </SearchBarProvider>
             </NowPlayingProvider>
           </LocalMediaProvider>
         </AuthProvider>

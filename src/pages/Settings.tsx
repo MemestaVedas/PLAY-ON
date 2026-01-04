@@ -11,12 +11,13 @@ import {
 } from '../lib/localMangaDb';
 import {
     SettingsIcon,
-    PlayIcon,
     LinkIcon,
     BookIcon,
     FolderIcon,
     WrenchIcon
 } from '../components/ui/Icons';
+import { DEFAULT_KEYBOARD_SHORTCUTS, ShortcutAction } from '../context/SettingsContext';
+import { formatShortcutFromEvent } from '../hooks/useKeyboardShortcuts';
 import './Settings.css';
 
 // ============================================================================
@@ -24,7 +25,7 @@ import './Settings.css';
 // Comprehensive settings interface with 5 categories
 // ============================================================================
 
-type TabId = 'general' | 'player' | 'integrations' | 'manga' | 'storage' | 'advanced';
+type TabId = 'general' | 'integrations' | 'manga' | 'storage' | 'advanced';
 
 interface Tab {
     id: TabId;
@@ -34,24 +35,10 @@ interface Tab {
 
 const TABS: Tab[] = [
     { id: 'general', label: 'General', icon: <SettingsIcon size={18} /> },
-    { id: 'player', label: 'Player', icon: <PlayIcon size={18} /> },
     { id: 'integrations', label: 'Integrations', icon: <LinkIcon size={18} /> },
     { id: 'manga', label: 'Manga', icon: <BookIcon size={18} /> },
     { id: 'storage', label: 'Storage & Library', icon: <FolderIcon size={18} /> },
     { id: 'advanced', label: 'Advanced', icon: <WrenchIcon size={18} /> },
-];
-
-const SUBTITLE_LANGUAGES = [
-    'English',
-    'Japanese',
-    'Spanish',
-    'French',
-    'German',
-    'Portuguese',
-    'Italian',
-    'Russian',
-    'Korean',
-    'Chinese',
 ];
 
 const DEFAULT_PAGES = [
@@ -204,49 +191,14 @@ function GeneralSettings() {
                     />
                 </SettingRow>
             </div>
+            {/* Keyboard Shortcuts Section */}
+            <div style={{ margin: '32px 0 16px', borderTop: '1px solid var(--color-border-subtle)' }} />
+            <KeyboardSettings />
         </div>
     );
 }
 
-// ============================================================================
-// SECTION: Player Settings
-// ============================================================================
 
-function PlayerSettings() {
-    const { settings, updateSetting } = useSettings();
-
-    return (
-        <div className="settings-section">
-            <h2 className="settings-section-title">Player</h2>
-            <p className="settings-section-description">
-                Configure playback preferences
-            </p>
-
-            <div className="setting-group">
-                <h3 className="setting-group-title">Playback</h3>
-
-                <SettingRow label="Auto-Play" description="Automatically start next episode">
-                    <Toggle
-                        checked={settings.autoPlay}
-                        onChange={(checked) => updateSetting('autoPlay', checked)}
-                    />
-                </SettingRow>
-            </div>
-
-            <div className="setting-group">
-                <h3 className="setting-group-title">Subtitles</h3>
-
-                <SettingRow label="Subtitle Language" description="Default language for subtitles">
-                    <Dropdown
-                        value={settings.subtitleLanguage}
-                        options={SUBTITLE_LANGUAGES.map((lang) => ({ value: lang, label: lang }))}
-                        onChange={(value) => updateSetting('subtitleLanguage', value)}
-                    />
-                </SettingRow>
-            </div>
-        </div>
-    );
-}
 
 // ============================================================================
 // SECTION: Integrations Settings
@@ -536,11 +488,117 @@ function StorageSettings() {
 }
 
 // ============================================================================
+// SECTION: Keyboard Settings
+// ============================================================================
+
+const SHORTCUT_LABELS: Record<ShortcutAction, { label: string; description: string }> = {
+    searchAnime: { label: 'Search Anime', description: 'Focus search bar in Anime mode' },
+    searchManga: { label: 'Search Manga', description: 'Focus search bar in Manga mode' },
+    goHome: { label: 'Go to Home', description: 'Navigate to Home page' },
+    goAnimeList: { label: 'Go to Anime List', description: 'Navigate to Anime List' },
+    goMangaList: { label: 'Go to Manga List', description: 'Navigate to Manga List' },
+    goSettings: { label: 'Go to Settings', description: 'Navigate to Settings' },
+    goProfile: { label: 'Go to Profile', description: 'Navigate to Profile' },
+    escape: { label: 'Escape / Close', description: 'Close dropdowns and dialogs' },
+};
+
+function KeyboardSettings() {
+    const { settings, updateSetting } = useSettings();
+    const [recordingAction, setRecordingAction] = useState<ShortcutAction | null>(null);
+
+    const handleRecordShortcut = useCallback((action: ShortcutAction) => {
+        setRecordingAction(action);
+    }, []);
+
+    const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+        if (!recordingAction) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Ignore modifier-only presses
+        if (['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) return;
+
+        const shortcut = formatShortcutFromEvent(event.nativeEvent);
+
+        // Update the shortcut
+        const newShortcuts = { ...settings.keyboardShortcuts, [recordingAction]: shortcut };
+        updateSetting('keyboardShortcuts', newShortcuts);
+        setRecordingAction(null);
+    }, [recordingAction, settings.keyboardShortcuts, updateSetting]);
+
+    const handleResetShortcut = useCallback((action: ShortcutAction) => {
+        const newShortcuts = { ...settings.keyboardShortcuts, [action]: DEFAULT_KEYBOARD_SHORTCUTS[action] };
+        updateSetting('keyboardShortcuts', newShortcuts);
+    }, [settings.keyboardShortcuts, updateSetting]);
+
+    const handleResetAll = useCallback(() => {
+        updateSetting('keyboardShortcuts', { ...DEFAULT_KEYBOARD_SHORTCUTS });
+    }, [updateSetting]);
+
+    return (
+        <div onKeyDown={handleKeyDown}>
+
+            <div className="setting-group">
+                <h3 className="setting-group-title">Keyboard Shortcuts</h3>
+
+                {(Object.entries(SHORTCUT_LABELS) as [ShortcutAction, { label: string; description: string }][]).map(
+                    ([action, { label, description }]) => (
+                        <div key={action} className="setting-row">
+                            <div className="setting-info">
+                                <span className="setting-label">{label}</span>
+                                <span className="setting-description">{description}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <button
+                                    className={`shortcut-key-button ${recordingAction === action ? 'recording' : ''}`}
+                                    onClick={() => handleRecordShortcut(action)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        background: recordingAction === action ? 'rgba(244, 0, 53, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                        border: recordingAction === action ? '1px solid rgba(244, 0, 53, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                        color: recordingAction === action ? '#f40035' : 'var(--color-text-main)',
+                                        fontFamily: 'var(--font-mono)',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        minWidth: '100px',
+                                        textAlign: 'center',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                >
+                                    {recordingAction === action ? 'Press keys...' : settings.keyboardShortcuts[action]}
+                                </button>
+                                {settings.keyboardShortcuts[action] !== DEFAULT_KEYBOARD_SHORTCUTS[action] && (
+                                    <button
+                                        className="setting-button"
+                                        onClick={() => handleResetShortcut(action)}
+                                        style={{ fontSize: '11px', padding: '4px 8px' }}
+                                    >
+                                        Reset
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )
+                )}
+            </div>
+
+            <div className="setting-group" style={{ marginTop: '24px' }}>
+                <button className="setting-button" onClick={handleResetAll}>
+                    Reset All to Defaults
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ============================================================================
 // SECTION: Advanced Settings
 // ============================================================================
 
 function AdvancedSettings() {
-    const { settings, updateSetting, clearCache, resetSettings } = useSettings();
+    const { clearCache, resetSettings } = useSettings();
     const [isClearing, setIsClearing] = useState(false);
     const [appVersion, setAppVersion] = useState('...');
 
@@ -570,26 +628,37 @@ function AdvancedSettings() {
             </p>
 
             <div className="setting-group">
-                <h3 className="setting-group-title">Developer</h3>
 
-                <SettingRow label="Developer Mode" description="Show debug information and logs">
-                    <Toggle
-                        checked={settings.developerMode}
-                        onChange={(checked) => updateSetting('developerMode', checked)}
-                    />
-                </SettingRow>
             </div>
 
             <div className="setting-group">
                 <h3 className="setting-group-title">Cache</h3>
 
                 <SettingRow label="Clear Cache" description="Clear cached images and metadata">
+                    <div className="flex gap-2">
+                        <button
+                            className="setting-button"
+                            onClick={handleClearCache}
+                            disabled={isClearing}
+                        >
+                            {isClearing ? 'Clearing...' : 'Clear Cache'}
+                        </button>
+                    </div>
+                </SettingRow>
+
+                <SettingRow label="Clear & Restart" description="Clear cache and restart application">
                     <button
-                        className="setting-button"
-                        onClick={handleClearCache}
-                        disabled={isClearing}
+                        className="setting-button danger"
+                        onClick={async () => {
+                            if (confirm('This will delete all local cache and restart the application. Continue?')) {
+                                const { clearAllCache } = await import('../lib/cacheUtils');
+                                const { relaunch } = await import('@tauri-apps/plugin-process');
+                                await clearAllCache();
+                                await relaunch();
+                            }
+                        }}
                     >
-                        {isClearing ? 'Clearing...' : 'Clear Cache'}
+                        Clear & Restart
                     </button>
                 </SettingRow>
             </div>
@@ -630,8 +699,6 @@ export default function Settings() {
         switch (activeTab) {
             case 'general':
                 return <GeneralSettings />;
-            case 'player':
-                return <PlayerSettings />;
             case 'integrations':
                 return <IntegrationsSettings />;
             case 'manga':

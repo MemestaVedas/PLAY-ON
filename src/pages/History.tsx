@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { Card, SectionHeader, EmptyState } from '../components/ui/UIComponents';
+import RefreshButton from '../components/ui/RefreshButton';
 import { useHistory, HistoryFlatItem } from '../hooks/useHistory';
 import { Virtuoso } from 'react-virtuoso';
 
@@ -31,14 +32,12 @@ function History() {
                     subtitle="Your recent anime viewing activity"
                     className="font-planet tracking-[0.2em] text-[#B4A2F6]"
                 />
-                <button
+                <RefreshButton
                     onClick={() => refetch()}
-                    className={`p-2 rounded-full transition-all ${loading ? 'animate-spin' : ''}`}
-                    style={{ color: 'var(--color-text-muted)' }}
+                    loading={loading}
                     title="Refresh History"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                </button>
+                    iconSize={18}
+                />
             </div>
 
             <div className="flex-1 min-h-0">

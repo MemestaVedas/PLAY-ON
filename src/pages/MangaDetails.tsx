@@ -37,6 +37,14 @@ interface Manga {
     volumes?: number;
     status?: string;
     format?: string;
+    source?: string;
+    popularity?: number;
+    rankings?: {
+        rank: number;
+        type: string;
+        context: string;
+        allTime: boolean;
+    }[];
     averageScore?: number;
     startDate?: {
         year?: number;
@@ -167,11 +175,23 @@ function MangaDetails() {
     const recommendations = manga.recommendations?.nodes.map(n => n.mediaRecommendation) || [];
     const percentage = manga.chapters ? Math.min((progress / manga.chapters) * 100, 100) : 0;
 
+    // Stats Logic
+    const allTimeRank = manga.rankings?.find(r => r.allTime && r.type === 'RATED')?.rank;
+    const popularity = manga.popularity?.toLocaleString();
+    const source = manga.source?.replace(/_/g, ' ') || 'Original';
+
+    const stats = [
+        { label: 'SCORE', value: manga.averageScore ? `${manga.averageScore}%` : 'N/A', color: 'text-mint-tonic' },
+        { label: 'RANK', value: allTimeRank ? `#${allTimeRank}` : 'N/A', color: 'text-sky-blue' },
+        { label: 'POPULARITY', value: popularity ? popularity : 'N/A', color: 'text-pastels-pink' },
+        { label: 'SOURCE', value: source, color: 'text-white' }
+    ];
+
     return (
         <div className="relative min-h-full font-rounded pb-20" style={{ color: 'var(--color-text-main)', margin: '-96px -32px 0 -32px' }}>
             {/* Banner - Full Width & Top Bleed */}
             <div
-                className="relative w-full h-[350px] md:h-[450px]"
+                className="relative w-full h-[250px] md:h-[350px]"
             >
                 <div
                     className="absolute inset-0 bg-cover bg-center"
@@ -186,7 +206,7 @@ function MangaDetails() {
             </div>
 
             {/* Main Content Grid - Overlapping Banner */}
-            <div className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 -mt-48 md:-mt-64 flex flex-col gap-10">
+            <div className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 -mt-32 md:-mt-48 flex flex-col gap-8">
                 <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr] gap-8 md:gap-12 items-start">
 
                     {/* Left Column: Single Poster Cover */}
@@ -207,7 +227,7 @@ function MangaDetails() {
 
                         {/* Title Block */}
                         <div>
-                            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
+                            <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
                                 {title}
                             </h1>
                             <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
@@ -225,27 +245,21 @@ function MangaDetails() {
                             </div>
                         </div>
 
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                                <div className="font-mono text-xs text-white/40 uppercase mb-1">Score</div>
-                                <div className="text-2xl font-bold">{manga.averageScore ? `${manga.averageScore}%` : 'N/A'}</div>
-                            </div>
-                            <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                                <div className="font-mono text-xs text-white/40 uppercase mb-1">Chapters</div>
-                                <div className="text-2xl font-bold">{manga.chapters || '?'}</div>
-                            </div>
-                            <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                                <div className="font-mono text-xs text-white/40 uppercase mb-1">Volumes</div>
-                                <div className="text-2xl font-bold">{manga.volumes || '?'}</div>
-                            </div>
+                        {/* Stats Grid - Updated to match AnimeStats */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {stats.map((stat, i) => (
+                                <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors">
+                                    <span className="font-mono text-[10px] text-white/40 uppercase tracking-widest">{stat.label}</span>
+                                    <span className={`font-bold text-xl ${stat.color} drop-shadow-md`}>{stat.value}</span>
+                                </div>
+                            ))}
                         </div>
 
                         {/* Description Box */}
                         <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
                             <div
-                                className="text-lg leading-relaxed text-gray-200/90 font-light max-h-[200px] overflow-y-auto custom-scrollbar pr-4"
+                                className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
                                 dangerouslySetInnerHTML={{ __html: manga.description || 'No data available.' }}
                             />
                         </div>

@@ -15,6 +15,8 @@ mod anilist;
 mod file_system;
 // Import title parser module
 mod title_parser;
+// Import CBZ reader module
+mod cbz_reader;
 
 // Platform-conditional imports for unified interface
 #[cfg(windows)]
@@ -548,7 +550,9 @@ pub fn run() {
             update_anime_progress_command,
             progressive_search_command,
             download_image_for_notification,
-            http_proxy_command
+            cbz_reader::get_cbz_info,
+            cbz_reader::get_cbz_page,
+            cbz_reader::is_valid_cbz
         ])
         .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)
@@ -559,6 +563,58 @@ pub fn run() {
                 app.deep_link().register_all()?;
             }
             Ok(())
+        })
+        .register_uri_scheme_protocol("manga", |_app, request| {
+            let url = request.uri().to_string();
+            // Format: manga://localhost/path/to/file.cbz/page.jpg
+            // The path might be URL encoded, so we need to decode it.
+
+            // Typical URL: manga://localhost/E%3A%2FBooks%2FManga.cbz/001.jpg
+
+            // 1. Strip scheme and host
+            let path_and_query = url.replace("manga://localhost/", "");
+
+            // 2. Split into file path and page name
+            // The last slash separates the file path from the page name?
+            // NO, the user might have slashes in the page name (subfolders in zip).
+            // BUT, our frontend encodes the file path as a single segment.
+
+            // Let's assume the frontend sends: manga://localhost/<encoded_file_path>/<encoded_page_name>
+
+            let segments: Vec<&str> = path_and_query.split('/').collect();
+            if segments.len() < 2 {
+                return http::Response::builder()
+                    .status(400)
+                    .body(Vec::new())
+                    .map_err(|_| "Invalid URL format".into());
+            }
+
+            let encoded_path = segments[0];
+            // The rest is the page name (might handle subfolders later, but for now assuming flattened or encoded)
+            let encoded_page = segments[1..].join("/");
+
+            let decoded_path = urlencoding::decode(encoded_path)
+                .map_err(|_| "Failed to decode path")?
+                .to_string();
+
+            let decoded_page = urlencoding::decode(&encoded_page)
+                .map_err(|_| "Failed to decode page")?
+                .to_string();
+
+            match cbz_reader::read_cbz_page_bytes(&decoded_path, &decoded_page) {
+                Ok((bytes, mime)) => http::Response::builder()
+                    .header("Content-Type", mime)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .body(bytes)
+                    .map_err(|_| "Failed to build response".into()),
+                Err(e) => {
+                    eprintln!("Manga protocol error: {}", e);
+                    http::Response::builder()
+                        .status(404)
+                        .body(Vec::new())
+                        .map_err(|_| "Page not found".into())
+                }
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

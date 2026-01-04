@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/ui/AnimeCard';
+import RefreshButton from '../components/ui/RefreshButton';
 import Loading from '../components/ui/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
@@ -133,6 +134,14 @@ function Home() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Discord RPC - Set browsing activity when on Home
+    useEffect(() => {
+        // Dynamic import to avoid SSR issues if any, and keep bundle size manageable
+        import('../services/discordRPC').then(({ setBrowsingActivity }) => {
+            setBrowsingActivity('full');
+        });
+    }, []);
+
     const itemCount = windowWidth >= 1280 ? 8 : 4;
 
     return (
@@ -157,14 +166,12 @@ function Home() {
                             {isAuthenticated ? "WATCHING" : "TRENDING"}
                         </h3>
                         {isAuthenticated && (
-                            <button
+                            <RefreshButton
                                 onClick={() => refetchUser()}
-                                className={`p-2 rounded-full transition-all hover:bg-white/10 ${userLoading ? 'animate-spin' : ''}`}
-                                style={{ color: 'var(--color-text-muted)' }}
+                                loading={userLoading}
                                 title="Refresh List"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                            </button>
+                                iconSize={16}
+                            />
                         )}
                     </div>
 
@@ -222,14 +229,12 @@ function Home() {
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]"></div>
                                 READING
                             </h3>
-                            <button
+                            <RefreshButton
                                 onClick={() => refetchManga()}
-                                className={`p-2 rounded-full transition-all hover:bg-white/10 ${mangaLoading ? 'animate-spin' : ''}`}
-                                style={{ color: 'var(--color-text-muted)' }}
+                                loading={mangaLoading}
                                 title="Refresh List"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                            </button>
+                                iconSize={16}
+                            />
                         </div>
 
                         {!mangaData && mangaLoading ? (

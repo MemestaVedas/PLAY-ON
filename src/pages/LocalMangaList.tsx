@@ -11,7 +11,8 @@ import {
     getDefaultCategory
 } from '../lib/localMangaDb';
 import { syncMangaFromAniList } from '../lib/syncService';
-import { PlayIcon, RefreshIcon } from '../components/ui/Icons';
+import { PlayIcon } from '../components/ui/Icons';
+import RefreshButton from '../components/ui/RefreshButton';
 import AnimeCard from '../components/ui/AnimeCard';
 
 function LocalMangaList() {
@@ -216,15 +217,12 @@ function LocalMangaList() {
 
                     {/* Refresh Button */}
                     <div className="flex items-center pl-2 border-l border-white/10">
-                        <button
+                        <RefreshButton
                             onClick={handleRefreshLibrary}
-                            disabled={isRefreshing}
-                            className={`p-2 rounded-full transition-all hover:bg-white/5 ${isRefreshing ? 'animate-spin' : ''}`}
-                            style={{ color: isRefreshing ? 'var(--color-text-main)' : 'var(--color-text-muted)' }}
+                            loading={isRefreshing}
                             title="Refresh List"
-                        >
-                            <RefreshIcon size={16} />
-                        </button>
+                            iconSize={16}
+                        />
                     </div>
 
                     {/* View Toggle */}

@@ -95,7 +95,7 @@ function AnimeDetails() {
         <div className="relative min-h-full font-rounded pb-20" style={{ color: 'var(--color-text-main)', margin: '-96px -32px 0 -32px' }}>
             {/* Banner - Full Width & Top Bleed */}
             <div
-                className="relative w-full h-[350px] md:h-[450px]"
+                className="relative w-full h-[250px] md:h-[350px]"
             >
                 <div
                     className="absolute inset-0 bg-cover bg-center"
@@ -110,7 +110,7 @@ function AnimeDetails() {
             </div>
 
             {/* Main Content Grid - Overlapping Banner */}
-            <div className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 -mt-48 md:-mt-64 flex flex-col gap-10">
+            <div className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-10 -mt-32 md:-mt-48 flex flex-col gap-8">
                 <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr] gap-8 md:gap-12 items-start">
 
                     {/* Left Column: Single Poster Cover */}
@@ -124,8 +124,6 @@ function AnimeDetails() {
                             {/* Glass Glint Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                         </div>
-
-
                     </div>
 
                     {/* Right Column: Details */}
@@ -133,7 +131,7 @@ function AnimeDetails() {
 
                         {/* Title Block */}
                         <div>
-                            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
+                            <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
                                 {title}
                             </h1>
                             <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
@@ -152,7 +150,7 @@ function AnimeDetails() {
                         <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
                             <div
-                                className="text-lg leading-relaxed text-gray-200/90 font-light max-h-[200px] overflow-y-auto custom-scrollbar pr-4"
+                                className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
                                 dangerouslySetInnerHTML={{ __html: anime.description || 'No data available.' }}
                             />
                         </div>

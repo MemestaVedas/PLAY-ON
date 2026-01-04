@@ -484,3 +484,167 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+
+/* ============================================================================
+   CHAPTER CONTROLS (v0.3.0)
+   ============================================================================ */
+
+.chapter-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.control-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.control-btn.active {
+    background: rgba(180, 162, 246, 0.2);
+    border-color: var(--color-zen-accent);
+    color: var(--color-zen-accent);
+}
+
+.filter-select {
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-select:hover,
+.filter-select:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    outline: none;
+}
+
+.filter-select option {
+    background: #1a1a24;
+    color: white;
+}
+
+/* Chapter item enhancements */
+.chapter-item {
+    flex-wrap: wrap;
+}
+
+.chapter-main {
+    flex: 1;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.chapter-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.chapter-downloaded-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: rgba(96, 165, 250, 0.1);
+    border-radius: 50%;
+    color: #60A5FA;
+    font-size: 0.7rem;
+}
+
+.chapter-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.5rem;
+}
+
+.bookmark-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bookmark-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.bookmark-btn.bookmarked {
+    color: var(--color-zen-accent);
+}
+
+.bookmark-btn.bookmarked:hover {
+    background: rgba(180, 162, 246, 0.15);
+    color: var(--color-zen-accent);
+}
+
+/* Downloaded chapter indicator */
+.chapter-item.downloaded {
+    border-left: 3px solid #60A5FA;
+}
+
+.chapter-item.downloaded .chapter-number::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #60A5FA;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+/* Download button */
+.download-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.download-btn:hover {
+    background: rgba(96, 165, 250, 0.15);
+    color: #60A5FA;
+    border-color: rgba(96, 165, 250, 0.3);
+}
+
+.download-btn:active {
+    transform: scale(0.95);
+}

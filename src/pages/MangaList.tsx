@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, forwardRef, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import AnimeCard from '../components/ui/AnimeCard'; // Reusing AnimeCard for Manga
+import RefreshButton from '../components/ui/RefreshButton';
 import { useAuth } from '../hooks/useAuth';
 import { USER_MANGA_COLLECTION_QUERY } from '../api/anilistClient';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
@@ -236,14 +237,12 @@ function MangaList() {
 
                     {/* Refresh Button */}
                     <div className="flex items-center pl-2 border-l border-white/10">
-                        <button
+                        <RefreshButton
                             onClick={() => data?.refetch && data.refetch()}
-                            className={`p-2 rounded-full transition-all hover:bg-white/5 ${queryLoading ? 'animate-spin' : ''}`}
-                            style={{ color: 'var(--color-text-muted)', ...(queryLoading && { color: 'var(--color-text-main)' }) }}
+                            loading={queryLoading}
                             title="Refresh List"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                        </button>
+                            iconSize={16}
+                        />
                     </div>
 
                     {/* View Toggle */}

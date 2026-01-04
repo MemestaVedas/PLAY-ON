@@ -31,28 +31,19 @@
 .settings-tabs {
     display: flex;
     flex-direction: row;
-    /* Changed from column */
-    gap: 8px;
-    /* Slightly increased gap */
+    gap: 12px;
     width: 100%;
-    /* Full width */
     min-width: auto;
-    padding: 8px;
-    /* Reduced padding */
-    background: var(--color-bg-glass);
-    border-radius: 16px;
-    border: 1px solid var(--color-border-subtle);
+    padding: 0 0 12px 0;
+    background: transparent;
+    border-radius: 0;
+    border: none;
     height: fit-content;
     position: sticky;
     top: 0;
-    /* Stick to top */
     z-index: 10;
-    /* Ensure it stays above content */
-    backdrop-filter: blur(10px);
     overflow-x: auto;
-    /* Allow scrolling if tabs don't fit */
     scrollbar-width: none;
-    /* Hide scrollbar for cleaner look */
 }
 
 /* Hide scrollbar for WebKit */
@@ -64,38 +55,41 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Center content */
-    gap: 8px;
-    padding: 10px 20px;
-    border-radius: 12px;
-    background: transparent;
-    border: none;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--color-text-muted);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
-    /* Prevent wrapping */
-    flex: 1;
-    /* Distribute space evenly */
+    flex: 0 0 auto;
+    backdrop-filter: blur(8px);
 }
 
 .settings-tab:hover {
-    background: var(--color-bg-glass-hover);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--color-text-main);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 .settings-tab.active {
-    background: linear-gradient(135deg, rgba(180, 162, 246, 0.15), rgba(165, 219, 248, 0.1));
-    color: #B4A2F6;
-    border: 1px solid rgba(180, 162, 246, 0.2);
+    background: rgba(180, 162, 246, 0.2);
+    color: #fff;
+    border: 1px solid rgba(180, 162, 246, 0.3);
+    box-shadow: 0 0 10px rgba(180, 162, 246, 0.1);
 }
 
 .settings-tab-icon {
-    font-size: 18px;
-    width: 24px;
+    font-size: 16px;
+    width: 20px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* ============================================================================

@@ -8,15 +8,9 @@ import Breadcrumbs from '../components/ui/Breadcrumbs';
 
 import FloatingNowPlaying from '../components/ui/FloatingNowPlaying';
 import { useDiscordRPC } from '../hooks/useDiscordRPC';
-
-/**
- * MainLayout Component
- * 
- * Provides the persistent shell for the application.
- */
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useSearchBar } from '../context/SearchBarContext';
 import { useSettings } from '../context/SettingsContext';
-
-// ... (existing imports)
 
 /**
  * MainLayout Component
@@ -32,6 +26,13 @@ function MainLayout() {
 
     // Discord Rich Presence - now respects user settings
     useDiscordRPC(settings.discordRpcEnabled, settings.discordPrivacyLevel);
+
+    // Keyboard Shortcuts
+    const { focusSearch } = useSearchBar();
+    useKeyboardShortcuts({
+        onSearchAnime: () => focusSearch('anime'),
+        onSearchManga: () => focusSearch('manga'),
+    });
 
     const handleBack = () => {
         window.history.back();

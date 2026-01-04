@@ -5,11 +5,16 @@ interface AnimeStatsProps {
 }
 
 export function AnimeStats({ anime }: AnimeStatsProps) {
+    // Find the highest rank (usually "RATED" or "POPULAR")
+    const allTimeRank = anime.rankings?.find(r => r.allTime && r.type === 'RATED')?.rank;
+    const popularity = anime.popularity?.toLocaleString();
+    const source = anime.source?.replace(/_/g, ' ') || 'Original';
+
     const stats = [
         { label: 'SCORE', value: anime.averageScore ? `${anime.averageScore}%` : 'N/A', color: 'text-mint-tonic' },
-        { label: 'RANK', value: '#--', color: 'text-sky-blue' }, // Placeholder
-        { label: 'POPULARITY', value: 'High', color: 'text-pastels-pink' },
-        { label: 'SOURCE', value: 'Original', color: 'text-white' }
+        { label: 'RANK', value: allTimeRank ? `#${allTimeRank}` : 'N/A', color: 'text-sky-blue' },
+        { label: 'POPULARITY', value: popularity ? popularity : 'N/A', color: 'text-pastels-pink' },
+        { label: 'SOURCE', value: source, color: 'text-white' }
     ];
 
     return (
