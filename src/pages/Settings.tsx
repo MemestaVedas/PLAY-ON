@@ -423,7 +423,7 @@ function StorageSettings() {
                             <span className="setting-label">Watched Folders</span>
                             <span className="setting-description">Folders to scan for anime files</span>
                         </div>
-                        <button className="setting-button primary" onClick={addFolder}>
+                        <button className="setting-button primary" onClick={() => addFolder('anime')}>
                             + Add Folder
                         </button>
                     </div>

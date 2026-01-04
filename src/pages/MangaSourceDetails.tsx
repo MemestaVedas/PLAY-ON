@@ -91,7 +91,7 @@ function MangaSourceDetails() {
 
     useEffect(() => {
         // Listen for download progress to update UI
-        const unsubscribe = onDownloadProgress((chapterId, current, total, status) => {
+        const unsubscribe = onDownloadProgress((chapterId, current, total, _status) => {
             if (chapterId) {
                 // If starting or in progress
                 if (current < total) {
