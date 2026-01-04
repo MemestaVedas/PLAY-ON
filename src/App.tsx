@@ -22,7 +22,7 @@ import { SettingsProvider } from './context/SettingsContext';
 import { SearchBarProvider } from './context/SearchBarContext';
 import LocalFolder from './pages/LocalFolder';
 import Settings from './pages/Settings';
-import StreamPage from './pages/StreamPage';
+
 import UserProfile from './pages/UserProfile';
 import "./App.css";
 
@@ -207,6 +207,8 @@ function App() {
 
                     {/* Full-screen Local File Reader (outside MainLayout) */}
                     <Route path="/read-local" element={<LocalFileReader />} />
+
+
 
                     {/* Main App Layout */}
                     <Route element={<MainLayout />}>

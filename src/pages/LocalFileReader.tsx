@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { getCbzInfo, getCbzPage, getFileType } from '../services/localFileReader';
+import { getCbzInfo } from '../services/localFileReader';
 import { loadPdf, renderPdfPage } from '../lib/pdfReader';
 import './MangaReader.css';
 

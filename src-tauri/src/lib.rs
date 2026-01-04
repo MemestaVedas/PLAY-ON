@@ -419,88 +419,6 @@ async fn download_image_for_notification(url: String) -> Result<String, String> 
     Ok(path_str)
 }
 
-/// Tauri command to make HTTP requests from Rust side (bypasses CORS)
-/// Used for streaming providers that have CORS restrictions
-///
-/// # Arguments
-/// * `url` - URL to fetch
-/// * `method` - HTTP method (GET, POST, etc.)
-/// * `headers` - Optional headers as JSON object
-/// * `body` - Optional request body
-///
-/// # Returns
-/// * JSON with response status, headers, and body
-#[tauri::command]
-async fn http_proxy_command(
-    url: String,
-    method: Option<String>,
-    headers: Option<serde_json::Value>,
-    body: Option<String>,
-) -> Result<String, String> {
-    use serde_json::json;
-
-    let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-
-    let method_str = method.unwrap_or_else(|| "GET".to_string());
-    let req_method = match method_str.to_uppercase().as_str() {
-        "POST" => reqwest::Method::POST,
-        "PUT" => reqwest::Method::PUT,
-        "DELETE" => reqwest::Method::DELETE,
-        "PATCH" => reqwest::Method::PATCH,
-        _ => reqwest::Method::GET,
-    };
-
-    let mut request = client.request(req_method, &url);
-
-    // Add custom headers
-    if let Some(hdrs) = headers {
-        if let Some(obj) = hdrs.as_object() {
-            for (key, value) in obj {
-                if let Some(val_str) = value.as_str() {
-                    request = request.header(key, val_str);
-                }
-            }
-        }
-    }
-
-    // Add body for POST/PUT/PATCH
-    if let Some(req_body) = body {
-        request = request.body(req_body);
-    }
-
-    let response = request
-        .send()
-        .await
-        .map_err(|e| format!("HTTP request failed: {}", e))?;
-
-    let status = response.status().as_u16();
-    let response_headers: serde_json::Map<String, serde_json::Value> = response
-        .headers()
-        .iter()
-        .map(|(k, v)| {
-            (
-                k.as_str().to_string(),
-                serde_json::Value::String(v.to_str().unwrap_or("").to_string()),
-            )
-        })
-        .collect();
-
-    let body_text = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response body: {}", e))?;
-
-    Ok(json!({
-        "status": status,
-        "headers": response_headers,
-        "body": body_text
-    })
-    .to_string())
-}
-
 /// Simple hash function for cache keys
 fn md5_hash(s: &str) -> u64 {
     use std::collections::hash_map::DefaultHasher;
@@ -550,11 +468,12 @@ pub fn run() {
             update_anime_progress_command,
             progressive_search_command,
             download_image_for_notification,
+            download_image_for_notification,
             cbz_reader::get_cbz_info,
             cbz_reader::get_cbz_page,
             cbz_reader::is_valid_cbz
         ])
-        .setup(|app| {
+        .setup(|_app| {
             // Register deep links at runtime for development mode (Windows/Linux)
             // This is needed because deep links are only registered on install by default
             #[cfg(any(target_os = "linux", windows))]
@@ -586,33 +505,45 @@ pub fn run() {
                 return http::Response::builder()
                     .status(400)
                     .body(Vec::new())
-                    .map_err(|_| "Invalid URL format".into());
+                    .unwrap_or_else(|_| http::Response::new(Vec::new()));
             }
 
             let encoded_path = segments[0];
             // The rest is the page name (might handle subfolders later, but for now assuming flattened or encoded)
             let encoded_page = segments[1..].join("/");
 
-            let decoded_path = urlencoding::decode(encoded_path)
-                .map_err(|_| "Failed to decode path")?
-                .to_string();
+            let decoded_path = match urlencoding::decode(encoded_path) {
+                Ok(p) => p.to_string(),
+                Err(_) => {
+                    return http::Response::builder()
+                        .status(400)
+                        .body(Vec::new())
+                        .unwrap_or_else(|_| http::Response::new(Vec::new()));
+                }
+            };
 
-            let decoded_page = urlencoding::decode(&encoded_page)
-                .map_err(|_| "Failed to decode page")?
-                .to_string();
+            let decoded_page = match urlencoding::decode(&encoded_page) {
+                Ok(p) => p.to_string(),
+                Err(_) => {
+                    return http::Response::builder()
+                        .status(400)
+                        .body(Vec::new())
+                        .unwrap_or_else(|_| http::Response::new(Vec::new()));
+                }
+            };
 
             match cbz_reader::read_cbz_page_bytes(&decoded_path, &decoded_page) {
                 Ok((bytes, mime)) => http::Response::builder()
                     .header("Content-Type", mime)
                     .header("Access-Control-Allow-Origin", "*")
                     .body(bytes)
-                    .map_err(|_| "Failed to build response".into()),
+                    .unwrap_or_else(|_| http::Response::new(Vec::new())),
                 Err(e) => {
                     eprintln!("Manga protocol error: {}", e);
                     http::Response::builder()
                         .status(404)
                         .body(Vec::new())
-                        .map_err(|_| "Page not found".into())
+                        .unwrap_or_else(|_| http::Response::new(Vec::new()))
                 }
             }
         })
