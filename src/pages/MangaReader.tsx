@@ -22,6 +22,7 @@ import { syncMangaEntryToAniList } from '../lib/syncService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { updateMangaActivity, clearDiscordActivity, setMangaReadingState } from '../services/discordRPC';
+import { trackMangaSession } from '../services/StatsService';
 import './MangaReader.css';
 
 // Helper component to handle image loading (supports both online URLs and local encoded CBZ paths)
@@ -136,6 +137,9 @@ function MangaReader() {
     // Track synced chapters to avoid duplicate syncs
     const syncedChaptersRef = useRef<Set<string>>(new Set());
 
+    // Track actual reading time for stats
+    const chapterStartTimeRef = useRef<number>(Date.now());
+
     // Get AniList mapping for this manga
     const anilistMapping = sourceId && mangaId ? getMapping(sourceId, mangaId) : undefined;
 
@@ -150,6 +154,9 @@ function MangaReader() {
             setLoading(true);
             setError(null);
             setScrollProgress(0);
+
+            // Reset chapter start time for accurate time tracking
+            chapterStartTimeRef.current = Date.now();
 
             // Default to idle
             setSyncStatus('idle');
@@ -405,6 +412,22 @@ function MangaReader() {
                 });
 
                 console.log('[MangaReader] Saved to local DB:', entry.title, 'Ch', entry.chapter);
+
+                // Track manga session for stats (with actual elapsed time)
+                const elapsedMinutes = Math.round((Date.now() - chapterStartTimeRef.current) / 60000);
+                // Use actual time if reasonable (1-60 min), otherwise fallback to 10 min estimate
+                const actualMinutesRead = (elapsedMinutes >= 1 && elapsedMinutes <= 60) ? elapsedMinutes : 10;
+
+                trackMangaSession(
+                    anilistMapping?.anilistId || parseInt(mangaId || '0', 10),
+                    manga?.title || mangaTitle || 'Unknown Manga',
+                    manga?.coverUrl || anilistMapping?.coverImage,
+                    1, // 1 chapter read
+                    actualMinutesRead, // Use actual tracked time
+                    manga?.genres || []
+                );
+
+                console.log('[MangaReader] Tracked', actualMinutesRead, 'minutes for this chapter');
 
                 // Sync to AniList if we have a mapping
                 if (anilistMapping?.anilistId) {

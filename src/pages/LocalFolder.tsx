@@ -434,6 +434,7 @@ function LocalFolder() {
                 {title}
             </h3>
             <motion.div
+                key={`${title}-${fileList.length}-${filterStatus}-${searchQuery}`}
                 className="flex flex-col gap-2"
                 variants={containerVariants}
                 initial="hidden"
@@ -510,29 +511,32 @@ function LocalFolder() {
     return (
         <div className="max-w-[1400px] mx-auto pb-10 px-6 min-h-screen">
             {/* Header */}
-            <div className="mb-10 mt-6 px-2 flex items-end justify-between">
-                <div>
-                    <h1
-                        className="text-4xl font-bold text-white mb-2"
-                        style={{
-                            fontFamily: 'var(--font-rounded)',
-                            letterSpacing: '-0.02em',
-                            textShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                        }}
-                    >
-                        {currentPath.split(/[\\/]/).pop()}
-                    </h1>
-                    <p
-                        className="text-white/40 text-sm font-mono break-all mb-4"
-                        style={{ fontFamily: 'var(--font-mono)' }}
-                    >
-                        {currentPath}
-                    </p>
+            <div className="mb-10 mt-6 px-2">
+                {/* Row 1: Title & Link */}
+                <div className="flex items-end justify-between gap-6 mb-8">
+                    <div>
+                        <h1
+                            className="text-4xl font-bold text-white mb-2"
+                            style={{
+                                fontFamily: 'var(--font-rounded)',
+                                letterSpacing: '-0.02em',
+                                textShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                            }}
+                        >
+                            {currentPath.split(/[\\/]/).pop()}
+                        </h1>
+                        <p
+                            className="text-white/40 text-sm font-mono break-all"
+                            style={{ fontFamily: 'var(--font-mono)' }}
+                        >
+                            {currentPath}
+                        </p>
+                    </div>
 
                     {/* AniList Tracking Section - Hide if Root Folder and not mapped */}
                     {currentMapping ? (
                         <div
-                            className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10"
+                            className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-white/10 shrink-0"
                             style={{ background: 'rgba(180, 162, 246, 0.1)' }}
                         >
                             {currentMapping.coverImage && (
@@ -582,7 +586,7 @@ function LocalFolder() {
                     ) : !isRootFolder && (
                         <button
                             onClick={() => setIsSearchDialogOpen(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-105"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-105 shrink-0"
                             style={{
                                 background: 'linear-gradient(135deg, var(--color-zen-accent), #9c7cf0)',
                                 color: 'white',
@@ -595,37 +599,38 @@ function LocalFolder() {
                     )}
                 </div>
 
-                <div className="flex gap-4 items-center">
-                    {/* Filter Dropdown - Hide if Root Folder */}
-                    {!isRootFolder && (
-                        <div className="w-32 relative z-20">
+                {/* Row 2: Controls */}
+                <div className="flex items-center justify-between">
+                    <div className="flex gap-4 items-center">
+                        {/* Filter Dropdown - Hide if Root Folder */}
+                        {!isRootFolder && (
+                            <div className="w-32 relative z-20">
+                                <Dropdown
+                                    value={filterStatus}
+                                    options={[
+                                        { value: 'all', label: 'All' },
+                                        { value: 'watched', label: 'Watched' },
+                                        { value: 'unwatched', label: 'Unwatched' },
+                                    ]}
+                                    onChange={(val) => setFilterStatus(val as any)}
+                                    icon={null} // Optional icon
+                                />
+                            </div>
+                        )}
+
+                        {/* Sorting Dropdown */}
+                        <div className="w-40 relative z-20">
                             <Dropdown
-                                value={filterStatus}
-                                options={[
-                                    { value: 'all', label: 'All' },
-                                    { value: 'watched', label: 'Watched' },
-                                    { value: 'unwatched', label: 'Unwatched' },
-                                ]}
-                                onChange={(val) => setFilterStatus(val as any)}
-                                icon={null} // Optional icon
+                                value={`${sortBy}-${sortOrder}`}
+                                options={sortOptions}
+                                onChange={(val) => {
+                                    const [by, order] = val.split('-');
+                                    setSortBy(by as any);
+                                    setSortOrder(order as any);
+                                }}
                             />
                         </div>
-                    )}
-
-                    {/* Sorting Dropdown */}
-                    <div className="w-40 relative z-20">
-                        <Dropdown
-                            value={`${sortBy}-${sortOrder}`}
-                            options={sortOptions}
-                            onChange={(val) => {
-                                const [by, order] = val.split('-');
-                                setSortBy(by as any);
-                                setSortOrder(order as any);
-                            }}
-                        />
                     </div>
-
-                    <div className="w-[1px] h-8 bg-white/10 mx-2"></div>
 
                     {/* Search Bar */}
                     <div className="relative group mb-1">

@@ -128,6 +128,12 @@ query ($userId: Int) {
           count
           status
         }
+        genres {
+          genre
+          count
+          meanScore
+          minutesWatched
+        }
       }
       manga {
         count
@@ -138,6 +144,12 @@ query ($userId: Int) {
         statuses {
           count
           status
+        }
+        genres {
+          genre
+          count
+          meanScore
+          chaptersRead
         }
       }
     }
@@ -782,12 +794,24 @@ export async function fetchUserStats() {
             meanScore
             minutesWatched
             episodesWatched
+            genres(limit: 10, sort: COUNT_DESC) {
+              genre
+              count
+              meanScore
+              minutesWatched
+            }
           }
           manga {
             count
             meanScore
             chaptersRead
             volumesRead
+            genres(limit: 10, sort: COUNT_DESC) {
+              genre
+              count
+              meanScore
+              chaptersRead
+            }
           }
         }
       }
