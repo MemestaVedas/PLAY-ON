@@ -19,6 +19,8 @@ mod title_parser;
 mod cbz_reader;
 // Import downloader module
 mod downloader;
+// Import MyAnimeList module
+mod myanimelist;
 
 // Platform-conditional imports for unified interface
 #[cfg(windows)]
@@ -470,13 +472,187 @@ fn md5_hash(s: &str) -> u64 {
     hasher.finish()
 }
 
-/// Tauri command to hide the main window (minimize to tray)
+// ============================================================================
+// MYANIMELIST COMMANDS
+// ============================================================================
+
+/// Generate PKCE code verifier and challenge for MAL OAuth
 #[tauri::command]
-async fn hide_window(app: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("main") {
-        window.hide().map_err(|e| e.to_string())?;
+fn mal_generate_pkce() -> (String, String) {
+    let verifier = myanimelist::generate_code_verifier();
+    let challenge = myanimelist::generate_code_challenge(&verifier);
+    (verifier, challenge)
+}
+
+/// Complete MAL OAuth flow: starts localhost server, opens browser, waits for callback, exchanges code
+/// Returns JSON with tokens on success
+#[tauri::command]
+async fn mal_start_oauth_flow(client_id: String) -> Result<String, String> {
+    // Generate PKCE
+    let verifier = myanimelist::generate_code_verifier();
+    let challenge = myanimelist::generate_code_challenge(&verifier);
+
+    // Use a fixed port for the callback server
+    let port: u16 = 17563;
+    let redirect_uri = format!("http://localhost:{}", port);
+
+    // Build auth URL
+    let auth_url = format!(
+        "https://myanimelist.net/v1/oauth2/authorize?response_type=code&client_id={}&code_challenge={}&code_challenge_method=plain&redirect_uri={}",
+        urlencoding::encode(&client_id),
+        urlencoding::encode(&challenge),
+        urlencoding::encode(&redirect_uri)
+    );
+
+    println!("[MAL] Starting OAuth flow...");
+    println!("[MAL] Redirect URI: {}", redirect_uri);
+
+    // Start the callback server in a separate task
+    let server_handle =
+        tokio::spawn(async move { myanimelist::start_oauth_callback_server(port).await });
+
+    // Open browser (use shell command since we don't have app handle here)
+    println!("[MAL] Opening browser: {}", auth_url);
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(&auth_url).spawn();
     }
-    Ok(())
+    #[cfg(target_os = "windows")]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "start", "", &auth_url])
+            .spawn();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open")
+            .arg(&auth_url)
+            .spawn();
+    }
+
+    // Wait for the code from the callback server
+    let code = server_handle
+        .await
+        .map_err(|e| format!("Server task error: {}", e))?
+        .map_err(|e| format!("OAuth callback error: {}", e))?;
+
+    println!("[MAL] Received authorization code, exchanging for tokens...");
+
+    // Exchange code for tokens
+    let token_data = myanimelist::exchange_code_for_token(
+        code,
+        client_id,
+        verifier,
+        format!("http://localhost:{}", port),
+    )
+    .await?;
+
+    serde_json::to_string(&token_data).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Exchange authorization code for MAL tokens using PKCE
+#[tauri::command]
+async fn mal_exchange_code(
+    code: String,
+    client_id: String,
+    code_verifier: String,
+    redirect_uri: String,
+) -> Result<String, String> {
+    let token_data =
+        myanimelist::exchange_code_for_token(code, client_id, code_verifier, redirect_uri).await?;
+    serde_json::to_string(&token_data).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Refresh MAL access token
+#[tauri::command]
+async fn mal_refresh_token(refresh_token: String, client_id: String) -> Result<String, String> {
+    let token_data = myanimelist::refresh_token(refresh_token, client_id).await?;
+    serde_json::to_string(&token_data).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Get MAL user profile
+#[tauri::command]
+async fn mal_get_user(access_token: String) -> Result<String, String> {
+    let user = myanimelist::get_user_info(&access_token).await?;
+    serde_json::to_string(&user).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Search anime on MAL
+#[tauri::command]
+async fn mal_search_anime(
+    access_token: String,
+    query: String,
+    limit: Option<i32>,
+) -> Result<String, String> {
+    let results = myanimelist::search_anime(&access_token, &query, limit.unwrap_or(10)).await?;
+    serde_json::to_string(&results).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Search manga on MAL
+#[tauri::command]
+async fn mal_search_manga(
+    access_token: String,
+    query: String,
+    limit: Option<i32>,
+) -> Result<String, String> {
+    let results = myanimelist::search_manga(&access_token, &query, limit.unwrap_or(10)).await?;
+    serde_json::to_string(&results).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Update anime progress on MAL
+#[tauri::command]
+async fn mal_update_anime_progress(
+    access_token: String,
+    anime_id: i64,
+    episodes_watched: i32,
+    status: Option<String>,
+) -> Result<String, String> {
+    let status_ref = status.as_deref();
+    let result =
+        myanimelist::update_anime_progress(&access_token, anime_id, episodes_watched, status_ref)
+            .await?;
+    serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Update manga progress on MAL
+#[tauri::command]
+async fn mal_update_manga_progress(
+    access_token: String,
+    manga_id: i64,
+    chapters_read: i32,
+    status: Option<String>,
+) -> Result<String, String> {
+    let status_ref = status.as_deref();
+    let result =
+        myanimelist::update_manga_progress(&access_token, manga_id, chapters_read, status_ref)
+            .await?;
+    serde_json::to_string(&result).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Get user's anime list from MAL
+#[tauri::command]
+async fn mal_get_anime_list(
+    access_token: String,
+    status: Option<String>,
+    limit: Option<i32>,
+) -> Result<String, String> {
+    let status_ref = status.as_deref();
+    let results =
+        myanimelist::get_anime_list(&access_token, status_ref, limit.unwrap_or(100)).await?;
+    serde_json::to_string(&results).map_err(|e| format!("Serialization error: {}", e))
+}
+
+/// Get user's manga list from MAL
+#[tauri::command]
+async fn mal_get_manga_list(
+    access_token: String,
+    status: Option<String>,
+    limit: Option<i32>,
+) -> Result<String, String> {
+    let status_ref = status.as_deref();
+    let results =
+        myanimelist::get_manga_list(&access_token, status_ref, limit.unwrap_or(100)).await?;
+    serde_json::to_string(&results).map_err(|e| format!("Serialization error: {}", e))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -525,7 +701,18 @@ pub fn run() {
             cbz_reader::get_cbz_page,
             cbz_reader::is_valid_cbz,
             download_chapter_command,
-            hide_window
+            // MAL commands
+            mal_generate_pkce,
+            mal_start_oauth_flow,
+            mal_exchange_code,
+            mal_refresh_token,
+            mal_get_user,
+            mal_search_anime,
+            mal_search_manga,
+            mal_update_anime_progress,
+            mal_update_manga_progress,
+            mal_get_anime_list,
+            mal_get_manga_list
         ])
         .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)

@@ -17,6 +17,8 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Dropdown } from '../components/ui/Dropdown';
 import { ExtensionManager, Page, Chapter, Manga } from '../services/ExtensionManager';
 import { useMangaMappings } from '../hooks/useMangaMappings';
+import { useMalAuth } from '../context/MalAuthContext';
+import * as malClient from '../api/malClient';
 import { updateMangaProgress, getMangaEntryByAnilistId, getLocalMangaEntry, getLocalMangaDb, isChapterDownloaded, LocalMangaEntry } from '../lib/localMangaDb';
 import { syncMangaEntryToAniList } from '../lib/syncService';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -107,6 +109,7 @@ function MangaReader() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { getMapping } = useMangaMappings();
+    const malAuth = useMalAuth();
 
     // Get manga info from URL params for chapter navigation
     const mangaId = searchParams.get('mangaId');
@@ -438,6 +441,30 @@ function MangaReader() {
                     // No AniList link, just saved locally
                     setSyncStatus('synced');
                 }
+
+                // Also sync to MAL if authenticated
+                if (malAuth.isAuthenticated && malAuth.accessToken) {
+                    const mangaTitleStr = manga?.title || mangaTitle || '';
+                    try {
+                        const malResults = await malClient.searchManga(
+                            malAuth.accessToken,
+                            mangaTitleStr,
+                            1
+                        );
+                        if (malResults.length > 0) {
+                            const malId = malResults[0].id;
+                            await malClient.updateMangaProgress(
+                                malAuth.accessToken,
+                                malId,
+                                chapterNumber,
+                                'reading'
+                            );
+                            console.log('[MangaReader] MAL progress synced:', chapterNumber);
+                        }
+                    } catch (malErr) {
+                        console.error('[MangaReader] MAL sync failed:', malErr);
+                    }
+                }
             } catch (err) {
                 console.error('[MangaReader] Sync error:', err);
                 setSyncStatus('error');
@@ -445,7 +472,7 @@ function MangaReader() {
         };
 
         syncChapter();
-    }, [scrollProgress, sourceId, mangaId, chapterId, currentChapter, manga, mangaTitle, anilistMapping]);
+    }, [scrollProgress, sourceId, mangaId, chapterId, currentChapter, manga, mangaTitle, anilistMapping, malAuth]);
 
     // Keyboard navigation
     useEffect(() => {

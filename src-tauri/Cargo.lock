@@ -3088,6 +3088,7 @@ dependencies = [
  "lazy_static",
  "lofty",
  "natord",
+ "rand 0.8.5",
  "regex",
  "reqwest",
  "serde",

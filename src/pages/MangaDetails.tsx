@@ -16,6 +16,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchMangaDetails, updateMangaProgress, updateMediaStatus } from '../api/anilistClient';
 import { useMangaMappings } from '../hooks/useMangaMappings';
 import { StatusDropdown } from '../components/ui/StatusDropdown';
+import { useMalAuth } from '../context/MalAuthContext';
+import * as malClient from '../api/malClient';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
 import { SearchIcon, BookOpenIcon, ArrowRightIcon } from '../components/ui/Icons';
@@ -99,6 +101,7 @@ function MangaDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { getMappingByAnilistId } = useMangaMappings();
+    const malAuth = useMalAuth();
     const [manga, setManga] = useState<Manga | null>(null);
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
@@ -137,8 +140,36 @@ function MangaDetails() {
         if (!manga || updating) return;
         setUpdating(true);
         try {
+            // Update AniList
             await updateMangaProgress(manga.id, newProgress);
             setProgress(newProgress);
+
+            // Also update MAL if authenticated
+            if (malAuth.isAuthenticated && malAuth.accessToken) {
+                const mangaTitle = manga.title?.english || manga.title?.romaji || '';
+                try {
+                    // Search MAL for this manga to get MAL ID
+                    const malResults = await malClient.searchManga(
+                        malAuth.accessToken,
+                        mangaTitle,
+                        1
+                    );
+                    if (malResults.length > 0) {
+                        const malId = malResults[0].id;
+                        const malStatus = newProgress > 0 ? 'reading' : undefined;
+                        await malClient.updateMangaProgress(
+                            malAuth.accessToken,
+                            malId,
+                            newProgress,
+                            malStatus
+                        );
+                        console.log('[MangaDetails] MAL progress synced:', newProgress);
+                    }
+                } catch (malErr) {
+                    console.error('[MangaDetails] MAL sync failed:', malErr);
+                    // Don't fail the whole operation if MAL sync fails
+                }
+            }
         } catch (err) {
             console.error("Failed to update progress:", err);
         } finally {

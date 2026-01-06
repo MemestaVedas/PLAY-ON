@@ -21,6 +21,7 @@ import { DEFAULT_KEYBOARD_SHORTCUTS, ShortcutAction } from '../context/SettingsC
 import { formatShortcutFromEvent } from '../hooks/useKeyboardShortcuts';
 import { Dropdown } from '../components/ui/Dropdown';
 import './Settings.css';
+import TrackerConnections from '../components/settings/TrackerConnections';
 
 // ============================================================================
 // SETTINGS PAGE
@@ -235,6 +236,7 @@ function IntegrationsSettings() {
 
 
             </div>
+            <TrackerConnections />
         </div>
     );
 }

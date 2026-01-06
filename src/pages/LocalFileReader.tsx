@@ -6,6 +6,8 @@ import { getCbzInfo, getCbzPage } from '../services/localFileReader';
 import { loadPdf, renderPdfPage } from '../lib/pdfReader';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { useFolderMappings } from '../hooks/useFolderMappings';
+import { useMalAuth } from '../context/MalAuthContext';
+import * as malClient from '../api/malClient';
 import { updateMangaProgress } from '../lib/localMangaDb';
 import { syncMangaEntryToAniList } from '../lib/syncService';
 import { updateMangaActivity, clearDiscordActivity, setMangaReadingState } from '../services/discordRPC';
@@ -21,6 +23,7 @@ function LocalFileReader() {
     const fileName = filePath.split(/[/\\]/).pop() || 'Unknown';
     const navigate = useNavigate();
     const { getMappingForFilePath } = useFolderMappings();
+    const malAuth = useMalAuth();
 
     const [pages, setPages] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -249,6 +252,29 @@ function LocalFileReader() {
                 setSyncStatus('syncing');
                 const synced = await syncMangaEntryToAniList(entry);
                 setSyncStatus(synced ? 'synced' : 'error');
+
+                // Also sync to MAL if authenticated
+                if (malAuth.isAuthenticated && malAuth.accessToken) {
+                    try {
+                        const malResults = await malClient.searchManga(
+                            malAuth.accessToken,
+                            mapping.animeName,
+                            1
+                        );
+                        if (malResults.length > 0) {
+                            const malId = malResults[0].id;
+                            await malClient.updateMangaProgress(
+                                malAuth.accessToken,
+                                malId,
+                                chapterNumber,
+                                'reading'
+                            );
+                            console.log('[LocalReader] MAL progress synced:', chapterNumber);
+                        }
+                    } catch (malErr) {
+                        console.error('[LocalReader] MAL sync failed:', malErr);
+                    }
+                }
             } catch (err) {
                 console.error('[LocalReader] Sync error:', err);
                 setSyncStatus('error');
@@ -256,7 +282,7 @@ function LocalFileReader() {
         };
 
         syncChapter();
-    }, [scrollProgress, mapping, chapterNumber]);
+    }, [scrollProgress, mapping, chapterNumber, malAuth]);
 
     // Keyboard navigation
     useEffect(() => {

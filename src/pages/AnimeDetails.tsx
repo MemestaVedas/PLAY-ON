@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAnimeData, Anime } from '../hooks/useAnimeData';
 import { updateMediaProgress, updateMediaStatus } from '../api/anilistClient';
 import { useFolderMappings } from '../hooks/useFolderMappings';
+import { useMalAuth } from '../context/MalAuthContext';
+import * as malClient from '../api/malClient';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
 import { AnimeStats } from '../components/anime/AnimeStats';
@@ -27,6 +29,7 @@ function AnimeDetails() {
     const navigate = useNavigate();
     const { getAnimeDetails } = useAnimeData();
     const { getMappingByAnilistId } = useFolderMappings();
+    const malAuth = useMalAuth();
     const [anime, setAnime] = useState<Anime | null>(null);
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
@@ -64,8 +67,36 @@ function AnimeDetails() {
         if (!anime || updating) return;
         setUpdating(true);
         try {
+            // Update AniList
             await updateMediaProgress(anime.id, newProgress);
             setProgress(newProgress);
+
+            // Also update MAL if authenticated
+            if (malAuth.isAuthenticated && malAuth.accessToken) {
+                const animeTitle = anime.title?.english || anime.title?.romaji || '';
+                try {
+                    // Search MAL for this anime to get MAL ID
+                    const malResults = await malClient.searchAnime(
+                        malAuth.accessToken,
+                        animeTitle,
+                        1
+                    );
+                    if (malResults.length > 0) {
+                        const malId = malResults[0].id;
+                        const malStatus = newProgress > 0 ? 'watching' : undefined;
+                        await malClient.updateAnimeProgress(
+                            malAuth.accessToken,
+                            malId,
+                            newProgress,
+                            malStatus
+                        );
+                        console.log('[AnimeDetails] MAL progress synced:', newProgress);
+                    }
+                } catch (malErr) {
+                    console.error('[AnimeDetails] MAL sync failed:', malErr);
+                    // Don't fail the whole operation if MAL sync fails
+                }
+            }
         } catch (err) {
             console.error("Failed to update progress:", err);
         } finally {

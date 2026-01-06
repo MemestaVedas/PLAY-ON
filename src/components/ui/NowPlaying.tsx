@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { updateProgress } from '../../lib/localAnimeDb';
 import { syncEntryToAniList } from '../../lib/syncService';
+import { useMalAuth } from '../../context/MalAuthContext';
+import * as malClient from '../../api/malClient';
 
 interface DetectionResult {
     status: 'detected' | 'not_media_player' | 'no_window';
@@ -41,6 +43,7 @@ interface NowPlayingProps {
 }
 
 export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
+    const malAuth = useMalAuth();
     const [detection, setDetection] = useState<DetectionResult | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -118,6 +121,30 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
                 setSyncStatus(synced ? 'synced' : 'error');
             } else {
                 setSyncStatus('idle'); // No AniList match, just saved locally
+            }
+
+            // Also sync to MAL if authenticated
+            if (malAuth.isAuthenticated && malAuth.accessToken) {
+                const animeTitle = anilistMatch?.title.english || anilistMatch?.title.romaji || result.parsed?.title || '';
+                try {
+                    const malResults = await malClient.searchAnime(
+                        malAuth.accessToken,
+                        animeTitle,
+                        1
+                    );
+                    if (malResults.length > 0) {
+                        const malId = malResults[0].id;
+                        await malClient.updateAnimeProgress(
+                            malAuth.accessToken,
+                            malId,
+                            result.parsed!.episode,
+                            'watching'
+                        );
+                        console.log('[NowPlaying] MAL progress synced:', result.parsed!.episode);
+                    }
+                } catch (malErr) {
+                    console.error('[NowPlaying] MAL sync failed:', malErr);
+                }
             }
         } catch (err) {
             console.error('[NowPlaying] Save/sync error:', err);
