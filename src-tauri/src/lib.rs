@@ -528,9 +528,18 @@ async fn mal_start_oauth_flow(client_id: String) -> Result<String, String> {
     }
     #[cfg(target_os = "windows")]
     {
-        // Use PowerShell Start-Process which handles URLs with special chars properly
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+        // Use PowerShell Start-Process with hidden window
         let _ = std::process::Command::new("powershell")
-            .args(["-Command", &format!("Start-Process '{}'", auth_url)])
+            .args([
+                "-WindowStyle",
+                "Hidden",
+                "-Command",
+                &format!("Start-Process '{}'", auth_url),
+            ])
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn();
     }
     #[cfg(target_os = "linux")]
