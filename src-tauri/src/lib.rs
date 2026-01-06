@@ -472,6 +472,15 @@ fn md5_hash(s: &str) -> u64 {
     hasher.finish()
 }
 
+/// Tauri command to hide the main window (minimize to tray)
+#[tauri::command]
+async fn hide_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 // ============================================================================
 // MYANIMELIST COMMANDS
 // ============================================================================
@@ -511,7 +520,7 @@ async fn mal_start_oauth_flow(client_id: String) -> Result<String, String> {
     let server_handle =
         tokio::spawn(async move { myanimelist::start_oauth_callback_server(port).await });
 
-    // Open browser (use shell command since we don't have app handle here)
+    // Open browser - properly escape URL for each platform
     println!("[MAL] Opening browser: {}", auth_url);
     #[cfg(target_os = "macos")]
     {
@@ -519,8 +528,9 @@ async fn mal_start_oauth_flow(client_id: String) -> Result<String, String> {
     }
     #[cfg(target_os = "windows")]
     {
-        let _ = std::process::Command::new("cmd")
-            .args(["/C", "start", "", &auth_url])
+        // Use PowerShell Start-Process which handles URLs with special chars properly
+        let _ = std::process::Command::new("powershell")
+            .args(["-Command", &format!("Start-Process '{}'", auth_url)])
             .spawn();
     }
     #[cfg(target_os = "linux")]
@@ -701,6 +711,7 @@ pub fn run() {
             cbz_reader::get_cbz_page,
             cbz_reader::is_valid_cbz,
             download_chapter_command,
+            hide_window,
             // MAL commands
             mal_generate_pkce,
             mal_start_oauth_flow,

@@ -230,6 +230,7 @@ pub async fn exchange_code_for_token(
 
     let response = client
         .post(&url)
+        .header("Content-Type", "application/x-www-form-urlencoded")
         .form(&params)
         .send()
         .await
