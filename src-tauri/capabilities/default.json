@@ -36,6 +36,27 @@
           "url": "https://*.weebcentral.com/*"
         },
         {
+          "url": "https://mangareader.to/*"
+        },
+        {
+          "url": "https://*.mangareader.to/*"
+        },
+        {
+          "url": "https://c-1.mangareader.to/*"
+        },
+        {
+          "url": "https://mangadex.org/*"
+        },
+        {
+          "url": "https://*.mangadex.org/*"
+        },
+        {
+          "url": "https://api.mangadex.org/*"
+        },
+        {
+          "url": "https://uploads.mangadex.org/*"
+        },
+        {
           "url": "https://temp.compsci88.com/*"
         },
         {

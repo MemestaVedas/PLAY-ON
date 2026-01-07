@@ -13,11 +13,24 @@
 
 import { Extension } from './types';
 import { ExtensionStorage } from './ExtensionStorage';
-import { fetch } from '@tauri-apps/plugin-http';
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+
+// Production fix: Ensure we have a valid fetch function
+// Try Tauri's fetch first, fall back to window.fetch
+const getFetch = () => {
+    if (typeof tauriFetch === 'function') return tauriFetch;
+    if (typeof window !== 'undefined' && window.fetch) return window.fetch.bind(window); // Bind to window for safety
+    if (typeof globalThis !== 'undefined' && globalThis.fetch) return globalThis.fetch.bind(globalThis);
+    throw new Error('No fetch implementation found!');
+};
 
 class ExtensionLoaderService {
     private loadedExtensions: Map<string, Extension> = new Map();
+    private loadErrors: Map<string, string> = new Map();
     private initialized: boolean = false;
+
+    // Use robust fetch getter
+    private readonly fetch = getFetch();
 
     /**
      * Initialize the loader - load all enabled extensions from storage
@@ -26,6 +39,7 @@ class ExtensionLoaderService {
         if (this.initialized) return;
 
         console.log('[ExtensionLoader] Initializing...');
+        this.loadErrors.clear();
 
         // Load enabled extensions from storage
         const enabledExtensions = ExtensionStorage.getEnabledExtensions();
@@ -49,7 +63,9 @@ class ExtensionLoaderService {
                     console.error(`[ExtensionLoader] ✗ Bundle execution returned null for ${installed.id}`);
                 }
             } catch (error) {
+                const msg = error instanceof Error ? error.message : String(error);
                 console.error(`[ExtensionLoader] ✗ Failed to load ${installed.id}:`, error);
+                this.loadErrors.set(installed.id, msg);
             }
         }
 
@@ -65,7 +81,9 @@ class ExtensionLoaderService {
             console.log(`[ExtensionLoader] executeBundle called for ${id}, code length: ${code?.length || 0}`);
 
             if (!code || code.length === 0) {
-                console.error(`[ExtensionLoader] Empty bundle code for ${id}`);
+                const msg = `Empty bundle code`;
+                console.error(`[ExtensionLoader] ${msg} for ${id}`);
+                this.loadErrors.set(id, msg);
                 return null;
             }
 
@@ -78,15 +96,16 @@ class ExtensionLoaderService {
             const extensionFactory = new Function('fetch', code);
             console.log(`[ExtensionLoader] Factory created, type: ${typeof extensionFactory}`);
 
-            // Call the factory with the fetch API
-            const extension = extensionFactory(fetch);
+            // Call the factory with the fetch API from Tauri HTTP plugin
+            const extension = extensionFactory(this.fetch);
             console.log(`[ExtensionLoader] Extension created:`, extension ? `id=${extension.id}, name=${extension.name}` : 'null');
 
             // Validate the returned object has required methods
             if (!extension || typeof extension.search !== 'function') {
-                console.error(`[ExtensionLoader] Invalid extension bundle for ${id}: missing required methods`);
+                const msg = `Invalid extension bundle: missing required methods (search)`;
+                console.error(`[ExtensionLoader] ${msg} for ${id}`);
                 console.error(`[ExtensionLoader] Extension object:`, extension);
-                console.error(`[ExtensionLoader] search type:`, typeof extension?.search);
+                this.loadErrors.set(id, msg);
                 return null;
             }
 
@@ -99,8 +118,10 @@ class ExtensionLoaderService {
             console.log(`[ExtensionLoader] Successfully executed bundle for ${id}`);
             return extension as Extension;
         } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
             console.error(`[ExtensionLoader] Failed to execute bundle for ${id}:`, error);
             console.error(`[ExtensionLoader] Stack:`, (error as Error).stack);
+            this.loadErrors.set(id, `Bundle execution failed: ${msg}`);
             return null;
         }
     }
@@ -109,6 +130,9 @@ class ExtensionLoaderService {
      * Load a single extension dynamically (after install)
      */
     loadExtension(id: string): Extension | null {
+        // Clear previous error
+        this.loadErrors.delete(id);
+
         const installed = ExtensionStorage.getExtension(id);
         if (!installed || !installed.enabled) {
             return null;
@@ -122,7 +146,9 @@ class ExtensionLoaderService {
                 return extension;
             }
         } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
             console.error(`[ExtensionLoader] Failed to load ${id}:`, error);
+            this.loadErrors.set(id, msg);
         }
         return null;
     }
@@ -131,9 +157,9 @@ class ExtensionLoaderService {
      * Unload an extension (after uninstall or disable)
      */
     unloadExtension(id: string): void {
-        if (this.loadedExtensions.delete(id)) {
-            console.log(`[ExtensionLoader] Unloaded: ${id}`);
-        }
+        this.loadedExtensions.delete(id);
+        this.loadErrors.delete(id);
+        console.log(`[ExtensionLoader] Unloaded: ${id}`);
     }
 
     /**
@@ -141,6 +167,7 @@ class ExtensionLoaderService {
      */
     async reload(): Promise<void> {
         this.loadedExtensions.clear();
+        this.loadErrors.clear();
         this.initialized = false;
         await this.initialize();
     }
@@ -164,6 +191,13 @@ class ExtensionLoaderService {
      */
     isLoaded(id: string): boolean {
         return this.loadedExtensions.has(id);
+    }
+
+    /**
+     * Get load error for an extension if it failed
+     */
+    getLoadError(id: string): string | undefined {
+        return this.loadErrors.get(id);
     }
 }
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ExtensionRepository } from '../../services/extensions/ExtensionRepository';
 import { ExtensionStorage } from '../../services/extensions/ExtensionStorage';
 import { ExtensionManager } from '../../services/ExtensionManager';
+import { ExtensionLoader } from '../../services/extensions/loader';
 import {
     ExtensionMeta,
     ExtensionRepo,
@@ -233,6 +234,19 @@ export default function ExtensionsSettings() {
                                                 v{ext.version} • {ext.lang.toUpperCase()}
                                                 {ext.nsfw && <span style={{ color: '#ff6464', marginLeft: 8 }}>NSFW</span>}
                                             </div>
+                                            {ext.enabled && !ExtensionLoader.isLoaded(ext.id) && (
+                                                <div style={{
+                                                    color: '#ff6464',
+                                                    marginTop: 4,
+                                                    fontSize: '11px',
+                                                    background: 'rgba(255, 100, 100, 0.1)',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    display: 'inline-block'
+                                                }}>
+                                                    ⚠ Failed to load: {ExtensionLoader.getLoadError(ext.id) || 'Unknown error'}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -173,7 +173,21 @@ function MangaBrowse() {
 
             {/* Results */}
             <div className="browse-results">
-                {!query.trim() && !loading && (
+                {sources.length === 0 ? (
+                    <div className="browse-empty">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <h3>No Extensions Loaded</h3>
+                        <p>No active manga sources found. Extensions may have failed to load.</p>
+                        <button
+                            className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg mt-4"
+                            onClick={() => navigate('/settings')}
+                        >
+                            Manage Extensions
+                        </button>
+                    </div>
+                ) : !query.trim() && !loading ? (
                     <div className="browse-empty">
                         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
@@ -182,7 +196,7 @@ function MangaBrowse() {
                         <h3>Search for manga</h3>
                         <p>Enter a title to search on {currentSource?.name}</p>
                     </div>
-                )}
+                ) : null}
 
                 {results.length > 0 && (
                     <div className="manga-grid">
@@ -231,7 +245,7 @@ function MangaBrowse() {
                 )}
 
                 {/* No Results */}
-                {query.trim() && !loading && results.length === 0 && !error && (
+                {sources.length > 0 && query.trim() && !loading && results.length === 0 && !error && (
                     <div className="browse-empty">
                         <h3>No results found</h3>
                         <p>Try a different search term</p>

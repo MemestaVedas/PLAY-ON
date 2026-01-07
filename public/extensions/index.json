@@ -5,11 +5,20 @@
         {
             "id": "weebcentral",
             "name": "WeebCentral",
+            "version": "1.0.1",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://weebcentral.com/static/images/logo.png",
+            "bundleUrl": "weebcentral.js"
+        },
+        {
+            "id": "mangadex",
+            "name": "MangaDex",
             "version": "1.0.0",
             "lang": "en",
             "nsfw": false,
-            "iconUrl": "https://weebcentral.com/favicon.ico",
-            "bundleUrl": "weebcentral.js"
+            "iconUrl": "https://mangadex.org/favicon.ico",
+            "bundleUrl": "mangadex.js"
         },
         {
             "id": "mangareader",

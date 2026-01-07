@@ -18,6 +18,10 @@ const LOCAL_STORAGE_KEYS = [
     'play-on-offline-queue',    // Offline sync queue
     'play-on-local-anime-db',   // Local anime watch database
     'apollo-cache-persist',     // Apollo GraphQL cache
+    'play-on-settings',         // Main app settings
+    'extension-repos',          // Extension repositories
+    'installed-extensions',     // Installed extensions (code bundles)
+    'enabled-extensions',       // Status of extensions
 ];
 
 /**
