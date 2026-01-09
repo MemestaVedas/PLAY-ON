@@ -165,36 +165,48 @@ function AnimeDetails() {
                         </div>
                     </div>
 
-                    {/* Status Dropdown */}
-                    <div className="mt-4">
-                        <StatusDropdown
-                            currentStatus={currentStatus}
-                            onStatusChange={handleStatusChange}
-                            options={STATUS_OPTIONS}
-                            loading={statusUpdating}
-                        />
+                    {/* Right Column: Title, Status, Stats */}
+                    <div className="flex flex-col gap-6">
+                        {/* Status Dropdown */}
+                        <div className="mt-4">
+                            <StatusDropdown
+                                currentStatus={currentStatus}
+                                onStatusChange={handleStatusChange}
+                                options={STATUS_OPTIONS}
+                                loading={statusUpdating}
+                            />
+                        </div>
+
+                        {/* Title Block */}
+                        <div>
+                            <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
+                                {title}
+                            </h1>
+                            <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
+                                <span>{anime.seasonYear || 'YEAR_UNKNOWN'}</span>
+                                <span>//</span>
+                                <span>{anime.format || 'FORMAT_UNKNOWN'}</span>
+                                <span>//</span>
+                                <span>{anime.episodes ? `${anime.episodes} EPS` : 'EPS_UNKNOWN'}</span>
+                            </div>
+                        </div>
+
+                        {/* Stats Grid - Now in right column */}
+                        <AnimeStats anime={anime} />
+
+                        {/* Genres - Also in right column */}
+                        <div className="flex flex-wrap gap-2">
+                            {anime.genres?.map(g => (
+                                <span key={g} className="px-4 py-1.5 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-white/80 hover:bg-white/10 hover:border-lavender-mist/50 transition-colors cursor-default">
+                                    #{g.toUpperCase()}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                {/* Right Column: Details */}
+                {/* Full Width Content Below */}
                 <div className="flex flex-col gap-8">
-
-                    {/* Title Block */}
-                    <div>
-                        <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-none mb-4 drop-shadow-xl bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-lavender-mist">
-                            {title}
-                        </h1>
-                        <div className="flex flex-wrap gap-2 text-sm text-white/60 font-mono">
-                            <span>{anime.seasonYear || 'YEAR_UNKNOWN'}</span>
-                            <span>//</span>
-                            <span>{anime.format || 'FORMAT_UNKNOWN'}</span>
-                            <span>//</span>
-                            <span>{anime.episodes ? `${anime.episodes} EPS` : 'EPS_UNKNOWN'}</span>
-                        </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <AnimeStats anime={anime} />
 
                     {/* Description Box */}
                     <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
@@ -213,8 +225,6 @@ function AnimeDetails() {
                         />
                     )}
 
-
-
                     {/* Progress Control */}
                     <AnimeProgressCard
                         anime={anime}
@@ -223,37 +233,28 @@ function AnimeDetails() {
                         updating={updating}
                     />
 
-                    {/* Genres */}
-                    <div className="flex flex-wrap gap-2">
-                        {anime.genres?.map(g => (
-                            <span key={g} className="px-4 py-1.5 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-white/80 hover:bg-white/10 hover:border-lavender-mist/50 transition-colors cursor-default">
-                                #{g.toUpperCase()}
-                            </span>
-                        ))}
-                    </div>
-
                 </div>
+
+                {/* Related Anime Section */}
+                {recommendations.length > 0 && (
+                    <div className="mt-10">
+                        <div className="flex items-center gap-4 mb-6">
+                            <h2 className="text-2xl font-bold tracking-tight">SIMILAR_SIGNALS</h2>
+                            <div className="h-px flex-1 bg-white/10" />
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                            {recommendations.map((rec) => (
+                                <AnimeCard
+                                    key={rec.id}
+                                    anime={rec as unknown as Anime}
+                                    onClick={(id) => navigate(`/anime/${id}`)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* Related Anime Section */}
-            {recommendations.length > 0 && (
-                <div className="mt-10">
-                    <div className="flex items-center gap-4 mb-6">
-                        <h2 className="text-2xl font-bold tracking-tight">SIMILAR_SIGNALS</h2>
-                        <div className="h-px flex-1 bg-white/10" />
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                        {recommendations.map((rec) => (
-                            <AnimeCard
-                                key={rec.id}
-                                anime={rec as unknown as Anime}
-                                onClick={(id) => navigate(`/anime/${id}`)}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

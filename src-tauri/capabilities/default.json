@@ -164,6 +164,7 @@
     "drpc:default",
     "notification:default",
     "fs:default",
+    "autostart:default",
     {
       "identifier": "fs:allow-read",
       "allow": [

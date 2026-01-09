@@ -33,6 +33,7 @@ export interface Settings {
 
     // Window Behavior
     closeToTray: boolean; // When true, close button minimizes to tray; when false, quits app
+    startMinimized: boolean; // When true, app starts minimized to tray
 
     // Storage
     scanDepth: number;
@@ -78,6 +79,7 @@ const DEFAULT_SETTINGS: Settings = {
 
     // Window Behavior
     closeToTray: true, // Default: minimize to tray on close
+    startMinimized: false, // Default: show window on startup
 
     // Storage
     scanDepth: 3,

@@ -152,6 +152,46 @@ function TagsInput({ tags, onChange, placeholder = 'Add term...' }: TagsInputPro
 }
 
 // ============================================================================
+// COMPONENT: Autostart Toggle
+// Uses the Tauri autostart plugin to manage launch-at-startup
+// ============================================================================
+
+function AutostartToggle() {
+    const [isEnabled, setIsEnabled] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        // Check current autostart status on mount
+        import('@tauri-apps/plugin-autostart').then(({ isEnabled: checkEnabled }) => {
+            checkEnabled().then(setIsEnabled).catch(console.error).finally(() => setIsLoading(false));
+        });
+    }, []);
+
+    const handleToggle = async (checked: boolean) => {
+        // Optimistically update the UI immediately for smooth animation
+        setIsEnabled(checked);
+        try {
+            const { enable, disable } = await import('@tauri-apps/plugin-autostart');
+            if (checked) {
+                await enable();
+            } else {
+                await disable();
+            }
+        } catch (err) {
+            console.error('Failed to toggle autostart:', err);
+            // Revert on error
+            setIsEnabled(!checked);
+        }
+    };
+
+    return (
+        <div style={{ opacity: isLoading ? 0.5 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
+            <Toggle checked={isEnabled} onChange={handleToggle} />
+        </div>
+    );
+}
+
+// ============================================================================
 // SECTION: General Settings
 // ============================================================================
 
@@ -205,12 +245,29 @@ function GeneralSettings() {
                 <h3 className="setting-group-title">Window Behavior</h3>
 
                 <SettingRow
+                    label="Launch at Startup"
+                    description="Automatically start the app when your computer boots"
+                >
+                    <AutostartToggle />
+                </SettingRow>
+
+                <SettingRow
                     label="Minimize to Tray on Close"
                     description="When enabled, closing the app minimizes it to the system tray. When disabled, the app quits completely."
                 >
                     <Toggle
                         checked={settings.closeToTray}
                         onChange={(checked) => updateSetting('closeToTray', checked)}
+                    />
+                </SettingRow>
+
+                <SettingRow
+                    label="Start Minimized"
+                    description="When enabled, the app will start minimized to the system tray (only applies when Launch at Startup is enabled)."
+                >
+                    <Toggle
+                        checked={settings.startMinimized}
+                        onChange={(checked) => updateSetting('startMinimized', checked)}
                     />
                 </SettingRow>
             </div>
@@ -437,17 +494,42 @@ function MangaSettings() {
 
             {/* Add Category Dialog */}
             {isAddDialogOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="bg-[#1a1a1a] p-6 rounded-xl border border-white/10 w-[320px]" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-xl font-bold text-white mb-2">New Category</h3>
-                        <p className="text-sm text-white/60 mb-4">Create a new collection for your manga.</p>
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
+                    style={{ backgroundColor: 'var(--theme-bg-overlay)' }}
+                >
+                    <div
+                        className="p-6 rounded-xl w-[320px]"
+                        style={{
+                            backgroundColor: 'var(--theme-bg-card)',
+                            border: '1px solid var(--theme-border-subtle)'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h3
+                            className="text-xl font-bold mb-2"
+                            style={{ color: 'var(--theme-text-main)' }}
+                        >
+                            New Category
+                        </h3>
+                        <p
+                            className="text-sm mb-4"
+                            style={{ color: 'var(--theme-text-muted)' }}
+                        >
+                            Create a new collection for your manga.
+                        </p>
 
                         <input
                             type="text"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
                             placeholder="e.g. Action, Plan to Read"
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white mb-4 focus:outline-none focus:border-purple-500 transition-colors"
+                            className="w-full rounded-lg px-3 py-2 mb-4 focus:outline-none transition-colors"
+                            style={{
+                                backgroundColor: 'var(--theme-input-bg)',
+                                border: '1px solid var(--theme-border-subtle)',
+                                color: 'var(--theme-text-main)'
+                            }}
                             autoFocus
                             onKeyDown={(e) => e.key === 'Enter' && handleConfirmAdd()}
                         />
@@ -455,13 +537,21 @@ function MangaSettings() {
                         <div className="flex gap-2 justify-end">
                             <button
                                 onClick={() => setIsAddDialogOpen(false)}
-                                className="px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg transition-colors"
+                                style={{
+                                    color: 'var(--theme-text-muted)',
+                                    backgroundColor: 'transparent'
+                                }}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirmAdd}
-                                className="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+                                className="px-4 py-2 text-sm rounded-lg font-medium transition-colors"
+                                style={{
+                                    background: 'var(--theme-gradient-primary)',
+                                    color: 'var(--theme-btn-primary-text)'
+                                }}
                             >
                                 Create
                             </button>

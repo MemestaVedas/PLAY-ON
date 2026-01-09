@@ -202,6 +202,27 @@ function App() {
         console.log('[App] Cache was refreshed on startup');
       }
     });
+
+    // Check if app was started minimized but user has startMinimized disabled
+    // Read settings from localStorage and show window if needed
+    const checkStartMinimizedSetting = async () => {
+      try {
+        const savedSettings = localStorage.getItem('app-settings');
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          // If startMinimized is explicitly disabled, show the window
+          if (parsed.startMinimized === false) {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window');
+            const mainWindow = getCurrentWindow();
+            await mainWindow.show();
+            console.log('[App] Showing window - startMinimized is disabled');
+          }
+        }
+      } catch (err) {
+        console.error('[App] Failed to check startMinimized setting:', err);
+      }
+    };
+    checkStartMinimizedSetting();
   }, []);
 
   useEffect(() => {

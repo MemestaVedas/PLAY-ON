@@ -272,8 +272,11 @@ function MangaDetails() {
                             {/* Glass Glint Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                         </div>
+                    </div>
 
-                        {/* Status Dropdown */}
+                    {/* Right Column: Status, Title, Stats, Genres */}
+                    <div className="flex flex-col gap-6">
+                        {/* Status Dropdown - Now at top of right column */}
                         <div className="mt-4">
                             <StatusDropdown
                                 currentStatus={currentStatus}
@@ -282,10 +285,6 @@ function MangaDetails() {
                                 loading={statusUpdating}
                             />
                         </div>
-                    </div>
-
-                    {/* Right Column: Details */}
-                    <div className="flex flex-col gap-8">
 
                         {/* Title Block */}
                         <div>
@@ -307,7 +306,7 @@ function MangaDetails() {
                             </div>
                         </div>
 
-                        {/* Stats Grid - Updated to match AnimeStats */}
+                        {/* Stats Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {stats.map((stat, i) => (
                                 <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center gap-1 hover:bg-white/10 transition-colors">
@@ -317,118 +316,7 @@ function MangaDetails() {
                             ))}
                         </div>
 
-                        {/* Description Box */}
-                        <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
-                            <div
-                                className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
-                                dangerouslySetInnerHTML={{ __html: manga.description || 'No data available.' }}
-                            />
-                        </div>
-
-                        {/* Action Button - Search or Continue Reading */}
-                        <motion.button
-                            onClick={handleActionClick}
-                            whileHover={{ scale: 1.01, borderColor: mangaMapping ? 'rgba(56, 189, 248, 0.5)' : 'rgba(180, 162, 246, 0.5)' }}
-                            whileTap={{ scale: 0.98 }}
-                            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1e] to-[#121214] border border-white/10 p-4 text-left shadow-lg"
-                        >
-                            {/* Hover Gradient */}
-                            <motion.div
-                                className={`absolute inset-0 bg-gradient-to-r ${mangaMapping ? 'from-mint-tonic/10' : 'from-lavender-mist/10'} to-transparent`}
-                                initial={{ opacity: 0 }}
-                                whileHover={{ opacity: 1 }}
-                                transition={{ duration: 0.3 }}
-                            />
-
-                            <div className="relative flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    {/* Icon Box */}
-                                    <motion.div
-                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${mangaMapping ? 'bg-mint-tonic/10 text-mint-tonic border-mint-tonic/20' : 'bg-lavender-mist/10 text-lavender-mist border-lavender-mist/20'} border`}
-                                        whileHover={{ rotate: 15, scale: 1.1 }}
-                                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                                    >
-                                        {mangaMapping ? (
-                                            <BookOpenIcon size={20} />
-                                        ) : (
-                                            <SearchIcon size={20} />
-                                        )}
-                                    </motion.div>
-
-                                    {/* Text */}
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className={`font-mono text-[10px] uppercase tracking-widest ${mangaMapping ? 'text-mint-tonic' : 'text-lavender-mist'} font-bold`}>
-                                            {mangaMapping ? 'CONTINUE READING' : 'SEARCH THIS MANGA'}
-                                        </span>
-                                        <motion.span
-                                            className="font-bold text-white text-lg truncate max-w-[200px] md:max-w-[300px]"
-                                            whileHover={{ color: mangaMapping ? '#A0E9E5' : '#B4A2F6', x: 2 }}
-                                        >
-                                            {mangaMapping ? mangaMapping.sourceTitle : 'Browse Extensions'}
-                                        </motion.span>
-                                    </div>
-                                </div>
-
-                                {/* Arrow */}
-                                <motion.div
-                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/40"
-                                    whileHover={{
-                                        backgroundColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
-                                        color: '#121214',
-                                        borderColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
-                                        x: 5
-                                    }}
-                                >
-                                    <ArrowRightIcon size={16} />
-                                </motion.div>
-                            </div>
-                        </motion.button>
-
-                        {/* Progress Control */}
-                        <div className="p-1 rounded-2xl bg-gradient-to-r from-white/10 to-transparent p-[1px]">
-                            <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
-                                {/* Status Row (Removed - Moved to Left Column) */}
-                                {/* Progress Row */}
-
-                                {/* Progress Row */}
-                                <div className="flex flex-col md:flex-row items-center gap-6">
-                                    <div className="flex-1 w-full">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <span className="font-mono text-xs text-lavender-mist uppercase tracking-widest">PROGRESS</span>
-                                            <span className="font-mono text-xl font-bold">{progress} <span className="text-white/30">/ {manga.chapters || '?'}</span></span>
-                                        </div>
-                                        <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-lavender-mist to-sky-blue relative transition-all duration-300 ease-out"
-                                                style={{ width: `${percentage}%` }}
-                                            >
-                                                <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white]" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2 shrink-0">
-                                        <button
-                                            disabled={progress <= 0 || updating}
-                                            onClick={() => handleProgressUpdate(progress - 1)}
-                                            className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white disabled:opacity-30"
-                                        >
-                                            −
-                                        </button>
-                                        <button
-                                            onClick={() => handleProgressUpdate(progress + 1)}
-                                            disabled={(manga.chapters ? progress >= manga.chapters : false) || updating}
-                                            className="h-12 px-6 rounded-xl flex items-center justify-center font-bold bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
-                                        >
-                                            TRACK +1
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Genres */}
+                        {/* Genres - In right column with stats */}
                         <div className="flex flex-wrap gap-2">
                             {manga.genres?.map(g => (
                                 <span key={g} className="px-4 py-1.5 rounded-full text-xs font-mono border border-white/20 bg-white/5 text-white/80 hover:bg-white/10 hover:border-lavender-mist/50 transition-colors cursor-default">
@@ -436,36 +324,144 @@ function MangaDetails() {
                                 </span>
                             ))}
                         </div>
+                    </div>
+                </div>
 
+                {/* Full Width Content Below */}
+                <div className="flex flex-col gap-8">
+                    {/* Description Box */}
+                    <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md shadow-inner">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lavender-mist via-sky-blue to-transparent opacity-50 rounded-t-2xl" />
+                        <div
+                            className="text-base leading-relaxed text-gray-200/90 font-light pr-4"
+                            dangerouslySetInnerHTML={{ __html: manga.description || 'No data available.' }}
+                        />
+                    </div>
+
+                    {/* Action Button - Search or Continue Reading */}
+                    <motion.button
+                        onClick={handleActionClick}
+                        whileHover={{ scale: 1.01, borderColor: mangaMapping ? 'rgba(56, 189, 248, 0.5)' : 'rgba(180, 162, 246, 0.5)' }}
+                        whileTap={{ scale: 0.98 }}
+                        className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1e] to-[#121214] border border-white/10 p-4 text-left shadow-lg"
+                    >
+                        {/* Hover Gradient */}
+                        <motion.div
+                            className={`absolute inset-0 bg-gradient-to-r ${mangaMapping ? 'from-mint-tonic/10' : 'from-lavender-mist/10'} to-transparent`}
+                            initial={{ opacity: 0 }}
+                            whileHover={{ opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                        />
+
+                        <div className="relative flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                {/* Icon Box */}
+                                <motion.div
+                                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${mangaMapping ? 'bg-mint-tonic/10 text-mint-tonic border-mint-tonic/20' : 'bg-lavender-mist/10 text-lavender-mist border-lavender-mist/20'} border`}
+                                    whileHover={{ rotate: 15, scale: 1.1 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                >
+                                    {mangaMapping ? (
+                                        <BookOpenIcon size={20} />
+                                    ) : (
+                                        <SearchIcon size={20} />
+                                    )}
+                                </motion.div>
+
+                                {/* Text */}
+                                <div className="flex flex-col gap-0.5">
+                                    <span className={`font-mono text-[10px] uppercase tracking-widest ${mangaMapping ? 'text-mint-tonic' : 'text-lavender-mist'} font-bold`}>
+                                        {mangaMapping ? 'CONTINUE READING' : 'SEARCH THIS MANGA'}
+                                    </span>
+                                    <motion.span
+                                        className="font-bold text-white text-lg truncate max-w-[200px] md:max-w-[300px]"
+                                        whileHover={{ color: mangaMapping ? '#A0E9E5' : '#B4A2F6', x: 2 }}
+                                    >
+                                        {mangaMapping ? mangaMapping.sourceTitle : 'Browse Extensions'}
+                                    </motion.span>
+                                </div>
+                            </div>
+
+                            {/* Arrow */}
+                            <motion.div
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/40"
+                                whileHover={{
+                                    backgroundColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
+                                    color: '#121214',
+                                    borderColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
+                                    x: 5
+                                }}
+                            >
+                                <ArrowRightIcon size={16} />
+                            </motion.div>
+                        </div>
+                    </motion.button>
+
+                    {/* Progress Control */}
+                    <div className="p-1 rounded-2xl bg-gradient-to-r from-white/10 to-transparent p-[1px]">
+                        <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
+                            {/* Progress Row */}
+                            <div className="flex flex-col md:flex-row items-center gap-6">
+                                <div className="flex-1 w-full">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="font-mono text-xs text-lavender-mist uppercase tracking-widest">PROGRESS</span>
+                                        <span className="font-mono text-xl font-bold">{progress} <span className="text-white/30">/ {manga.chapters || '?'}</span></span>
+                                    </div>
+                                    <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-lavender-mist to-sky-blue relative transition-all duration-300 ease-out"
+                                            style={{ width: `${percentage}%` }}
+                                        >
+                                            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white]" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2 shrink-0">
+                                    <button
+                                        disabled={progress <= 0 || updating}
+                                        onClick={() => handleProgressUpdate(progress - 1)}
+                                        className="w-12 h-12 rounded-xl flex items-center justify-center border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white disabled:opacity-30"
+                                    >
+                                        −
+                                    </button>
+                                    <button
+                                        onClick={() => handleProgressUpdate(progress + 1)}
+                                        disabled={(manga.chapters ? progress >= manga.chapters : false) || updating}
+                                        className="h-12 px-6 rounded-xl flex items-center justify-center font-bold bg-white text-black hover:bg-gray-200 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:shadow-none"
+                                    >
+                                        TRACK +1
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Related Manga Section */}
-                {
-                    recommendations.length > 0 && (
-                        <div className="mt-10">
-                            <div className="flex items-center gap-4 mb-6">
-                                <h2 className="text-2xl font-bold tracking-tight">SIMILAR_READS</h2>
-                                <div className="h-px flex-1 bg-white/10" />
-                            </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                                {recommendations.map((rec) => (
-                                    <AnimeCard
-                                        key={rec.id}
-                                        anime={{
-                                            ...rec,
-                                            episodes: rec.chapters // Map chapters to episodes for card
-                                        } as any}
-                                        onClick={(id) => navigate(`/manga-details/${id}`)}
-                                    />
-                                ))}
-                            </div>
+                {recommendations.length > 0 && (
+                    <div className="mt-10 max-w-[1400px] mx-auto px-6 md:px-10">
+                        <div className="flex items-center gap-4 mb-6">
+                            <h2 className="text-2xl font-bold tracking-tight">SIMILAR_READS</h2>
+                            <div className="h-px flex-1 bg-white/10" />
                         </div>
-                    )
-                }
-            </div >
-        </div >
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                            {recommendations.map((rec) => (
+                                <AnimeCard
+                                    key={rec.id}
+                                    anime={{
+                                        ...rec,
+                                        episodes: rec.chapters // Map chapters to episodes for card
+                                    } as any}
+                                    onClick={(id) => navigate(`/manga-details/${id}`)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
 

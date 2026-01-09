@@ -37,15 +37,18 @@ export function CategoryPills({
                                 onCategoryDelete(cat.id);
                             }
                         }}
-                        className={`
-                            whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200
-                            ${isActive
-                                ? 'text-white shadow-lg'
-                                : 'bg-black/80 backdrop-blur-md text-white/60 hover:bg-white/10 hover:text-white border border-white/5 hover:border-white/10'}
-                        `}
+                        className="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
                         style={{
                             fontFamily: 'var(--font-rounded)',
-                            backgroundColor: isActive ? 'var(--theme-accent-primary)' : undefined,
+                            backgroundColor: isActive
+                                ? 'var(--theme-accent-primary)'
+                                : 'transparent',
+                            color: isActive
+                                ? 'var(--theme-btn-primary-text)'
+                                : 'var(--theme-text-muted)',
+                            border: isActive
+                                ? 'none'
+                                : '1px solid var(--theme-border-subtle)',
                             boxShadow: isActive ? '0 4px 14px 0 rgba(0,0,0,0.3)' : undefined
                         }}
                     >
@@ -58,3 +61,4 @@ export function CategoryPills({
 }
 
 export default CategoryPills;
+

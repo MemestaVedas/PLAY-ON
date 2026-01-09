@@ -1,7 +1,7 @@
 {
   "name": "play-on",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,6 +15,7 @@
     "@gsap/react": "^2.1.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-autostart": "^2",
     "@tauri-apps/plugin-deep-link": "^2.4.5",
     "@tauri-apps/plugin-dialog": "^2.4.2",
     "@tauri-apps/plugin-fs": "^2.4.4",

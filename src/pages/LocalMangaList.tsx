@@ -177,11 +177,18 @@ function LocalMangaList() {
 
                 {/* 1. Search Island (Left) */}
                 <div
-                    className="absolute left-4 pointer-events-auto group bg-black/60 backdrop-blur-2xl border border-white/20 rounded-full shadow-2xl h-[52px] flex items-center transition-all duration-300 w-[52px] hover:w-[340px] focus-within:w-[340px] overflow-hidden hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:border-white/40"
+                    className="absolute left-4 pointer-events-auto group backdrop-blur-2xl rounded-full shadow-2xl h-[52px] flex items-center transition-all duration-300 w-[52px] hover:w-[340px] focus-within:w-[340px] overflow-hidden"
+                    style={{
+                        backgroundColor: 'var(--theme-bg-glass)',
+                        border: '1px solid var(--theme-border-highlight)'
+                    }}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                 >
-                    <div className="absolute left-0 top-0 w-[52px] h-full flex items-center justify-center text-white/70 group-hover:text-white transition-colors pointer-events-none">
+                    <div
+                        className="absolute left-0 top-0 w-[52px] h-full flex items-center justify-center transition-colors pointer-events-none"
+                        style={{ color: 'var(--theme-text-muted)' }}
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     </div>
                     <input
@@ -189,26 +196,36 @@ function LocalMangaList() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search library..."
-                        className="w-full h-full bg-transparent border-none outline-none text-white text-sm font-medium pl-14 pr-4 placeholder-white/30 cursor-pointer focus:cursor-text"
-                        style={{ fontFamily: 'var(--font-rounded)' }}
+                        className="w-full h-full bg-transparent border-none outline-none text-sm font-medium pl-14 pr-4 cursor-pointer focus:cursor-text"
+                        style={{ fontFamily: 'var(--font-rounded)', color: 'var(--theme-text-main)' }}
                     />
                 </div>
 
 
 
                 {/* 3. Filter/Actions Pill (Right) */}
-                <div className="absolute right-4 top-0 pointer-events-auto flex flex-wrap items-center justify-between gap-4 py-2 px-3 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl transition-all duration-300">
+                <div
+                    className="absolute right-4 top-0 pointer-events-auto flex flex-wrap items-center justify-between gap-4 py-2 px-3 backdrop-blur-2xl rounded-full shadow-2xl transition-all duration-300"
+                    style={{
+                        backgroundColor: 'var(--theme-bg-glass)',
+                        border: '1px solid var(--theme-border-subtle)'
+                    }}
+                >
 
                     {/* Read/Unread Filter - Dropdown Trigger */}
                     <div className="relative">
                         <button
                             onClick={() => setShowFilterMenu(!showFilterMenu)}
-                            className={`p-2 rounded-full transition-all flex items-center gap-2 ${filterStatus !== 'all' || showFilterMenu ? 'bg-white/20 text-white shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                            className="p-2 rounded-full transition-all flex items-center gap-2"
+                            style={{
+                                backgroundColor: filterStatus !== 'all' || showFilterMenu ? 'var(--theme-active-bg)' : 'transparent',
+                                color: filterStatus !== 'all' || showFilterMenu ? 'var(--theme-text-main)' : 'var(--theme-text-muted)'
+                            }}
                             title="Filter Status"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                             {filterStatus !== 'all' && (
-                                <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-500 text-white px-1.5 rounded-sm">
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 rounded-sm" style={{ backgroundColor: 'var(--theme-accent-primary)', color: 'var(--theme-btn-primary-text)' }}>
                                     {filterStatus}
                                 </span>
                             )}
@@ -248,7 +265,7 @@ function LocalMangaList() {
 
 
                     {/* Refresh Button */}
-                    <div className="flex items-center pl-2 border-l border-white/10">
+                    <div className="flex items-center pl-2" style={{ borderLeft: '1px solid var(--theme-border-subtle)' }}>
                         <RefreshButton
                             onClick={handleRefreshLibrary}
                             loading={isRefreshing}
@@ -258,18 +275,25 @@ function LocalMangaList() {
                     </div>
 
                     {/* View Toggle */}
-                    <div className="flex items-center gap-2 pl-2 border-l border-white/10">
+                    <div className="flex items-center gap-2 pl-2" style={{ borderLeft: '1px solid var(--theme-border-subtle)' }}>
                         <button
                             onClick={() => handleViewModeChange('grid')}
-                            className={`p-2 rounded-full transition-all hover:bg-white/5 ${viewMode === 'grid' ? 'bg-white/20 shadow-sm' : ''}`}
-                            style={{ color: viewMode === 'grid' ? 'var(--color-text-main)' : 'var(--color-text-muted)' }}
+                            className="p-2 rounded-full transition-all"
+                            style={{
+                                backgroundColor: viewMode === 'grid' ? 'var(--theme-active-bg)' : 'transparent',
+                                color: viewMode === 'grid' ? 'var(--theme-text-main)' : 'var(--theme-text-muted)'
+                            }}
                             title="Grid View"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         </button>
                         <button
                             onClick={() => handleViewModeChange('list')}
-                            className={`p-2 rounded-full transition-all ${viewMode === 'list' ? 'bg-white/20 text-white shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                            className="p-2 rounded-full transition-all"
+                            style={{
+                                backgroundColor: viewMode === 'list' ? 'var(--theme-active-bg)' : 'transparent',
+                                color: viewMode === 'list' ? 'var(--theme-text-main)' : 'var(--theme-text-muted)'
+                            }}
                             title="List View"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>

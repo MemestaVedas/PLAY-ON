@@ -686,6 +686,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             println!("{}, {argv:?}, {_cwd}", app.package_info().name);
 
@@ -783,6 +787,22 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            // Window starts hidden by default (set in tauri.conf.json)
+            // Show the window only if NOT started with --minimized flag (from autostart)
+            let args: Vec<String> = std::env::args().collect();
+            let start_minimized = args.iter().any(|arg| arg == "--minimized");
+
+            if start_minimized {
+                println!("[Startup] Started with --minimized flag, keeping window hidden in tray");
+                // Window is already hidden from config, nothing to do
+            } else {
+                println!("[Startup] Normal startup, showing window");
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
 
             Ok(())
         })

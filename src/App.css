@@ -306,3 +306,14 @@ body {
   background: var(--theme-selection-bg);
   color: var(--theme-selection-text);
 }
+
+/* === UTILITIES === */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
