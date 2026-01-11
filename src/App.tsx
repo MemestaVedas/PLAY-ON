@@ -26,6 +26,7 @@ import LocalFolder from './pages/LocalFolder';
 import Settings from './pages/Settings';
 
 import UserProfile from './pages/UserProfile';
+import Calendar from './pages/Calendar';
 import "./App.css";
 
 /**
@@ -178,9 +179,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   useOfflineSync();
 
-  // Debug: Check extension status on every render
-  console.log('[App RENDER] ExtensionManager initialized:', ExtensionManager.isInitialized());
-  console.log('[App RENDER] Sources:', ExtensionManager.getAllSources().length);
+
 
   // Startup cache refresh (v0.3.0) and extension initialization
   useEffect(() => {
@@ -263,6 +262,7 @@ function App() {
                         {/* Main App Layout */}
                         <Route element={<MainLayout />}>
                           <Route path="/home" element={<Home />} />
+                          <Route path="/calendar" element={<Calendar />} />
                           <Route path="/anime-list" element={<AnimeList />} />
                           <Route path="/manga-list" element={<MangaList />} />
                           <Route path="/local-manga" element={<LocalMangaList />} />

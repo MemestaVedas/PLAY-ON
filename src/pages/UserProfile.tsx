@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom';
+// import { Edit2 } from 'lucide-react'; // Removed due to build error
 import { useQuery } from '@apollo/client';
 import { USER_PROFILE_QUERY } from '../api/anilistClient';
 import Loading from '../components/ui/Loading';
@@ -7,7 +8,7 @@ import AnimeCard from '../components/ui/AnimeCard';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { useState } from 'react';
-import { SettingsIcon, FilmIcon, BookIcon } from '../components/ui/Icons';
+import { FilmIcon, BookIcon, EditIcon } from '../components/ui/Icons';
 import { ProfileSettingsModal } from '../components/settings/ProfileSettings';
 import SpotlightCard from '../components/ui/SpotlightCard';
 
@@ -74,7 +75,7 @@ function UserProfile() {
 
                     {/* Name & Quick Stats */}
                     <div className="mb-4 flex-1 min-w-0">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-between w-full">
                             <h1 className="text-4xl md:text-6xl font-black mb-2 flex items-center gap-3 drop-shadow-xl tracking-tight text-white">
                                 {user.name}
                             </h1>
@@ -82,7 +83,7 @@ function UserProfile() {
                             {isOwnProfile && (
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all duration-200"
+                                    className="flex items-center justify-center p-3 rounded-xl font-bold text-sm transition-all duration-200"
                                     style={{
                                         background: 'rgba(255, 255, 255, 0.1)',
                                         border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -98,9 +99,9 @@ function UserProfile() {
                                         e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                                         e.currentTarget.style.color = 'white';
                                     }}
+                                    title="Edit Profile"
                                 >
-                                    <SettingsIcon size={16} />
-                                    Edit Profile
+                                    <EditIcon size={20} />
                                 </button>
                             )}
                         </div>

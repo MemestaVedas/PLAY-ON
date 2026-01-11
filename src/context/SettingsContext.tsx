@@ -21,6 +21,7 @@ export interface Settings {
     // General
     theme: 'light' | 'dark';
     defaultPage: 'home' | 'anime-list' | 'manga-list';
+    defaultSearchMode: 'anime' | 'manga';
 
     // Player
     autoPlay: boolean;
@@ -67,6 +68,7 @@ const DEFAULT_SETTINGS: Settings = {
     // General
     theme: 'dark',
     defaultPage: 'home',
+    defaultSearchMode: 'anime',
 
     // Player
     autoPlay: true,
@@ -192,13 +194,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.log('Cache cleared successfully');
     }, []);
 
-    const value: SettingsContextType = {
+    const value = React.useMemo<SettingsContextType>(() => ({
         settings,
         updateSetting,
         updateSettings,
         resetSettings,
         clearCache,
-    };
+    }), [settings, updateSetting, updateSettings, resetSettings, clearCache]);
 
     return (
         <SettingsContext.Provider value={value}>

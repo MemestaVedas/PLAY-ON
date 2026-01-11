@@ -12,6 +12,7 @@ import { getMangaEntryByAnilistId, updateMangaCache } from '../lib/localMangaDb'
 import { ExtensionManager } from '../services/ExtensionManager';
 import { getStats, formatTime, UserStats } from '../services/StatsService';
 
+
 function Home() {
     const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
@@ -19,6 +20,7 @@ function Home() {
     const { mappings: folderMappings } = useFolderMappings();
     const [resumingMangaId, setResumingMangaId] = useState<number | null>(null);
     const [stats, setStats] = useState<UserStats | null>(null);
+    // const { settings } = useSettings(); // Removed
 
     useEffect(() => {
         setStats(getStats());
@@ -29,6 +31,13 @@ function Home() {
         variables: { userId: user?.id, status: 'CURRENT' },
         skip: !isAuthenticated || !user?.id,
         notifyOnNetworkStatusChange: true,
+        fetchPolicy: 'cache-and-network'
+    });
+
+    // Fetch PLANNING anime for Upcoming Episodes section
+    const { data: planningData } = useQuery(USER_MEDIA_LIST_QUERY, {
+        variables: { userId: user?.id, status: 'PLANNING' },
+        skip: !isAuthenticated || !user?.id,
         fetchPolicy: 'cache-and-network'
     });
 
@@ -64,6 +73,7 @@ function Home() {
                     format: item.media.format,
                     averageScore: item.media.averageScore,
                     nextEpisode: item.media.nextAiringEpisode,
+                    status: item.media.status, // RELEASING, FINISHED, etc.
                     // Resume data
                     hasFolder: !!folderMapping,
                     folderPath: folderMapping?.folderPath
@@ -101,6 +111,39 @@ function Home() {
         }
         return [];
     }, [isAuthenticated, mangaData, mangaMappings]);
+
+    // Upcoming Episodes - Combine CURRENT + PLANNING, filter for RELEASING anime
+    const upcomingEpisodes = useMemo(() => {
+        if (!isAuthenticated) return [];
+
+        // Map planning anime same as current anime
+        const planningAnime = planningData?.Page?.mediaList?.map((item: any) => ({
+            id: item.media.id,
+            title: item.media.title,
+            coverImage: item.media.coverImage,
+            nextEpisode: item.media.nextAiringEpisode,
+            status: item.media.status,
+            fromPlanning: true // Mark as from planning list
+        })) || [];
+
+        // Combine current (animeList) + planning
+        const combined = [...animeList, ...planningAnime];
+
+        // Filter for RELEASING or NOT_YET_RELEASED (upcoming premieres), dedupe by id
+        const seen = new Set<number>();
+        return combined
+            .filter((anime: any) => {
+                if (seen.has(anime.id)) return false;
+                seen.add(anime.id);
+                return (
+                    (anime.status === 'RELEASING' || anime.status === 'NOT_YET_RELEASED') &&
+                    anime.nextEpisode &&
+                    anime.nextEpisode.timeUntilAiring
+                );
+            })
+            .sort((a: any, b: any) => a.nextEpisode.timeUntilAiring - b.nextEpisode.timeUntilAiring)
+            .slice(0, 6);
+    }, [isAuthenticated, animeList, planningData]);
 
     const handleAnimeClick = (id: number) => {
         navigate(`/anime/${id}`);
@@ -193,11 +236,16 @@ function Home() {
         });
     }, [user]);
 
+
+
+    // Focus Mode Layout (Default)
+    // - Lists side-by-side on LG screens (1024px+) to fit 1200px window
+    // - Stats below
     return (
         <div className="h-full flex flex-col" style={{ maxWidth: '1800px', margin: '0 auto', height: 'calc(100vh - 120px)' }}>
             <div className="flex flex-col gap-6 pb-2 px-2 overflow-y-auto">
-                {/* Lists Row */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 shrink-0">
+                {/* Lists Row - Force side-by-side on LG screens (1024px+) to fit 1200px window */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 shrink-0 focus-mode">
 
                     {/* Anime List Box */}
                     <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg relative group h-fit">
@@ -233,23 +281,27 @@ function Home() {
                             <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
                         ) : animeList.length > 0 ? (
                             <div className="">
-                                <div className="grid grid-cols-5 gap-3">
-                                    {animeList.slice(0, 5).map((anime: any) => (
-                                        <AnimeCard
-                                            key={anime.id}
-                                            anime={isAuthenticated ? {
-                                                id: anime.id,
-                                                title: anime.title,
-                                                coverImage: anime.coverImage,
-                                                episodes: anime.episodes,
-                                                format: anime.format,
-                                                averageScore: anime.averageScore
-                                            } : anime}
-                                            progress={isAuthenticated ? anime.progress : undefined}
-                                            onClick={() => handleAnimeClick(anime.id)}
-                                            onResume={anime.hasFolder ? () => handleAnimeResume(anime) : undefined}
-                                            compact
-                                        />
+                                {/* Responsive Grid: 
+                                    - Default (Windowed 1200px): 2 cols (Large posters), 4 items visible
+                                    - Fullscreen (1536px+): 4 cols (Normal posters), 8 items visible ("Bento" style)
+                                */}
+                                <div className="grid grid-cols-2 2xl:grid-cols-4 gap-4 2xl:gap-3">
+                                    {animeList.slice(0, 8).map((anime: any, index: number) => (
+                                        <div key={anime.id} className={index >= 4 ? 'hidden 2xl:block' : ''}>
+                                            <AnimeCard
+                                                anime={isAuthenticated ? {
+                                                    id: anime.id,
+                                                    title: anime.title,
+                                                    coverImage: anime.coverImage,
+                                                    episodes: anime.episodes,
+                                                    format: anime.format,
+                                                    averageScore: anime.averageScore
+                                                } : anime}
+                                                progress={isAuthenticated ? anime.progress : undefined}
+                                                onClick={() => handleAnimeClick(anime.id)}
+                                                onResume={anime.hasFolder ? () => handleAnimeResume(anime) : undefined}
+                                            />
+                                        </div>
                                     ))}
                                 </div>
                             </div>
@@ -260,7 +312,7 @@ function Home() {
                         )}
                     </div>
 
-                    {/* Manga List Box */}
+                    {/* Manga List Box - Always show if authenticated */}
                     {isAuthenticated && (
                         <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-2xl p-5 shadow-lg relative group h-fit">
                             <div className="flex items-center justify-between mb-4 shrink-0 z-10 relative">
@@ -293,24 +345,25 @@ function Home() {
                                 <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
                             ) : mangaList.length > 0 ? (
                                 <div className="">
-                                    <div className="grid grid-cols-5 gap-3">
-                                        {mangaList.slice(0, 5).map((manga: any) => (
-                                            <AnimeCard
-                                                key={manga.id}
-                                                anime={{
-                                                    id: manga.id,
-                                                    title: manga.title,
-                                                    coverImage: manga.coverImage,
-                                                    episodes: manga.episodes,
-                                                    format: manga.format,
-                                                    averageScore: manga.averageScore
-                                                }}
-                                                progress={manga.progress}
-                                                onClick={() => handleMangaClick(manga.id)}
-                                                onResume={manga.hasMapping ? () => handleMangaResume(manga) : undefined}
-                                                isResuming={resumingMangaId === manga.id}
-                                                compact
-                                            />
+                                    {/* Responsive Grid: 2 cols (Windowed) -> 4 cols (Fullscreen) */}
+                                    <div className="grid grid-cols-2 2xl:grid-cols-4 gap-4 2xl:gap-3">
+                                        {mangaList.slice(0, 8).map((manga: any, index: number) => (
+                                            <div key={manga.id} className={index >= 4 ? 'hidden 2xl:block' : ''}>
+                                                <AnimeCard
+                                                    anime={{
+                                                        id: manga.id,
+                                                        title: manga.title,
+                                                        coverImage: manga.coverImage,
+                                                        episodes: manga.episodes,
+                                                        format: manga.format,
+                                                        averageScore: manga.averageScore
+                                                    }}
+                                                    progress={manga.progress}
+                                                    onClick={() => handleMangaClick(manga.id)}
+                                                    onResume={manga.hasMapping ? () => handleMangaResume(manga) : undefined}
+                                                    isResuming={resumingMangaId === manga.id}
+                                                />
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
@@ -323,9 +376,9 @@ function Home() {
                     )}
                 </div>
 
-                {/* Stats Row - Bottom */}
+                {/* Stats Row - Bottom (Visible in both modes, but effectively 'below' lists) */}
                 {isAuthenticated && (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 shrink-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 shrink-0">
                         {/* Anime Stats */}
                         <div className="bg-black/20 backdrop-blur-xl border border-white/5 rounded-2xl p-4 shadow-lg">
                             <div className="grid grid-cols-3 gap-3">
@@ -364,6 +417,63 @@ function Home() {
                                     <div className="text-xl font-bold text-white leading-none">{stats?.manga.sessionsCount || 0}</div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Upcoming Episodes Section */}
+                {isAuthenticated && upcomingEpisodes.length > 0 && (
+                    <div className="shrink-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-xs font-bold tracking-wider uppercase flex items-center gap-2"
+                                style={{
+                                    color: 'var(--theme-accent-primary)',
+                                    fontFamily: 'var(--font-rounded)'
+                                }}
+                            >
+                                <div className="w-1.5 h-1.5 rounded-full bg-[var(--theme-accent-primary)] shadow-[0_0_8px_var(--theme-accent-primary)]"></div>
+                                UPCOMING EPISODES
+                            </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {upcomingEpisodes.map((anime: any) => {
+                                const timeUntil = anime.nextEpisode.timeUntilAiring;
+                                const days = Math.floor(timeUntil / 86400);
+                                const hours = Math.floor((timeUntil % 86400) / 3600);
+                                const mins = Math.floor((timeUntil % 3600) / 60);
+
+                                let timeStr = '';
+                                if (days > 0) timeStr = `${days}d ${hours}h`;
+                                else if (hours > 0) timeStr = `${hours}h ${mins}m`;
+                                else timeStr = `${mins}m`;
+
+                                return (
+                                    <div
+                                        key={anime.id}
+                                        onClick={() => handleAnimeClick(anime.id)}
+                                        className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer group"
+                                    >
+                                        <img
+                                            src={anime.coverImage?.medium || anime.coverImage?.large}
+                                            alt={anime.title?.english || anime.title?.romaji}
+                                            className="w-12 h-16 rounded-lg object-cover flex-shrink-0"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-white truncate group-hover:text-[var(--theme-accent-primary)] transition-colors">
+                                                {anime.title?.english || anime.title?.romaji}
+                                            </p>
+                                            <p className="text-xs text-white/50 mt-0.5">
+                                                Episode {anime.nextEpisode.episode}
+                                            </p>
+                                        </div>
+                                        <div className="text-right flex-shrink-0">
+                                            <p className="text-xs font-bold text-[var(--theme-accent-primary)]">{timeStr}</p>
+                                            <p className="text-[10px] text-white/40 uppercase">until air</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

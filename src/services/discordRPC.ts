@@ -209,14 +209,9 @@ export async function updateAnimeActivity(params: {
                 assets.setLargeText(animeName);
             }
 
-            // Use app icon as small image (must be uploaded to Discord Developer Portal)
-            if (smallImage) {
-                assets.setSmallImage(smallImage);
-                if (smallText) assets.setSmallText(smallText);
-            } else {
-                assets.setSmallImage(APP_ICON_ASSET);
-                assets.setSmallText('PLAY-ON!');
-            }
+            // User requested to remove small PFP/icon when tracking content
+            // assets.setSmallImage(APP_ICON_ASSET); 
+            // assets.setSmallText('PLAY-ON!');
 
             activity = activity.setAssets(assets);
 
@@ -389,13 +384,9 @@ export async function updateMangaActivity(params: {
                 assets.setLargeImage(APP_ICON_ASSET);
                 assets.setLargeText(mangaTitle);
             }
-            if (smallImage) {
-                assets.setSmallImage(smallImage);
-                if (smallText) assets.setSmallText(smallText);
-            } else {
-                assets.setSmallImage(APP_ICON_ASSET);
-                assets.setSmallText('PLAY-ON!');
-            }
+            // User requested to remove small PFP/icon when tracking content
+            // assets.setSmallImage(APP_ICON_ASSET);
+            // assets.setSmallText('PLAY-ON!');
             activity = activity.setAssets(assets);
 
             if (anilistId) {

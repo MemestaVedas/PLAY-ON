@@ -133,7 +133,7 @@ const SearchBar: React.FC = () => {
                             animate={{ y: 0, opacity: 1, rotateX: 0 }}
                             exit={{ y: -20, opacity: 0, rotateX: 90 }}
                             transition={{ duration: 0.3, ease: "backOut" }}
-                            className="flex items-center gap-0 w-full h-full absolute inset-0 px-2"
+                            className="flex items-center justify-center gap-0 w-full h-full absolute inset-0 px-2"
                             style={{ transformOrigin: "50% 50% -10px" }}
                         >
                             <div className="flex-shrink-0">
