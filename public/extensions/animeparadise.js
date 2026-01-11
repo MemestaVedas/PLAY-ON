@@ -10,10 +10,10 @@
 return {
     id: 'animeparadise',
     name: 'AnimeParadise',
-    baseUrl: 'https://animeparadise.org',
+    baseUrl: 'https://animeparadise.moe',
     lang: 'en',
     version: '1.0.0',
-    iconUrl: 'https://animeparadise.org/favicon.ico',
+    iconUrl: 'https://animeparadise.moe/favicon.ico',
 
     /**
      * Search for anime

@@ -15,9 +15,8 @@ import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
 import MangaDetails from './pages/MangaDetails';
 import CounterDemo from './pages/CounterDemo';
-import AnimeBrowse from './pages/AnimeBrowse';
-import AnimeSourceDetails from './pages/AnimeSourceDetails';
 import AnimeWatch from './pages/AnimeWatch';
+import WebBrowser from './pages/WebBrowser';
 import MainLayout from './layouts/MainLayout';
 import { AuthProvider } from './context/AuthContext';
 import { LocalMediaProvider } from './context/LocalMediaContext';
@@ -302,14 +301,14 @@ function App() {
                           {/* Manga Source Routes */}
                           <Route path="/manga-browse" element={<MangaBrowse />} />
                           <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
-
-                          {/* Anime Extension Source Routes */}
-                          <Route path="/anime-browse" element={<AnimeBrowse />} />
-                          <Route path="/anime-source/:sourceId/:animeId" element={<AnimeSourceDetails />} />
                         </Route>
 
                         {/* Full-screen Anime Watch (outside MainLayout) */}
                         <Route path="/watch/:sourceId/:episodeId" element={<AnimeWatch />} />
+
+                        {/* Full-screen Web Browser for Anime (outside MainLayout) */}
+                        <Route path="/anime-browse" element={<WebBrowser />} />
+                        <Route path="/browser" element={<WebBrowser />} />
                       </Routes>
                     </BrowserRouter>
                   </SearchBarProvider>

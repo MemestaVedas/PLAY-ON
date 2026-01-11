@@ -31,39 +31,6 @@
             "nsfw": false,
             "iconUrl": "https://mangareader.to/favicon.ico",
             "bundleUrl": "mangareader.js"
-        },
-        {
-            "id": "hianime",
-            "name": "HiAnime",
-            "type": "anime",
-            "version": "1.0.0",
-            "lang": "en",
-            "nsfw": false,
-            "iconUrl": "https://hianime.to/favicon.ico",
-            "bundleUrl": "hianime.js",
-            "description": "HiAnime/Aniwatch - Fast streaming via Consumet API"
-        },
-        {
-            "id": "animepahe",
-            "name": "AnimePahe",
-            "type": "anime",
-            "version": "1.0.0",
-            "lang": "en",
-            "nsfw": false,
-            "iconUrl": "https://animepahe.si/favicon.ico",
-            "bundleUrl": "animepahe.js",
-            "description": "AnimePahe - May have Cloudflare issues"
-        },
-        {
-            "id": "animeparadise",
-            "name": "AnimeParadise",
-            "type": "anime",
-            "version": "1.0.0",
-            "lang": "en",
-            "nsfw": false,
-            "iconUrl": "https://animeparadise.org/favicon.ico",
-            "bundleUrl": "animeparadise.js",
-            "description": "AnimeParadise - Anime streaming source"
         }
     ]
 }
