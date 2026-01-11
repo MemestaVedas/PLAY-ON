@@ -323,10 +323,16 @@ function Sidebar({ width: _width }: SidebarProps) {
                         cursor: 'pointer',
                         transition: 'transform 0.2s',
                     }}
-                    onClick={() => navigate('/profile')}
+                    onClick={() => {
+                        if (isAuthenticated && user?.name) {
+                            navigate(`/user/${user.name}`);
+                        } else {
+                            navigate('/settings');
+                        }
+                    }}
                     onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                     onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                    title={user?.name || 'Profile'}
+                    title={user?.name ? `View ${user.name}'s Profile` : 'Settings'}
                 >
                     {loading ? (
                         <div style={{

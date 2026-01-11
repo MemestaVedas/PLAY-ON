@@ -13,14 +13,14 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchMangaDetails, updateMangaProgress, updateMediaStatus } from '../api/anilistClient';
+import { fetchMangaDetails, updateMangaProgress, updateMediaStatus, toggleFavourite } from '../api/anilistClient';
 import { useMangaMappings } from '../hooks/useMangaMappings';
 import { StatusDropdown } from '../components/ui/StatusDropdown';
 import { useMalAuth } from '../context/MalAuthContext';
 import * as malClient from '../api/malClient';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
-import { SearchIcon, BookOpenIcon, ArrowRightIcon } from '../components/ui/Icons';
+import { SearchIcon, BookOpenIcon, ArrowRightIcon, HeartIcon } from '../components/ui/Icons';
 import { motion } from 'framer-motion';
 import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
 import { useAuth } from '../hooks/useAuth';
@@ -104,13 +104,21 @@ function MangaDetails() {
     const navigate = useNavigate();
     const { getMappingByAnilistId } = useMangaMappings();
     const malAuth = useMalAuth();
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
+
+    // Debug Auth
+    useEffect(() => {
+        console.log('[MangaDetails] Auth State:', isAuthenticated);
+    }, [isAuthenticated]);
+
     const [manga, setManga] = useState<Manga | null>(null);
     const [loading, setLoading] = useState(true);
     const [progress, setProgress] = useState(0);
     const [updating, setUpdating] = useState(false);
     const [currentStatus, setCurrentStatus] = useState<string | null>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [favoriteUpdating, setFavoriteUpdating] = useState(false);
 
 
     // Check if this manga is linked to a source in library
@@ -124,6 +132,8 @@ function MangaDetails() {
                 const data = await fetchMangaDetails(parseInt(id!));
                 if (data.data?.Media) {
                     setManga(data.data.Media as Manga);
+                    // Set favorite status from API response
+                    setIsFavorite(data.data.Media.isFavourite || false);
                     if (data.data.Media.mediaListEntry) {
                         setProgress(data.data.Media.mediaListEntry.progress);
                         setCurrentStatus(data.data.Media.mediaListEntry.status);
@@ -216,6 +226,20 @@ function MangaDetails() {
         }
     };
 
+    const handleFavoriteToggle = async () => {
+        if (!manga || favoriteUpdating || !isAuthenticated) return;
+
+        setFavoriteUpdating(true);
+        try {
+            await toggleFavourite(undefined, manga.id);
+            setIsFavorite(!isFavorite);
+        } catch (err) {
+            console.error('Failed to toggle favorite:', err);
+        } finally {
+            setFavoriteUpdating(false);
+        }
+    };
+
     if (loading) return <Loading />;
 
     if (!manga) return (
@@ -274,6 +298,42 @@ function MangaDetails() {
                             {/* Glass Glint Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                         </div>
+
+                        {/* Favorite Heart Button */}
+                        {isAuthenticated && (
+                            <motion.button
+                                onClick={handleFavoriteToggle}
+                                disabled={favoriteUpdating}
+                                className="absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center z-50"
+                                style={{
+                                    background: isFavorite ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 0, 0, 0.6)',
+                                    backdropFilter: 'blur(8px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                                }}
+                                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                animate={{
+                                    scale: isFavorite ? 1 : 1, // Reset scale
+                                    backgroundColor: isFavorite ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 0, 0, 0.6)'
+                                }}
+                                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                            >
+                                <motion.div
+                                    key={isFavorite ? 'fav' : 'not-fav'}
+                                    initial={{ scale: 0.5 }} // Removed opacity: 0 to ensure visibility
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                >
+                                    <HeartIcon
+                                        size={20}
+                                        filled={isFavorite}
+                                        className={`${isFavorite ? 'text-white' : 'text-white/80'} ${favoriteUpdating ? 'animate-pulse' : ''}`}
+                                    />
+                                </motion.div>
+                            </motion.button>
+                        )}
                     </div>
 
                     {/* Right Column: Status, Title, Stats, Genres */}

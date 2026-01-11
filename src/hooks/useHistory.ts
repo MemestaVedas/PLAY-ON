@@ -51,8 +51,7 @@ export function useHistory() {
         const groups: { [key: string]: HistoryItem[] } = {};
 
         data.Page.activities.forEach((activity: any) => {
-            // Skip activities that don't have media data (e.g., text posts, messages)
-            if (!activity.media) return;
+            if (!activity || !activity.media) return;
 
             const date = new Date(activity.createdAt * 1000);
             const dateKey = getDateKey(date);
@@ -61,12 +60,14 @@ export function useHistory() {
                 groups[dateKey] = [];
             }
 
+            const title = activity.media.title?.english || activity.media.title?.romaji || 'Unknown Title';
+
             groups[dateKey].push({
                 id: activity.id,
                 status: activity.status,
-                progress: `Episode ${activity.progress || '?'}`,
+                progress: `${activity.media.type === 'MANGA' ? 'Chapter' : 'Episode'} ${activity.progress || '?'}`,
                 time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                anime: activity.media.title?.english || activity.media.title?.romaji || 'Unknown',
+                anime: title,
                 image: activity.media.coverImage?.medium || '',
                 timestamp: activity.createdAt,
                 mediaId: activity.media.id,

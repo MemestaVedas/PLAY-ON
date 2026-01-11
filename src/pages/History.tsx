@@ -4,6 +4,7 @@ import { Card, SectionHeader, EmptyState } from '../components/ui/UIComponents';
 import RefreshButton from '../components/ui/RefreshButton';
 import { useHistory, HistoryFlatItem } from '../hooks/useHistory';
 import { Virtuoso } from 'react-virtuoso';
+import { getMediaBadgeStyle } from '../lib/theme';
 
 function History() {
     const { flatHistory, loading, error, refetch } = useHistory();
@@ -31,7 +32,6 @@ function History() {
                 <SectionHeader
                     title="Watch History"
                     subtitle="Your recent anime viewing activity"
-                    className="font-planet tracking-[0.2em] text-[#B4A2F6]"
                 />
                 <RefreshButton
                     onClick={() => refetch()}
@@ -59,7 +59,7 @@ function History() {
                             if (item.type === 'header') {
                                 return (
                                     <div className="bg-black/20 backdrop-blur-md rounded-xl py-2 px-4 sticky top-0 z-10 border border-white/5 shadow-sm mt-4 mb-2 w-fit mx-auto">
-                                        <h3 className="text-sm font-bold text-white/50 uppercase tracking-widest font-mono">
+                                        <h3 className="text-sm font-bold text-white/50 uppercase tracking-widest">
                                             {item.date}
                                         </h3>
                                     </div>
@@ -99,17 +99,22 @@ function History() {
                                                 <div className="font-bold text-white truncate mb-1 text-lg group-hover:text-[var(--color-zen-accent)] transition-colors" style={{ fontFamily: 'var(--font-rounded)' }}>
                                                     {data.anime}
                                                 </div>
-                                                <div className="text-sm flex gap-3 items-center font-mono">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${data.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                                                        }`}>
-                                                        {data.status}
-                                                    </span>
+                                                <div className="text-sm flex gap-3 items-center">
+                                                    {(() => {
+                                                        // Use modular style getter
+                                                        const style = getMediaBadgeStyle(data.mediaType, data.status);
+                                                        return (
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${style.bg} ${style.text} ${style.border ? `border ${style.border}` : ''}`}>
+                                                                {data.status}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                     <span className="opacity-40 text-white font-bold">{data.progress}</span>
                                                 </div>
                                             </div>
 
                                             {/* Time */}
-                                            <div className="text-xs text-white/30 font-bold tabular-nums px-3 py-1 bg-white/5 rounded-full border border-white/5 font-mono group-hover:bg-white/10 transition-colors">
+                                            <div className="text-xs text-white/30 font-bold tabular-nums px-3 py-1 bg-white/5 rounded-full border border-white/5 group-hover:bg-white/10 transition-colors">
                                                 {data.time}
                                             </div>
                                         </div>
