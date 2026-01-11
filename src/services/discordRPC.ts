@@ -131,7 +131,7 @@ export async function updateAnimeActivity(params: {
     smallImage?: string | null;
     smallText?: string | null;
 }): Promise<void> {
-    const { animeName, episode, season, anilistId, coverImage, totalEpisodes, privacyLevel = 'full', smallImage, smallText } = params;
+    const { animeName, episode, season, anilistId, coverImage, totalEpisodes, privacyLevel = 'full' } = params;
 
     // hidden: Do not update activity (effectively invisible)
     if (privacyLevel === 'hidden') {
@@ -331,7 +331,7 @@ export async function updateMangaActivity(params: {
     smallImage?: string | null;
     smallText?: string | null;
 }): Promise<void> {
-    const { mangaTitle, chapter, anilistId, coverImage, totalChapters, privacyLevel = 'full', smallImage, smallText } = params;
+    const { mangaTitle, chapter, anilistId, coverImage, totalChapters, privacyLevel = 'full' } = params;
 
     if (privacyLevel === 'hidden') return;
 
