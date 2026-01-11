@@ -5,6 +5,7 @@
         {
             "id": "weebcentral",
             "name": "WeebCentral",
+            "type": "manga",
             "version": "1.0.1",
             "lang": "en",
             "nsfw": false,
@@ -14,6 +15,7 @@
         {
             "id": "mangadex",
             "name": "MangaDex",
+            "type": "manga",
             "version": "1.0.0",
             "lang": "en",
             "nsfw": false,
@@ -23,11 +25,34 @@
         {
             "id": "mangareader",
             "name": "MangaReader",
+            "type": "manga",
             "version": "1.0.0",
             "lang": "en",
             "nsfw": false,
             "iconUrl": "https://mangareader.to/favicon.ico",
             "bundleUrl": "mangareader.js"
+        },
+        {
+            "id": "animepahe",
+            "name": "AnimePahe",
+            "type": "anime",
+            "version": "1.0.0",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://animepahe.ru/favicon.ico",
+            "bundleUrl": "animepahe.js",
+            "description": "AnimePahe - Fast streaming with multiple quality options"
+        },
+        {
+            "id": "animeparadise",
+            "name": "AnimeParadise",
+            "type": "anime",
+            "version": "1.0.0",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://animeparadise.org/favicon.ico",
+            "bundleUrl": "animeparadise.js",
+            "description": "AnimeParadise - Anime streaming source"
         }
     ]
 }

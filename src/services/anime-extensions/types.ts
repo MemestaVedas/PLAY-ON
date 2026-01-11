@@ -1,13 +1,13 @@
-import { MangaSource } from '../sources/Source';
+import { AnimeSource } from '../anime-sources/AnimeSource';
 
 /**
- * Interface that all dynamic extensions must implement.
- * This mirrors the internal MangaSource interface but is designed for external consumption.
+ * Interface that all dynamic anime extensions must implement.
+ * This mirrors the internal AnimeSource interface but is designed for external consumption.
  */
-export interface Extension extends MangaSource {
-    /** Unique identifier for the extension (e.g., "weebcentral") */
+export interface AnimeExtension extends AnimeSource {
+    /** Unique identifier for the extension (e.g., "hianime") */
     id: string;
-    /** Display name (e.g., "WeebCentral") */
+    /** Display name (e.g., "HiAnime") */
     name: string;
     /** Version string (e.g., "1.0.0") */
     version: string;
@@ -20,22 +20,21 @@ export interface Extension extends MangaSource {
 /**
  * Helper to define an extension - useful for type checking in development.
  */
-export function defineExtension(ext: Extension): Extension {
+export function defineAnimeExtension(ext: AnimeExtension): AnimeExtension {
     return ext;
 }
 
 // ============================================================================
-// EXTENSION REPOSITORY TYPES
+// ANIME EXTENSION REPOSITORY TYPES
 // ============================================================================
 
 /**
- * Metadata for an extension as listed in a repository index.
+ * Metadata for an anime extension as listed in a repository index.
  */
-export interface ExtensionMeta {
+export interface AnimeExtensionMeta {
     id: string;
     name: string;
-    /** Extension type: 'manga' (default) or 'anime' */
-    type?: 'manga' | 'anime';
+    type: 'anime';
     version: string;
     lang: string;
     nsfw: boolean;
@@ -47,22 +46,11 @@ export interface ExtensionMeta {
 }
 
 /**
- * Repository index format (index.json)
+ * Installed anime extension stored in localStorage
  */
-export interface RepositoryIndex {
-    name: string;
-    description?: string;
-    extensions: ExtensionMeta[];
-}
-
-/**
- * Installed extension stored in localStorage
- */
-export interface InstalledExtension {
+export interface InstalledAnimeExtension {
     id: string;
     name: string;
-    /** Extension type: 'manga' (default) or 'anime' */
-    type?: 'manga' | 'anime';
     version: string;
     lang: string;
     nsfw: boolean;
@@ -75,13 +63,4 @@ export interface InstalledExtension {
     enabled: boolean;
     /** Installation timestamp */
     installedAt: number;
-}
-
-/**
- * Repository entry stored in localStorage
- */
-export interface ExtensionRepo {
-    url: string;
-    name: string;
-    addedAt: number;
 }

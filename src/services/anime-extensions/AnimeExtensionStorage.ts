@@ -1,19 +1,19 @@
 /**
  * ====================================================================
- * EXTENSION STORAGE SERVICE
+ * ANIME EXTENSION STORAGE SERVICE
  * ====================================================================
  * 
- * Manages installed extensions in localStorage.
+ * Manages installed anime extensions in localStorage.
  * Handles install, uninstall, enable/disable operations.
  * ====================================================================
  */
 
-import { InstalledExtension, ExtensionMeta } from './types';
+import { InstalledAnimeExtension, AnimeExtensionMeta } from './types';
 
-const INSTALLED_STORAGE_KEY = 'installed-extensions';
+const INSTALLED_STORAGE_KEY = 'installed-anime-extensions';
 
-class ExtensionStorageService {
-    private extensions: Map<string, InstalledExtension> = new Map();
+class AnimeExtensionStorageService {
+    private extensions: Map<string, InstalledAnimeExtension> = new Map();
 
     constructor() {
         this.loadExtensions();
@@ -26,11 +26,11 @@ class ExtensionStorageService {
         try {
             const saved = localStorage.getItem(INSTALLED_STORAGE_KEY);
             if (saved) {
-                const parsed = JSON.parse(saved) as Record<string, InstalledExtension>;
+                const parsed = JSON.parse(saved) as Record<string, InstalledAnimeExtension>;
                 this.extensions = new Map(Object.entries(parsed));
             }
         } catch (e) {
-            console.error('[ExtensionStorage] Failed to load extensions:', e);
+            console.error('[AnimeExtensionStorage] Failed to load extensions:', e);
             this.extensions = new Map();
         }
     }
@@ -39,7 +39,7 @@ class ExtensionStorageService {
      * Save installed extensions to localStorage
      */
     private saveExtensions(): void {
-        const obj: Record<string, InstalledExtension> = {};
+        const obj: Record<string, InstalledAnimeExtension> = {};
         this.extensions.forEach((ext, id) => {
             obj[id] = ext;
         });
@@ -49,11 +49,10 @@ class ExtensionStorageService {
     /**
      * Install an extension
      */
-    installExtension(meta: ExtensionMeta, repoUrl: string, bundleCode: string): void {
-        const installed: InstalledExtension = {
+    installExtension(meta: AnimeExtensionMeta, repoUrl: string, bundleCode: string): void {
+        const installed: InstalledAnimeExtension = {
             id: meta.id,
             name: meta.name,
-            type: meta.type || 'manga',
             version: meta.version,
             lang: meta.lang,
             nsfw: meta.nsfw,
@@ -66,7 +65,7 @@ class ExtensionStorageService {
 
         this.extensions.set(meta.id, installed);
         this.saveExtensions();
-        console.log(`[ExtensionStorage] Installed: ${meta.name} v${meta.version}`);
+        console.log(`[AnimeExtensionStorage] Installed: ${meta.name} v${meta.version}`);
     }
 
     /**
@@ -76,7 +75,7 @@ class ExtensionStorageService {
         const deleted = this.extensions.delete(id);
         if (deleted) {
             this.saveExtensions();
-            console.log(`[ExtensionStorage] Uninstalled: ${id}`);
+            console.log(`[AnimeExtensionStorage] Uninstalled: ${id}`);
         }
         return deleted;
     }
@@ -89,7 +88,7 @@ class ExtensionStorageService {
         if (ext) {
             ext.enabled = true;
             this.saveExtensions();
-            console.log(`[ExtensionStorage] Enabled: ${id}`);
+            console.log(`[AnimeExtensionStorage] Enabled: ${id}`);
         }
     }
 
@@ -101,7 +100,7 @@ class ExtensionStorageService {
         if (ext) {
             ext.enabled = false;
             this.saveExtensions();
-            console.log(`[ExtensionStorage] Disabled: ${id}`);
+            console.log(`[AnimeExtensionStorage] Disabled: ${id}`);
         }
     }
 
@@ -113,7 +112,7 @@ class ExtensionStorageService {
         if (ext) {
             ext.enabled = !ext.enabled;
             this.saveExtensions();
-            console.log(`[ExtensionStorage] Toggled ${id}: ${ext.enabled ? 'enabled' : 'disabled'}`);
+            console.log(`[AnimeExtensionStorage] Toggled ${id}: ${ext.enabled ? 'enabled' : 'disabled'}`);
             return ext.enabled;
         }
         return false;
@@ -129,35 +128,35 @@ class ExtensionStorageService {
     /**
      * Get an installed extension by ID
      */
-    getExtension(id: string): InstalledExtension | undefined {
+    getExtension(id: string): InstalledAnimeExtension | undefined {
         return this.extensions.get(id);
     }
 
     /**
      * Get all installed extensions
      */
-    getAllExtensions(): InstalledExtension[] {
+    getAllExtensions(): InstalledAnimeExtension[] {
         return Array.from(this.extensions.values());
     }
 
     /**
      * Get only enabled extensions
      */
-    getEnabledExtensions(): InstalledExtension[] {
+    getEnabledExtensions(): InstalledAnimeExtension[] {
         return this.getAllExtensions().filter(ext => ext.enabled);
     }
 
     /**
      * Update an extension with new version
      */
-    updateExtension(meta: ExtensionMeta, bundleCode: string): void {
+    updateExtension(meta: AnimeExtensionMeta, bundleCode: string): void {
         const existing = this.extensions.get(meta.id);
         if (existing) {
             existing.version = meta.version;
             existing.bundleCode = bundleCode;
             existing.iconUrl = meta.iconUrl;
             this.saveExtensions();
-            console.log(`[ExtensionStorage] Updated: ${meta.name} to v${meta.version}`);
+            console.log(`[AnimeExtensionStorage] Updated: ${meta.name} to v${meta.version}`);
         }
     }
 
@@ -188,4 +187,4 @@ class ExtensionStorageService {
 }
 
 // Singleton instance
-export const ExtensionStorage = new ExtensionStorageService();
+export const AnimeExtensionStorage = new AnimeExtensionStorageService();
