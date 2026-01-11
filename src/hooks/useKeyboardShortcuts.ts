@@ -11,6 +11,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings, ShortcutAction } from '../context/SettingsContext';
+import { useAuthContext } from '../context/AuthContext';
 
 // Parse a shortcut string like "Ctrl+Shift+A" into components
 function parseShortcut(shortcut: string): { key: string; ctrl: boolean; shift: boolean; alt: boolean; meta: boolean } {
@@ -54,6 +55,7 @@ export interface ShortcutCallbacks {
 export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
     const navigate = useNavigate();
     const { settings } = useSettings();
+    const { user, isAuthenticated } = useAuthContext();
     const callbacksRef = useRef(callbacks);
 
     // Keep callbacks ref updated
@@ -95,7 +97,12 @@ export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
                         break;
                     case 'goProfile':
                         (document.activeElement as HTMLElement)?.blur?.();
-                        navigate('/profile');
+                        // Navigate to user's AniList profile page if authenticated
+                        if (isAuthenticated && user?.name) {
+                            navigate(`/user/${user.name}`);
+                        } else {
+                            navigate('/settings');
+                        }
                         break;
                     case 'goBack':
                         (document.activeElement as HTMLElement)?.blur?.();

@@ -333,6 +333,7 @@ const MANGA_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: MANGA) {
     id
+    isFavourite
     title {
       english
       romaji
@@ -406,6 +407,7 @@ const ANIME_DETAILS_QUERY = gql`
 query ($id: Int) {
   Media (id: $id, type: ANIME) {
     id
+    isFavourite
     title {
       english
       romaji
@@ -508,13 +510,20 @@ query {
   Viewer {
     id
     name
+    about(asHtml: false)
     avatar {
       large
       medium
     }
     bannerImage
     options {
+      titleLanguage
+      staffNameLanguage
       displayAdultContent
+      profileColor
+      timezone
+      activityMergeTime
+      airingNotifications
     }
     mediaListOptions {
       scoreFormat
@@ -537,6 +546,70 @@ mutation UpdateMediaProgress($mediaId: Int, $progress: Int, $status: MediaListSt
       id
       title {
         english
+      }
+    }
+  }
+}
+`;
+
+const UPDATE_USER_MUTATION = gql`
+mutation UpdateUser(
+  $about: String
+  $titleLanguage: UserTitleLanguage
+  $staffNameLanguage: UserStaffNameLanguage
+  $displayAdultContent: Boolean
+  $scoreFormat: ScoreFormat
+  $profileColor: String
+  $timezone: String
+  $activityMergeTime: Int
+  $airingNotifications: Boolean
+) {
+  UpdateUser(
+    about: $about
+    titleLanguage: $titleLanguage
+    staffNameLanguage: $staffNameLanguage
+    displayAdultContent: $displayAdultContent
+    scoreFormat: $scoreFormat
+    profileColor: $profileColor
+    timezone: $timezone
+    activityMergeTime: $activityMergeTime
+    airingNotifications: $airingNotifications
+  ) {
+    id
+    name
+    about
+    avatar {
+      large
+      medium
+    }
+    bannerImage
+    options {
+      titleLanguage
+      staffNameLanguage
+      displayAdultContent
+      profileColor
+      timezone
+      activityMergeTime
+      airingNotifications
+    }
+    mediaListOptions {
+      scoreFormat
+    }
+  }
+}
+`;
+
+const TOGGLE_FAVOURITE_MUTATION = gql`
+mutation ToggleFavourite($animeId: Int, $mangaId: Int) {
+  ToggleFavourite(animeId: $animeId, mangaId: $mangaId) {
+    anime {
+      nodes {
+        id
+      }
+    }
+    manga {
+      nodes {
+        id
       }
     }
   }
@@ -824,6 +897,47 @@ export async function fetchUserStats() {
   });
 }
 
+// Type definitions for profile update options
+export type TitleLanguage = 'ROMAJI' | 'ENGLISH' | 'NATIVE' | 'ROMAJI_STYLISED' | 'ENGLISH_STYLISED' | 'NATIVE_STYLISED';
+export type StaffNameLanguage = 'ROMAJI_WESTERN' | 'ROMAJI' | 'NATIVE';
+export type ScoreFormat = 'POINT_100' | 'POINT_10_DECIMAL' | 'POINT_10' | 'POINT_5' | 'POINT_3';
+
+export interface UpdateUserProfileOptions {
+  about?: string;
+  titleLanguage?: TitleLanguage;
+  staffNameLanguage?: StaffNameLanguage;
+  displayAdultContent?: boolean;
+  scoreFormat?: ScoreFormat;
+  profileColor?: string;
+  timezone?: string;
+  activityMergeTime?: number;
+  airingNotifications?: boolean;
+}
+
+/**
+ * Updates the authenticated user's profile settings on AniList.
+ * Returns the updated user data.
+ */
+export async function updateUserProfile(options: UpdateUserProfileOptions) {
+  const result = await apolloClient.mutate({
+    mutation: UPDATE_USER_MUTATION,
+    variables: options,
+  });
+  return result;
+}
+
+/**
+ * Toggles an anime or manga as a favorite.
+ * Pass animeId for anime, mangaId for manga.
+ */
+export async function toggleFavourite(animeId?: number, mangaId?: number) {
+  const result = await apolloClient.mutate({
+    mutation: TOGGLE_FAVOURITE_MUTATION,
+    variables: { animeId, mangaId },
+  });
+  return result;
+}
+
 // ============================================================================
 // NOTIFICATIONS
 // ============================================================================
@@ -840,6 +954,7 @@ query ($page: Int, $perPage: Int) {
         contexts
         createdAt
         media {
+          type
           title { english romaji }
           coverImage { medium }
         }
@@ -896,6 +1011,7 @@ query ($page: Int, $perPage: Int) {
         context
         createdAt
         media {
+          type
           title { english romaji }
           coverImage { medium }
         }
@@ -906,6 +1022,7 @@ query ($page: Int, $perPage: Int) {
         context
         createdAt
         media {
+          type
           title { english romaji }
           coverImage { medium }
         }
@@ -1006,6 +1123,7 @@ export interface AniListNotification {
   animeId?: number;
   activityId?: number;
   media?: {
+    type?: string;
     title: { english?: string; romaji?: string };
     coverImage?: { medium?: string };
   };

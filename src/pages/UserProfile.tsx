@@ -2,18 +2,31 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import { USER_PROFILE_QUERY } from '../api/anilistClient';
 import Loading from '../components/ui/Loading';
-import { Card, SectionHeader, EmptyState } from '../components/ui/UIComponents';
+import { SectionHeader, EmptyState } from '../components/ui/UIComponents';
 import AnimeCard from '../components/ui/AnimeCard';
 import { useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../context/AuthContext';
+import { useState } from 'react';
+import { SettingsIcon, FilmIcon, BookIcon } from '../components/ui/Icons';
+import { ProfileSettingsModal } from '../components/settings/ProfileSettings';
+import SpotlightCard from '../components/ui/SpotlightCard';
 
 function UserProfile() {
     const { username } = useParams<{ username: string }>();
     const navigate = useNavigate();
+    const { user: currentUser, isAuthenticated } = useAuthContext();
 
-    const { data, loading, error } = useQuery(USER_PROFILE_QUERY, {
+    // Check if viewing own profile
+    const isOwnProfile = isAuthenticated && currentUser?.name === username;
+
+    const { data, loading, error, refetch } = useQuery(USER_PROFILE_QUERY, {
         variables: { name: username },
-        skip: !username
+        skip: !username,
+        fetchPolicy: 'cache-first', // Use cached data, only fetch if not in cache
     });
+
+    // Edit mode state
+    const [isEditing, setIsEditing] = useState(false);
 
     if (loading) return <Loading />;
 
@@ -36,10 +49,6 @@ function UserProfile() {
         );
     }
 
-    // Safely parse about text, stripping HTML for now or displaying as is if needed. 
-    // AniList returns markdown/html mixed. For safety, we'll just show it raw or minimal processing if needed.
-    // Ideally use a markdown parser, but for now simple text display.
-
     return (
         <div className="relative min-h-full font-rounded pb-20" style={{ color: 'var(--color-text-main)', margin: '-96px -32px 0 -32px' }}>
             {/* Edge-to-Edge Banner */}
@@ -58,16 +67,43 @@ function UserProfile() {
 
                 {/* Header Info */}
                 <div className="flex items-end gap-8 mb-10">
-                    {/* Avatar */}
-                    <div className="w-32 h-32 md:w-48 md:h-48 rounded-2xl overflow-hidden border-4 border-[#0a0a0f] shadow-2xl bg-[#0a0a0f] shrink-0">
+                    {/* Avatar - no background or border */}
+                    <div className="w-32 h-32 md:w-48 md:h-48 rounded-2xl overflow-hidden shadow-2xl shrink-0">
                         <img src={user.avatar?.large} alt={user.name} className="w-full h-full object-cover" />
                     </div>
 
                     {/* Name & Quick Stats */}
                     <div className="mb-4 flex-1 min-w-0">
-                        <h1 className="text-4xl md:text-6xl font-black mb-2 flex items-center gap-3 drop-shadow-xl tracking-tight text-white">
-                            {user.name}
-                        </h1>
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-4xl md:text-6xl font-black mb-2 flex items-center gap-3 drop-shadow-xl tracking-tight text-white">
+                                {user.name}
+                            </h1>
+                            {/* Edit Profile Button - Only for own profile */}
+                            {isOwnProfile && (
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all duration-200"
+                                    style={{
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        color: 'white',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'var(--color-zen-accent)';
+                                        e.currentTarget.style.borderColor = 'var(--color-zen-accent)';
+                                        e.currentTarget.style.color = '#000';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                                        e.currentTarget.style.color = 'white';
+                                    }}
+                                >
+                                    <SettingsIcon size={16} />
+                                    Edit Profile
+                                </button>
+                            )}
+                        </div>
                         <div className="flex gap-6 text-sm font-bold text-white/60 tracking-wider">
                             <span className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-blue-400"></span>
@@ -96,9 +132,12 @@ function UserProfile() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                     {/* Anime Stats */}
-                    <Card className="p-8 bg-white/5 border-white/10 backdrop-blur-md">
+                    <SpotlightCard
+                        className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md"
+                        spotlightColor="rgba(59, 130, 246, 0.25)"
+                    >
                         <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-blue-400">
-                            <span className="text-3xl">📺</span> Anime Stats
+                            <FilmIcon size={28} /> Anime Stats
                         </h3>
                         <div className="grid grid-cols-2 gap-6">
                             <StatBox label="Count" value={user.statistics?.anime?.count} />
@@ -106,12 +145,15 @@ function UserProfile() {
                             <StatBox label="Episodes" value={user.statistics?.anime?.episodesWatched} />
                             <StatBox label="Minutes" value={Math.floor((user.statistics?.anime?.minutesWatched || 0) / 60) + ' hrs'} />
                         </div>
-                    </Card>
+                    </SpotlightCard>
 
                     {/* Manga Stats */}
-                    <Card className="p-8 bg-white/5 border-white/10 backdrop-blur-md">
+                    <SpotlightCard
+                        className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md"
+                        spotlightColor="rgba(34, 197, 94, 0.25)"
+                    >
                         <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-green-400">
-                            <span className="text-3xl">📖</span> Manga Stats
+                            <BookIcon size={28} /> Manga Stats
                         </h3>
                         <div className="grid grid-cols-2 gap-6">
                             <StatBox label="Count" value={user.statistics?.manga?.count} />
@@ -119,13 +161,23 @@ function UserProfile() {
                             <StatBox label="Chapters" value={user.statistics?.manga?.chaptersRead} />
                             <StatBox label="Volumes" value={user.statistics?.manga?.volumesRead} />
                         </div>
-                    </Card>
+                    </SpotlightCard>
                 </div>
 
                 {/* Favorites - Anime */}
                 {user.favourites?.anime?.nodes?.length > 0 && (
                     <div className="mb-12">
-                        <SectionHeader title="Favorite Anime" />
+                        <div className="flex items-center justify-between mb-4">
+                            <SectionHeader title="Favorite Anime" />
+                            <a
+                                href={`https://anilist.co/user/${username}/favorites`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-bold text-white/40 hover:text-[var(--color-zen-accent)] transition-colors"
+                            >
+                                View All →
+                            </a>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                             {user.favourites.anime.nodes.map((anime: any) => (
                                 <AnimeCard
@@ -141,7 +193,17 @@ function UserProfile() {
                 {/* Favorites - Manga */}
                 {user.favourites?.manga?.nodes?.length > 0 && (
                     <div className="mb-12">
-                        <SectionHeader title="Favorite Manga" />
+                        <div className="flex items-center justify-between mb-4">
+                            <SectionHeader title="Favorite Manga" />
+                            <a
+                                href={`https://anilist.co/user/${username}/favorites`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-bold text-white/40 hover:text-[var(--color-zen-accent)] transition-colors"
+                            >
+                                View All →
+                            </a>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                             {user.favourites.manga.nodes.map((manga: any) => (
                                 <AnimeCard
@@ -157,7 +219,17 @@ function UserProfile() {
                 {/* Favorites - Characters */}
                 {user.favourites?.characters?.nodes?.length > 0 && (
                     <div className="mb-12">
-                        <SectionHeader title="Favorite Characters" />
+                        <div className="flex items-center justify-between mb-4">
+                            <SectionHeader title="Favorite Characters" />
+                            <a
+                                href={`https://anilist.co/user/${username}/favorites`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-bold text-white/40 hover:text-[var(--color-zen-accent)] transition-colors"
+                            >
+                                View All →
+                            </a>
+                        </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                             {user.favourites.characters.nodes.map((char: any) => (
                                 <div key={char.id} className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-white/5 border border-white/10 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-white/20">
@@ -173,6 +245,16 @@ function UserProfile() {
                     </div>
                 )}
             </div>
+
+            {/* Edit Profile Modal - Uses shared component */}
+            <ProfileSettingsModal
+                isOpen={isEditing}
+                onClose={async () => {
+                    setIsEditing(false);
+                    // Refetch profile data after closing
+                    await refetch();
+                }}
+            />
         </div>
     );
 }

@@ -5,6 +5,7 @@ import RefreshButton from '../components/ui/RefreshButton';
 import { useAniListNotifications } from '../hooks/useAniListNotifications';
 import { useAuth } from '../hooks/useAuth';
 import { Virtuoso } from 'react-virtuoso';
+import { getNotificationBadgeStyle } from '../lib/theme';
 
 /**
  * Format a Unix timestamp to a human-readable relative time
@@ -88,28 +89,7 @@ function getNotificationImage(notification: any): string | null {
     return notification.media?.coverImage?.medium || notification.user?.avatar?.medium || null;
 }
 
-/**
- * Get a color for the notification type badge
- */
-function getNotificationTypeColor(type: string): { bg: string; text: string; border: string } {
-    switch (type) {
-        case 'AIRING':
-            return { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' };
-        case 'FOLLOWING':
-            return { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' };
-        case 'ACTIVITY_LIKE':
-            return { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20' };
-        case 'ACTIVITY_REPLY':
-        case 'ACTIVITY_MESSAGE':
-        case 'ACTIVITY_MENTION':
-            return { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' };
-        case 'MEDIA_DATA_CHANGE':
-        case 'RELATED_MEDIA_ADDITION':
-            return { bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' };
-        default:
-            return { bg: 'bg-white/5', text: 'text-white/50', border: 'border-white/10' };
-    }
-}
+// getNotificationTypeColor removed - using theme utility
 
 /**
  * Format the notification type for display
@@ -250,7 +230,7 @@ function Notifications() {
                             ))
                         }}
                         itemContent={(_index, notification) => {
-                            const typeColor = getNotificationTypeColor(notification.type);
+                            const typeColor = getNotificationBadgeStyle(notification.type, notification.media?.type || notification.media?.type);
                             const image = getNotificationImage(notification);
                             const hasRoute = getNotificationRoute(notification) !== null;
                             const hint = getNotificationHint(notification);
@@ -301,7 +281,7 @@ function Notifications() {
                                                             className="hover:underline cursor-pointer relative z-10"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                navigate(`/user/${notification.user.name}`);
+                                                                navigate(`/user/${notification.user?.name}`);
                                                             }}
                                                         >
                                                             {getNotificationTitle(notification)}

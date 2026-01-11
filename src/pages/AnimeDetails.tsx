@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAnimeData, Anime } from '../hooks/useAnimeData';
-import { updateMediaProgress, updateMediaStatus } from '../api/anilistClient';
+import { updateMediaProgress, updateMediaStatus, toggleFavourite } from '../api/anilistClient';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { useMalAuth } from '../context/MalAuthContext';
+import { useAuthContext } from '../context/AuthContext';
 import * as malClient from '../api/malClient';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
@@ -11,7 +12,8 @@ import { AnimeStats } from '../components/anime/AnimeStats';
 import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
 import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
 import { StatusDropdown } from '../components/ui/StatusDropdown';
-import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
+import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon, HeartIcon } from '../components/ui/Icons';
+import { motion } from 'framer-motion';
 
 // Status options for AniList
 const STATUS_OPTIONS = [
@@ -29,6 +31,13 @@ function AnimeDetails() {
     const navigate = useNavigate();
     const { getAnimeDetails } = useAnimeData();
     const { getMappingByAnilistId } = useFolderMappings();
+    const { isAuthenticated } = useAuthContext();
+
+    // Debug Auth State
+    useEffect(() => {
+        console.log('[AnimeDetails] Auth State:', isAuthenticated);
+    }, [isAuthenticated]);
+
     const malAuth = useMalAuth();
     const [anime, setAnime] = useState<Anime | null>(null);
     const [loading, setLoading] = useState(true);
@@ -36,6 +45,8 @@ function AnimeDetails() {
     const [updating, setUpdating] = useState(false);
     const [currentStatus, setCurrentStatus] = useState<string | null>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [favoriteUpdating, setFavoriteUpdating] = useState(false);
 
     // Check if this anime is linked to a local folder
     const folderMapping = anime ? getMappingByAnilistId(anime.id) : undefined;
@@ -48,6 +59,8 @@ function AnimeDetails() {
                 const data = await getAnimeDetails(parseInt(id!));
                 if (data) {
                     setAnime(data);
+                    // Set favorite status from API response
+                    setIsFavorite((data as any).isFavourite || false);
                     if (data.mediaListEntry) {
                         setProgress(data.mediaListEntry.progress);
                         setCurrentStatus(data.mediaListEntry.status);
@@ -120,6 +133,20 @@ function AnimeDetails() {
         }
     };
 
+    const handleFavoriteToggle = async () => {
+        if (!anime || favoriteUpdating || !isAuthenticated) return;
+
+        setFavoriteUpdating(true);
+        try {
+            await toggleFavourite(anime.id, undefined);
+            setIsFavorite(!isFavorite);
+        } catch (err) {
+            console.error('Failed to toggle favorite:', err);
+        } finally {
+            setFavoriteUpdating(false);
+        }
+    };
+
     if (loading) return <Loading />;
 
     if (!anime) return (
@@ -165,6 +192,42 @@ function AnimeDetails() {
                             {/* Glass Glint Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                         </div>
+
+                        {/* Favorite Heart Button */}
+                        {isAuthenticated && (
+                            <motion.button
+                                onClick={handleFavoriteToggle}
+                                disabled={favoriteUpdating}
+                                className="absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center z-50"
+                                style={{
+                                    background: isFavorite ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 0, 0, 0.6)',
+                                    backdropFilter: 'blur(8px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                                }}
+                                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                animate={{
+                                    scale: isFavorite ? 1 : 1, // Reset scale
+                                    backgroundColor: isFavorite ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 0, 0, 0.6)'
+                                }}
+                                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                            >
+                                <motion.div
+                                    key={isFavorite ? 'fav' : 'not-fav'}
+                                    initial={{ scale: 0.5 }} // Removed opacity: 0 to ensure visibility
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                >
+                                    <HeartIcon
+                                        size={20}
+                                        filled={isFavorite}
+                                        className={`${isFavorite ? 'text-white' : 'text-white/80'} ${favoriteUpdating ? 'animate-pulse' : ''}`}
+                                    />
+                                </motion.div>
+                            </motion.button>
+                        )}
                     </div>
 
                     {/* Right Column: Title, Status, Stats */}

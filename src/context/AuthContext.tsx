@@ -12,6 +12,7 @@ const ANILIST_CLIENT_SECRET = import.meta.env.VITE_ANILIST_CLIENT_SECRET || '';
 interface UserProfile {
     id: number;
     name: string;
+    about?: string;
     avatar: {
         large: string;
         medium: string;
@@ -19,7 +20,13 @@ interface UserProfile {
     bannerImage?: string;
     favorites?: any;
     options?: {
+        titleLanguage?: string;
+        staffNameLanguage?: string;
         displayAdultContent: boolean;
+        profileColor?: string;
+        timezone?: string;
+        activityMergeTime?: number;
+        airingNotifications?: boolean;
     };
     mediaListOptions?: {
         scoreFormat: string;
@@ -35,6 +42,7 @@ interface AuthContextType {
     logout: () => void;
     loginWithCode: (code: string) => Promise<void>;
     handleDeepLink: (url: string) => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -247,6 +255,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    /**
+     * Refreshes the current user data from AniList.
+     * Call this after updating profile settings.
+     */
+    const refreshUser = async () => {
+        try {
+            const result = await fetchCurrentUser();
+            if (result.data && (result.data as any).Viewer) {
+                const viewer = (result.data as any).Viewer;
+                setUser(viewer);
+                localStorage.setItem('user_profile', JSON.stringify(viewer));
+            }
+        } catch (err) {
+            console.error('Failed to refresh user:', err);
+        }
+    };
+
     // Determine if authenticated (really logged in)
     const isReallyAuthenticated = !!user;
 
@@ -258,7 +283,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         loginWithCode: exchangeCodeForToken,
-        handleDeepLink
+        handleDeepLink,
+        refreshUser
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

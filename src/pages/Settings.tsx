@@ -27,6 +27,7 @@ import { Dropdown } from '../components/ui/Dropdown';
 import './Settings.css';
 import TrackerConnections from '../components/settings/TrackerConnections';
 import ExtensionsSettings from '../components/settings/ExtensionsSettings';
+import { ProfileSettingsModal, ProfileSettingsButton } from '../components/settings/ProfileSettings';
 
 // ============================================================================
 // SETTINGS PAGE
@@ -288,6 +289,7 @@ function GeneralSettings() {
 function IntegrationsSettings() {
     const { settings, updateSetting } = useSettings();
     const { isAuthenticated, user, logout } = useAuthContext();
+    const [showProfileModal, setShowProfileModal] = useState(false);
 
     return (
         <div className="settings-section">
@@ -317,12 +319,19 @@ function IntegrationsSettings() {
                 </SettingRow>
 
                 {isAuthenticated && (
-                    <SettingRow label="Auto Sync" description="Automatically sync progress with AniList">
-                        <Toggle
-                            checked={settings.anilistAutoSync}
-                            onChange={(checked) => updateSetting('anilistAutoSync', checked)}
-                        />
-                    </SettingRow>
+                    <>
+                        {/* Profile Settings Button */}
+                        <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+                            <ProfileSettingsButton onClick={() => setShowProfileModal(true)} />
+                        </div>
+
+                        <SettingRow label="Auto Sync" description="Automatically sync progress with AniList">
+                            <Toggle
+                                checked={settings.anilistAutoSync}
+                                onChange={(checked) => updateSetting('anilistAutoSync', checked)}
+                            />
+                        </SettingRow>
+                    </>
                 )}
             </div>
 
@@ -339,6 +348,12 @@ function IntegrationsSettings() {
 
             </div>
             <TrackerConnections />
+
+            {/* Profile Settings Modal */}
+            <ProfileSettingsModal
+                isOpen={showProfileModal}
+                onClose={() => setShowProfileModal(false)}
+            />
         </div>
     );
 }
