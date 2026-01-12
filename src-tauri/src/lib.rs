@@ -674,6 +674,47 @@ async fn mal_get_manga_list(
     serde_json::to_string(&results).map_err(|e| format!("Serialization error: {}", e))
 }
 
+/// Open a new browser window with the given URL
+/// This creates a native WebView window that behaves like a real browser,
+/// bypassing iframe restrictions that block embedded content
+#[tauri::command]
+async fn open_browser_window(
+    app: tauri::AppHandle,
+    url: String,
+    title: String,
+) -> Result<String, String> {
+    use tauri::WebviewUrl;
+    use tauri::WebviewWindowBuilder;
+
+    println!("[Browser] Opening native window for: {}", url);
+
+    // Create a unique window label based on timestamp
+    let window_label = format!(
+        "browser_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+
+    // Create the webview window
+    let _window = WebviewWindowBuilder::new(
+        &app,
+        &window_label,
+        WebviewUrl::External(url.parse().map_err(|e| format!("Invalid URL: {}", e))?),
+    )
+    .title(&title)
+    .inner_size(1280.0, 800.0)
+    .center()
+    .resizable(true)
+    .build()
+    .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    println!("[Browser] Created window: {}", window_label);
+
+    Ok(format!("Opened {} in new window", title))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -736,7 +777,9 @@ pub fn run() {
             mal_update_anime_progress,
             mal_update_manga_progress,
             mal_get_anime_list,
-            mal_get_manga_list
+            mal_get_manga_list,
+            // Browser window command
+            open_browser_window
         ])
         .setup(|app| {
             // Register deep links at runtime for development mode (Windows/Linux)

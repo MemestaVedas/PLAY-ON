@@ -5,6 +5,7 @@
         {
             "id": "weebcentral",
             "name": "WeebCentral",
+            "type": "manga",
             "version": "1.0.1",
             "lang": "en",
             "nsfw": false,
@@ -14,6 +15,7 @@
         {
             "id": "mangadex",
             "name": "MangaDex",
+            "type": "manga",
             "version": "1.0.0",
             "lang": "en",
             "nsfw": false,
@@ -23,6 +25,7 @@
         {
             "id": "mangareader",
             "name": "MangaReader",
+            "type": "manga",
             "version": "1.0.0",
             "lang": "en",
             "nsfw": false,

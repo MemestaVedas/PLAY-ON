@@ -15,6 +15,8 @@ import Statistics from './pages/Statistics';
 import AnimeDetails from './pages/AnimeDetails';
 import MangaDetails from './pages/MangaDetails';
 import CounterDemo from './pages/CounterDemo';
+import AnimeWatch from './pages/AnimeWatch';
+import WebBrowser from './pages/WebBrowser';
 import MainLayout from './layouts/MainLayout';
 import { AuthProvider } from './context/AuthContext';
 import { LocalMediaProvider } from './context/LocalMediaContext';
@@ -174,6 +176,7 @@ import { apolloClient } from './lib/apollo';
 import { checkAndRefreshCache } from './lib/cacheRefresh';
 import SplashScreen from './components/ui/SplashScreen';
 import { ExtensionManager } from './services/ExtensionManager';
+import { AnimeExtensionManager } from './services/AnimeExtensionManager';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -187,13 +190,24 @@ function App() {
 
     // Initialize extension manager (loads installed extensions from storage)
     ExtensionManager.initialize().then(() => {
-      console.log('[App] Extension manager initialized');
-      console.log('[App] Sources available:', ExtensionManager.getAllSources().length);
+      console.log('[App] Manga extension manager initialized');
+      console.log('[App] Manga sources available:', ExtensionManager.getAllSources().length);
       ExtensionManager.getAllSources().forEach(s => {
         console.log(`[App]   - ${s.name} (${s.id})`);
       });
     }).catch(err => {
-      console.error('[App] Failed to initialize extensions:', err);
+      console.error('[App] Failed to initialize manga extensions:', err);
+    });
+
+    // Initialize anime extension manager
+    AnimeExtensionManager.initialize().then(() => {
+      console.log('[App] Anime extension manager initialized');
+      console.log('[App] Anime sources available:', AnimeExtensionManager.getAllSources().length);
+      AnimeExtensionManager.getAllSources().forEach(s => {
+        console.log(`[App]   - ${s.name} (${s.id})`);
+      });
+    }).catch(err => {
+      console.error('[App] Failed to initialize anime extensions:', err);
     });
 
     // Check if cache needs refresh (6 hour interval)
@@ -287,6 +301,13 @@ function App() {
                           <Route path="/manga-browse" element={<MangaBrowse />} />
                           <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
                         </Route>
+
+                        {/* Full-screen Anime Watch (outside MainLayout) */}
+                        <Route path="/watch/:sourceId/:episodeId" element={<AnimeWatch />} />
+
+                        {/* Full-screen Web Browser for Anime (outside MainLayout) */}
+                        <Route path="/anime-browse" element={<WebBrowser />} />
+                        <Route path="/browser" element={<WebBrowser />} />
                       </Routes>
                     </BrowserRouter>
                   </SearchBarProvider>
