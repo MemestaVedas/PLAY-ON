@@ -5,12 +5,12 @@ import RefreshButton from '../components/ui/RefreshButton';
 import Loading from '../components/ui/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
-import { USER_MEDIA_LIST_QUERY, USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY } from '../api/anilistClient';
+import { USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY, USER_STATUS_ANIME_COLLECTION_QUERY } from '../api/anilistClient';
 import { useMangaMappings } from '../hooks/useMangaMappings';
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { getMangaEntryByAnilistId, updateMangaCache } from '../lib/localMangaDb';
 import { ExtensionManager } from '../services/ExtensionManager';
-import { getStats, formatTime, UserStats } from '../services/StatsService';
+import { getStats, formatTime, getActivityStreak, UserStats } from '../services/StatsService';
 
 
 function Home() {
@@ -27,7 +27,7 @@ function Home() {
     }, []);
 
     // Fetch Anime Data with useQuery for instant cache access
-    const { data: userData, loading: userLoading, refetch: refetchUser } = useQuery(USER_MEDIA_LIST_QUERY, {
+    const { data: userData, loading: userLoading, refetch: refetchUser } = useQuery(USER_STATUS_ANIME_COLLECTION_QUERY, {
         variables: { userId: user?.id, status: 'CURRENT' },
         skip: !isAuthenticated || !user?.id,
         notifyOnNetworkStatusChange: true,
@@ -35,7 +35,7 @@ function Home() {
     });
 
     // Fetch PLANNING anime for Upcoming Episodes section
-    const { data: planningData } = useQuery(USER_MEDIA_LIST_QUERY, {
+    const { data: planningData } = useQuery(USER_STATUS_ANIME_COLLECTION_QUERY, {
         variables: { userId: user?.id, status: 'PLANNING' },
         skip: !isAuthenticated || !user?.id,
         fetchPolicy: 'cache-and-network'
@@ -59,8 +59,8 @@ function Home() {
 
     // Derived state from queries - include folder mapping for resume button
     const animeList = useMemo(() => {
-        if (isAuthenticated && userData?.Page?.mediaList) {
-            const updates = userData.Page.mediaList;
+        if (isAuthenticated && userData?.MediaListCollection?.lists) {
+            const updates = userData.MediaListCollection.lists.flatMap((l: any) => l.entries);
             return updates.map((item: any) => {
                 // Check if anime has a linked local folder
                 const folderMapping = folderMappings.find(m => m.anilistId === item.media.id);
@@ -117,7 +117,7 @@ function Home() {
         if (!isAuthenticated) return [];
 
         // Map planning anime same as current anime
-        const planningAnime = planningData?.Page?.mediaList?.map((item: any) => ({
+        const planningAnime = planningData?.MediaListCollection?.lists?.flatMap((l: any) => l.entries)?.map((item: any) => ({
             id: item.media.id,
             title: item.media.title,
             coverImage: item.media.coverImage,
@@ -393,8 +393,10 @@ function Home() {
                                     <div className="text-xl font-bold text-white leading-none">{stats?.anime.episodesWatched || 0}</div>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">
-                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-white/40">Sessions</div>
-                                    <div className="text-xl font-bold text-white leading-none">{stats?.anime.sessionsCount || 0}</div>
+                                    <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-white/40">Streak</div>
+                                    <div className="text-xl font-bold text-white leading-none">
+                                        {stats?.daily ? getActivityStreak(stats.daily) : 0} <span className="text-xs font-normal text-white/50">days</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -405,7 +407,7 @@ function Home() {
                                 <div className="p-3 rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-600/5 border border-rose-500/10 dark:from-rose-500/5 dark:to-pink-600/5 flex flex-col items-center justify-center text-center">
                                     <div className="text-[10px] font-mono uppercase tracking-wider mb-1 text-rose-500/80">Read Time</div>
                                     <div className="text-xl font-bold text-white leading-none">
-                                        {formatTime((stats?.manga.chaptersRead || 0) * 10).replace('h', 'h ')}
+                                        {formatTime(stats?.manga.totalMinutesRead || 0).replace('h', 'h ')}
                                     </div>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">

@@ -50,6 +50,39 @@ query ($userId: Int, $status: MediaListStatus) {
 }
 `;
 
+export const USER_STATUS_ANIME_COLLECTION_QUERY = gql`
+query ($userId: Int, $status: MediaListStatus) {
+  MediaListCollection(userId: $userId, type: ANIME, status: $status) {
+    lists {
+      name
+      entries {
+        id
+        progress
+        media {
+          id
+          title {
+            english
+            romaji
+          }
+          coverImage {
+            extraLarge
+            large
+          }
+          episodes
+          status
+          format
+          averageScore
+          nextAiringEpisode {
+            episode
+            timeUntilAiring
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
 export const USER_MANGA_LIST_QUERY = gql`
 query ($userId: Int, $status: MediaListStatus) {
   Page {

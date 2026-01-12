@@ -20,8 +20,6 @@ import {
     clearDiscordActivity,
     isMangaReading,
 } from '../services/discordRPC';
-import { trackAnimeSession } from '../services/StatsService';
-import { fetchAnimeDetails } from '../api/anilistClient';
 import { sendDesktopNotification } from '../services/notification';
 import { useNowPlaying } from '../context/NowPlayingContext';
 import { useFolderMappings } from './useFolderMappings';
@@ -104,9 +102,6 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
     const isWatchingRef = useRef<boolean>(false);
     const isInitializedRef = useRef<boolean>(false);
 
-    // Cache for genres by AniList ID (to avoid repeated API calls)
-    const genresCacheRef = useRef<Map<number, string[]>>(new Map());
-
     // Get manual session from context
     const { manualSession, clearManualSession } = useNowPlaying();
 
@@ -115,41 +110,6 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
 
     // Get user for avatar
     const { user } = useAuthContext();
-
-    // Helper function to track anime session with genres
-    const trackAnimeWithGenres = useCallback(async (
-        anilistId: number,
-        animeName: string,
-        coverImage: string | null,
-        episode: number | null
-    ) => {
-        try {
-            // Check cache first
-            let genres: string[] = genresCacheRef.current.get(anilistId) || [];
-
-            // If not cached, fetch from AniList
-            if (genres.length === 0) {
-                const result = await fetchAnimeDetails(anilistId);
-                genres = result?.data?.Media?.genres || [];
-                if (genres.length > 0) {
-                    genresCacheRef.current.set(anilistId, genres);
-                }
-            }
-
-            // Track the session with genres (estimate ~24 minutes per episode)
-            trackAnimeSession(
-                anilistId,
-                animeName,
-                coverImage || undefined,
-                24, // Average episode duration in minutes
-                genres
-            );
-            console.log('[useDiscordRPC] Tracked anime session:', animeName, 'Ep', episode, 'Genres:', genres);
-        } catch (err) {
-            // Silently fail - stats tracking should not break the main flow
-            console.error('[useDiscordRPC] Failed to track anime session:', err);
-        }
-    }, []);
 
     // Function to check for media and update Discord
     const checkAndUpdateActivity = useCallback(async () => {
@@ -233,14 +193,6 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                             smallImage: user?.avatar?.medium || null,
                             smallText: user?.name ? `Logged in as ${user.name}` : null,
                         });
-
-                        // Track stats for new episode
-                        trackAnimeWithGenres(
-                            manualSession.anilistId,
-                            manualSession.animeName,
-                            manualSession.coverImage || null,
-                            episode
-                        );
                     }
                     return; // Done, skip everything else
                 }
@@ -310,14 +262,6 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                         smallImage: user?.avatar?.medium || null,
                         smallText: user?.name ? `Logged in as ${user.name}` : null,
                     });
-
-                    // Track stats for new episode
-                    trackAnimeWithGenres(
-                        anilistId,
-                        newDetection.animeName,
-                        newDetection.coverImage,
-                        newDetection.episode
-                    );
                 }
                 return; // Successfully detected, don't fall through
             }
@@ -360,14 +304,6 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                         smallImage: user?.avatar?.medium || null,
                         smallText: user?.name ? `Logged in as ${user.name}` : null,
                     });
-
-                    // Track stats for new episode
-                    trackAnimeWithGenres(
-                        newDetection.anilistId,
-                        newDetection.animeName,
-                        newDetection.coverImage,
-                        newDetection.episode
-                    );
                 }
                 return;
             }
@@ -425,16 +361,6 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                         smallImage: user?.avatar?.medium || null,
                         smallText: user?.name ? `Logged in as ${user.name}` : null,
                     });
-
-                    // Track stats for new episode (only when truly different)
-                    if (isDifferentEpisode || isDifferentAnime) {
-                        trackAnimeWithGenres(
-                            newDetection.anilistId,
-                            newDetection.animeName,
-                            newDetection.coverImage,
-                            newDetection.episode
-                        );
-                    }
                 }
             } else {
                 // Not detecting anime right now
@@ -467,7 +393,7 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
             // On error, increment the counter but don't immediately switch
             notDetectedCountRef.current++;
         }
-    }, [manualSession, getMappingForFilePath, clearManualSession, privacyLevel, trackAnimeWithGenres, user]);
+    }, [manualSession, getMappingForFilePath, clearManualSession, privacyLevel, user]);
 
     useEffect(() => {
         if (!enabled) {
