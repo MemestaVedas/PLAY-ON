@@ -109,7 +109,7 @@ function Sidebar({ width: _width }: SidebarProps) {
             }}>
                 {/* Home - Top Level */}
                 <div style={{ marginBottom: '0.5rem' }}>
-                    {renderLink(homeItem)}
+                    {homeItem.map(renderLink)}
                 </div>
                 {/* Calendar - Below Home */}
                 <div style={{ marginBottom: '0.5rem' }}>
