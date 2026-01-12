@@ -4,6 +4,7 @@ import { updateProgress } from '../../lib/localAnimeDb';
 import { syncEntryToAniList } from '../../lib/syncService';
 import { useMalAuth } from '../../context/MalAuthContext';
 import * as malClient from '../../api/malClient';
+import { trackAnimeSession } from '../../services/StatsService';
 
 interface DetectionResult {
     status: 'detected' | 'not_media_player' | 'no_window';
@@ -151,6 +152,29 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
             setSyncStatus('error');
         }
     };
+
+    // Track detailed stats (minutes watched) locally
+    useEffect(() => {
+        if (!detection || detection.status !== 'detected' || !detection.parsed?.episode) return;
+
+        // Only track if we have a title
+        const title = detection.anilist_match?.title.english ||
+            detection.anilist_match?.title.romaji ||
+            detection.parsed.title ||
+            'Unknown Anime';
+
+        const interval = setInterval(() => {
+            trackAnimeSession(
+                detection.anilist_match?.id || 0, // 0 if no match, handled by service
+                title,
+                detection.anilist_match?.coverImage.medium,
+                1, // 1 minute
+                [] // Genres not easily available here without extra call, sending empty
+            );
+        }, 60 * 1000); // Every minute
+
+        return () => clearInterval(interval);
+    }, [detection]);
 
     useEffect(() => {
         const detectAnime = async () => {

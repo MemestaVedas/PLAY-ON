@@ -9,7 +9,7 @@
 import { useAuth } from '../../hooks/useAuth';
 import { useMemo } from 'react';
 import { useQuery } from '@apollo/client';
-import { USER_MEDIA_LIST_QUERY } from '../../api/anilistClient';
+import { USER_STATUS_ANIME_COLLECTION_QUERY } from '../../api/anilistClient';
 import { useNavigate } from 'react-router-dom';
 import './CurrentlyWatching.css';
 
@@ -17,15 +17,15 @@ function CurrentlyWatching() {
     const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
 
-    const { data, loading: listLoading } = useQuery(USER_MEDIA_LIST_QUERY, {
+    const { data, loading: listLoading } = useQuery(USER_STATUS_ANIME_COLLECTION_QUERY, {
         variables: { userId: user?.id, status: 'CURRENT' },
         skip: !user?.id,
         fetchPolicy: 'cache-first'
     });
 
     const animeList = useMemo(() => {
-        if (!data?.Page?.mediaList) return [];
-        return data.Page.mediaList;
+        if (!data?.MediaListCollection?.lists) return [];
+        return data.MediaListCollection.lists.flatMap((l: any) => l.entries);
     }, [data]);
 
     const handleIncrement = async (mediaId: number, currentProgress: number) => {
