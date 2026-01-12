@@ -239,6 +239,19 @@ function GeneralSettings() {
                         onChange={(value) => updateSetting('defaultPage', value as 'home' | 'anime-list' | 'manga-list')}
                     />
                 </SettingRow>
+
+                <SettingRow label="Default Search Mode" description="Initial search bar mode">
+                    <Dropdown
+                        value={settings.defaultSearchMode}
+                        options={[
+                            { value: 'anime', label: 'Anime' },
+                            { value: 'manga', label: 'Manga' },
+                        ]}
+                        onChange={(value) => updateSetting('defaultSearchMode', value as 'anime' | 'manga')}
+                    />
+                </SettingRow>
+
+
             </div>
 
             {/* Window Behavior Section */}

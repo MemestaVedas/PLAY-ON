@@ -131,7 +131,7 @@ export async function updateAnimeActivity(params: {
     smallImage?: string | null;
     smallText?: string | null;
 }): Promise<void> {
-    const { animeName, episode, season, anilistId, coverImage, totalEpisodes, privacyLevel = 'full', smallImage, smallText } = params;
+    const { animeName, episode, season, anilistId, coverImage, totalEpisodes, privacyLevel = 'full' } = params;
 
     // hidden: Do not update activity (effectively invisible)
     if (privacyLevel === 'hidden') {
@@ -209,14 +209,9 @@ export async function updateAnimeActivity(params: {
                 assets.setLargeText(animeName);
             }
 
-            // Use app icon as small image (must be uploaded to Discord Developer Portal)
-            if (smallImage) {
-                assets.setSmallImage(smallImage);
-                if (smallText) assets.setSmallText(smallText);
-            } else {
-                assets.setSmallImage(APP_ICON_ASSET);
-                assets.setSmallText('PLAY-ON!');
-            }
+            // User requested to remove small PFP/icon when tracking content
+            // assets.setSmallImage(APP_ICON_ASSET); 
+            // assets.setSmallText('PLAY-ON!');
 
             activity = activity.setAssets(assets);
 
@@ -336,7 +331,7 @@ export async function updateMangaActivity(params: {
     smallImage?: string | null;
     smallText?: string | null;
 }): Promise<void> {
-    const { mangaTitle, chapter, anilistId, coverImage, totalChapters, privacyLevel = 'full', smallImage, smallText } = params;
+    const { mangaTitle, chapter, anilistId, coverImage, totalChapters, privacyLevel = 'full' } = params;
 
     if (privacyLevel === 'hidden') return;
 
@@ -389,13 +384,9 @@ export async function updateMangaActivity(params: {
                 assets.setLargeImage(APP_ICON_ASSET);
                 assets.setLargeText(mangaTitle);
             }
-            if (smallImage) {
-                assets.setSmallImage(smallImage);
-                if (smallText) assets.setSmallText(smallText);
-            } else {
-                assets.setSmallImage(APP_ICON_ASSET);
-                assets.setSmallText('PLAY-ON!');
-            }
+            // User requested to remove small PFP/icon when tracking content
+            // assets.setSmallImage(APP_ICON_ASSET);
+            // assets.setSmallText('PLAY-ON!');
             activity = activity.setAssets(assets);
 
             if (anilistId) {

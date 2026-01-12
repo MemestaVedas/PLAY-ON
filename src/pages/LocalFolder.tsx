@@ -500,9 +500,7 @@ function LocalFolder() {
                                     <span
                                         className="ml-3 shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full border border-[var(--color-mint-tonic)] text-[var(--color-mint-tonic)] relative z-10"
                                         style={{
-                                            boxShadow: '0 0 10px var(--color-mint-tonic), inset 0 0 5px rgba(0,0,0,0.2)',
-                                            textShadow: '0 0 5px var(--color-mint-tonic)',
-                                            backgroundColor: 'rgba(0,0,0,0.4)'
+                                            backgroundColor: 'rgba(0,0,0,0.6)'
                                         }}
                                     >
                                         {isMangaFile(file.name) ? 'READ' : 'WATCHED'}

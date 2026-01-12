@@ -265,6 +265,49 @@ query ($search: String, $page: Int, $perPage: Int) {
 }
 `;
 
+// Seasonal Anime Query for Calendar View
+export const SEASONAL_ANIME_QUERY = gql`
+query ($season: MediaSeason, $seasonYear: Int, $page: Int, $perPage: Int, $sort: [MediaSort]) {
+  Page (page: $page, perPage: $perPage) {
+    pageInfo {
+      total
+      currentPage
+      lastPage
+      hasNextPage
+      perPage
+    }
+    media (season: $season, seasonYear: $seasonYear, type: ANIME, sort: $sort, isAdult: false) {
+      id
+      title {
+        english
+        romaji
+      }
+      coverImage {
+        extraLarge
+        large
+        medium
+      }
+      bannerImage
+      episodes
+      status
+      format
+      averageScore
+      popularity
+      genres
+      studios(isMain: true) {
+        nodes {
+          name
+        }
+      }
+      nextAiringEpisode {
+        episode
+        timeUntilAiring
+      }
+    }
+  }
+}
+`;
+
 // ============================================================================
 // MANGA QUERIES
 // ============================================================================

@@ -6,7 +6,8 @@
  * - Set the search mode (anime/manga)
  */
 
-import React, { createContext, useContext, useRef, useCallback, useState } from 'react';
+import React, { createContext, useContext, useRef, useCallback, useState, useEffect } from 'react';
+import { useSettings } from './SettingsContext';
 
 export type SearchMode = 'anime' | 'manga';
 
@@ -20,8 +21,14 @@ interface SearchBarContextType {
 const SearchBarContext = createContext<SearchBarContextType | undefined>(undefined);
 
 export function SearchBarProvider({ children }: { children: React.ReactNode }) {
+    const { settings } = useSettings();
     const inputRef = useRef<HTMLInputElement>(null);
-    const [searchMode, setSearchMode] = useState<SearchMode>('anime');
+    const [searchMode, setSearchMode] = useState<SearchMode>(settings.defaultSearchMode);
+
+    // Update search mode when setting changes
+    useEffect(() => {
+        setSearchMode(settings.defaultSearchMode);
+    }, [settings.defaultSearchMode]);
 
     const focusSearch = useCallback((mode?: SearchMode) => {
         if (mode) {
@@ -33,8 +40,15 @@ export function SearchBarProvider({ children }: { children: React.ReactNode }) {
         }, 50);
     }, []);
 
+    const value = React.useMemo(() => ({
+        inputRef,
+        searchMode,
+        setSearchMode,
+        focusSearch
+    }), [inputRef, searchMode, setSearchMode, focusSearch]);
+
     return (
-        <SearchBarContext.Provider value={{ inputRef, searchMode, setSearchMode, focusSearch }}>
+        <SearchBarContext.Provider value={value}>
             {children}
         </SearchBarContext.Provider>
     );

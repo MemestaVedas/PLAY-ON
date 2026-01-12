@@ -5,7 +5,7 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { HistoryIcon, HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, FilmIcon, PlayIcon, ChartIcon, BellIcon } from '../ui/Icons';
+import { HistoryIcon, HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, FilmIcon, PlayIcon, ChartIcon, BellIcon, CalendarIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
 import { useAniListNotifications } from '../../hooks/useAniListNotifications';
 
@@ -38,6 +38,7 @@ function Sidebar({ width: _width }: SidebarProps) {
         { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> },
         { label: 'Statistics', path: '/statistics', icon: <ChartIcon size={20} /> },];
 
+    const calendarItem: SidebarNavItem = { label: 'Calendar', path: '/calendar', icon: <CalendarIcon size={20} /> };
 
     const animeSection: SidebarNavItem[] = [
         { label: 'Anime List', path: '/anime-list', icon: <FilmIcon size={20} /> },
@@ -108,7 +109,11 @@ function Sidebar({ width: _width }: SidebarProps) {
             }}>
                 {/* Home - Top Level */}
                 <div style={{ marginBottom: '0.5rem' }}>
-                    {homeItem.map(renderLink)}
+                    {renderLink(homeItem)}
+                </div>
+                {/* Calendar - Below Home */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    {renderLink(calendarItem)}
                 </div>
 
                 {/* Anime Section */}
