@@ -348,6 +348,43 @@
     transform: translateX(4px);
 }
 
+/* Watched episode indicator */
+.episode-item.watched {
+    opacity: 0.5;
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.episode-item.watched:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateX(4px);
+}
+
+.episode-item.watched .episode-number {
+    color: rgba(255, 255, 255, 0.4);
+    /* text-decoration: line-through; Optional */
+}
+
+.episode-item.watched .episode-title {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.episode-watched-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: rgba(134, 239, 172, 0.1);
+    border-radius: 50%;
+    color: #86EFAC;
+    font-size: 0.7rem;
+    opacity: 0.8;
+    margin-left: auto;
+}
+
 .episode-thumb {
     width: 100px;
     height: 56px;

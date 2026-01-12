@@ -7,10 +7,8 @@ import SearchBar from '../components/ui/SearchBar';
 import Breadcrumbs from '../components/ui/Breadcrumbs';
 
 import FloatingNowPlaying from '../components/ui/FloatingNowPlaying';
-import { useDiscordRPC } from '../hooks/useDiscordRPC';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useSearchBar } from '../context/SearchBarContext';
-import { useSettings } from '../context/SettingsContext';
 
 /**
  * MainLayout Component
@@ -20,12 +18,6 @@ import { useSettings } from '../context/SettingsContext';
 function MainLayout() {
     const [sidebarWidth, setSidebarWidth] = useState(200);
     const [isResizing, setIsResizing] = useState(false);
-
-    // Get Discord settings
-    const { settings } = useSettings();
-
-    // Discord Rich Presence - now respects user settings
-    useDiscordRPC(settings.discordRpcEnabled, settings.discordPrivacyLevel);
 
     // Keyboard Shortcuts
     const { focusSearch } = useSearchBar();

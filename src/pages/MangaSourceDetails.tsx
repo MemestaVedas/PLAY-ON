@@ -41,6 +41,7 @@ import { queueChapterDownload, queueMultipleChapters, onDownloadProgress, isDown
 import { Dropdown } from '../components/ui/Dropdown';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import { DownloadFolderDialog } from '../components/ui/DownloadFolderDialog';
+import { PlayIcon } from '../components/ui/Icons';
 import './MangaSourceDetails.css';
 
 function MangaSourceDetails() {
@@ -62,9 +63,8 @@ function MangaSourceDetails() {
 
     // Sorting and filtering state
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(settings.defaultChapterSort);
-    const [readFilter, setReadFilter] = useState<'all' | 'read' | 'unread'>('all');
+    const [filter, setFilter] = useState<string[]>([]);
     const [bookmarkFilter, setBookmarkFilter] = useState(false);
-    const [downloadFilter, setDownloadFilter] = useState<'all' | 'downloaded' | 'not-downloaded'>('all');
     // Track downloading chapters: chapterId -> boolean
     const [downloadingChapters, setDownloadingChapters] = useState<Record<string, boolean>>({});
     // Show download folder configuration dialog
@@ -222,25 +222,34 @@ function MangaSourceDetails() {
             );
         }
 
-        // Apply read/unread filter
-        if (readFilter !== 'all' && localEntry) {
-            result = result.filter((ch) => {
-                const isRead = ch.number <= localEntry.chapter;
-                return readFilter === 'read' ? isRead : !isRead;
-            });
-        }
-
-        // Apply bookmark filter
-        if (bookmarkFilter && entryId) {
-            result = result.filter((ch) => isChapterBookmarked(entryId, ch.id));
-        }
-
-        // Apply download filter
-        if (downloadFilter !== 'all' && entryId) {
-            result = result.filter((ch) => {
-                const downloaded = isChapterDownloaded(entryId, ch.id);
-                return downloadFilter === 'downloaded' ? downloaded : !downloaded;
-            });
+        // Apply main filter (Read/Unread/Downloaded/Not-Downloaded)
+        if (filter.length > 0) {
+            if (filter.includes('read')) {
+                if (localEntry) {
+                    result = result.filter(ch => ch.number <= localEntry.chapter);
+                } else {
+                    result = []; // Can't be read if no local entry
+                }
+            }
+            if (filter.includes('unread')) {
+                if (localEntry) {
+                    result = result.filter(ch => ch.number > localEntry.chapter);
+                }
+                // If no local entry, all are unread, so no filtering needed
+            }
+            if (filter.includes('downloaded')) {
+                if (entryId) {
+                    result = result.filter(ch => isChapterDownloaded(entryId, ch.id));
+                } else {
+                    result = [];
+                }
+            }
+            if (filter.includes('not-downloaded')) {
+                if (entryId) {
+                    result = result.filter(ch => !isChapterDownloaded(entryId, ch.id));
+                }
+                // If no entryId, none are downloaded, so all are not-downloaded
+            }
         }
 
         // Apply sorting
@@ -249,7 +258,7 @@ function MangaSourceDetails() {
         });
 
         return result;
-    }, [chapters, searchQuery, sortOrder, readFilter, bookmarkFilter, downloadFilter, localEntry, sourceId, mangaId, refreshTrigger]);
+    }, [chapters, searchQuery, sortOrder, filter, bookmarkFilter, localEntry, sourceId, mangaId, refreshTrigger]);
 
     const handleChapterClick = (chapter: Chapter) => {
         navigate(
@@ -433,11 +442,15 @@ function MangaSourceDetails() {
                                         <img
                                             src={anilistMapping.coverImage}
                                             alt={anilistMapping.anilistTitle}
-                                            className="w-10 h-14 object-cover rounded-lg"
+                                            className="w-10 h-14 object-cover rounded-lg cursor-pointer"
                                             style={{ width: '40px', height: '56px' }}
+                                            onClick={() => navigate(`/manga-details/${anilistMapping.anilistId}`)}
                                         />
                                     )}
-                                    <div className="flex flex-col">
+                                    <div
+                                        className="flex flex-col cursor-pointer"
+                                        onClick={() => navigate(`/manga-details/${anilistMapping.anilistId}`)}
+                                    >
                                         <span
                                             className="text-xs text-white/40 uppercase tracking-wider"
                                             style={{ fontFamily: 'var(--font-mono)' }}
@@ -488,33 +501,35 @@ function MangaSourceDetails() {
                         <div className="action-buttons">
                             {localEntry && localEntry.chapter > 0 ? (
                                 <button className="primary-btn" onClick={handleContinueReading}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                                    </svg>
+                                    <PlayIcon size={20} fill="currentColor" />
                                     Continue Ch {localEntry.chapter + 1}
                                 </button>
                             ) : (
                                 <button className="primary-btn" onClick={handleReadFirst}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-                                    </svg>
+                                    <PlayIcon size={20} fill="currentColor" />
                                     Start Reading
                                 </button>
                             )}
-                            <button className="secondary-btn" onClick={handleReadLatest}>
-                                Latest Chapter
-                            </button>
+
 
                             <button
                                 className={`secondary-btn ${inLibrary ? 'library-active' : ''}`}
                                 onClick={handleToggleLibrary}
                                 title={inLibrary ? "Remove from Library" : "Add to Library"}
-                                style={inLibrary ? { borderColor: 'var(--color-zen-accent)', color: 'var(--color-zen-accent)', background: 'rgba(180, 162, 246, 0.1)' } : {}}
+                                style={inLibrary ? {
+                                    borderColor: 'var(--color-zen-accent)',
+                                    color: 'var(--color-zen-accent)',
+                                    background: 'rgba(180, 162, 246, 0.1)',
+                                    padding: '0.75rem',
+                                    aspectRatio: '1',
+                                    display: 'flex',
+                                    justifyContent: 'center'
+                                } : {}}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={inLibrary ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                                 </svg>
-                                {inLibrary ? "Saved" : "Save"}
+                                {!inLibrary && "Save"}
                             </button>
                         </div>
                     </div>
@@ -534,6 +549,25 @@ function MangaSourceDetails() {
                 <div className="chapters-header">
                     <h2>Chapters ({chapters.length})</h2>
                     <div className="chapter-controls">
+                        {/* Search Box */}
+                        <div className="chapter-search" style={{ marginRight: 'auto' }}>
+                            <input
+                                type="text"
+                                placeholder="Search chapters..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '8px',
+                                    padding: '6px 12px',
+                                    color: 'white',
+                                    fontSize: '0.9rem',
+                                    minWidth: '200px',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
                         {/* Sort Toggle */}
                         <button
                             className="control-btn"
@@ -549,16 +583,19 @@ function MangaSourceDetails() {
                             </svg>
                         </button>
 
-                        {/* Read Filter */}
+                        {/* Main Filter */}
                         <Dropdown
-                            value={readFilter}
-                            onChange={(val) => setReadFilter(val as 'all' | 'read' | 'unread')}
+                            multiple
+                            value={filter}
+                            onChange={(val) => setFilter(val)}
+                            placeholder="Filters"
                             options={[
-                                { value: 'all', label: 'All' },
                                 { value: 'read', label: 'Read' },
-                                { value: 'unread', label: 'Unread' }
+                                { value: 'unread', label: 'Unread' },
+                                { value: 'downloaded', label: 'Downloaded' },
+                                { value: 'not-downloaded', label: 'Not Downloaded' }
                             ]}
-                            className="w-32"
+                            className="w-40"
                         />
 
                         {/* Bookmark Filter Toggle */}
@@ -572,18 +609,6 @@ function MangaSourceDetails() {
                             </svg>
                         </button>
 
-                        {/* Download Filter */}
-                        <Dropdown
-                            value={downloadFilter}
-                            onChange={(val) => setDownloadFilter(val as 'all' | 'downloaded' | 'not-downloaded')}
-                            options={[
-                                { value: 'all', label: 'All DL' },
-                                { value: 'downloaded', label: 'Downloaded' },
-                                { value: 'not-downloaded', label: 'Not Downloaded' }
-                            ]}
-                            className="w-40"
-                        />
-
                         {/* Search */}
                         <div className="chapter-search">
                             <input
@@ -594,99 +619,7 @@ function MangaSourceDetails() {
                             />
                         </div>
 
-                        {/* Bulk Download Button */}
-                        <div className="bulk-download-dropdown">
-                            <Dropdown
-                                value=""
-                                placeholder="⬇ Download"
-                                options={[
-                                    { value: 'all', label: 'All Chapters' },
-                                    { value: 'unread', label: 'Unread Only' },
-                                ]}
-                                onChange={(value) => {
-                                    if (!value || !sourceId || !mangaId || !manga) return;
 
-                                    // Check if download folder is configured
-                                    if (!isDownloadFolderConfigured()) {
-                                        // Store the action to execute after folder is configured
-                                        setPendingDownloadAction(() => () => {
-                                            // Re-trigger the same download action
-                                            const entryId = localEntry?.id || `${sourceId}:${mangaId}`;
-                                            let chaptersToDownload = chapters;
-
-                                            if (value === 'unread') {
-                                                chaptersToDownload = chapters.filter(ch =>
-                                                    !(localEntry && ch.number <= localEntry.chapter)
-                                                );
-                                            }
-
-                                            chaptersToDownload = chaptersToDownload.filter(ch =>
-                                                !isChapterDownloaded(entryId, ch.id)
-                                            );
-
-                                            if (chaptersToDownload.length === 0) return;
-
-                                            const sorted = [...chaptersToDownload].sort((a, b) => a.number - b.number);
-                                            const downloadingMap: Record<string, boolean> = {};
-                                            sorted.forEach(ch => { downloadingMap[ch.id] = true; });
-                                            setDownloadingChapters(prev => ({ ...prev, ...downloadingMap }));
-
-                                            const tasks = sorted.map(ch => ({
-                                                sourceId: sourceId!,
-                                                mangaId: mangaId!,
-                                                mangaTitle: manga.title,
-                                                chapterId: ch.id,
-                                                chapterNumber: ch.number,
-                                                entryId,
-                                            }));
-
-                                            queueMultipleChapters(tasks);
-                                            sendNotification({ title: 'Download Started', body: `Queued ${tasks.length} chapters` });
-                                        });
-                                        setShowDownloadFolderDialog(true);
-                                        return;
-                                    }
-
-                                    const entryId = localEntry?.id || `${sourceId}:${mangaId}`;
-                                    let chaptersToDownload = chapters;
-
-                                    if (value === 'unread') {
-                                        chaptersToDownload = chapters.filter(ch =>
-                                            !(localEntry && ch.number <= localEntry.chapter)
-                                        );
-                                    }
-
-                                    chaptersToDownload = chaptersToDownload.filter(ch =>
-                                        !isChapterDownloaded(entryId, ch.id)
-                                    );
-
-                                    if (chaptersToDownload.length === 0) {
-                                        sendNotification({ title: 'Download', body: 'No chapters to download' });
-                                        return;
-                                    }
-
-                                    const sorted = [...chaptersToDownload].sort((a, b) => a.number - b.number);
-
-                                    // Mark all as downloading (optimistic)
-                                    const downloadingMap: Record<string, boolean> = {};
-                                    sorted.forEach(ch => { downloadingMap[ch.id] = true; });
-                                    setDownloadingChapters(prev => ({ ...prev, ...downloadingMap }));
-
-                                    const tasks = sorted.map(ch => ({
-                                        sourceId: sourceId!,
-                                        mangaId: mangaId!,
-                                        mangaTitle: manga.title,
-                                        chapterId: ch.id,
-                                        chapterNumber: ch.number,
-                                        entryId,
-                                    }));
-
-                                    queueMultipleChapters(tasks);
-                                    sendNotification({ title: 'Download Started', body: `Queued ${tasks.length} chapters` });
-                                }}
-                                className="w-40"
-                            />
-                        </div>
                     </div>
                 </div>
 

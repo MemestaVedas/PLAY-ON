@@ -35,6 +35,7 @@ function AnimeSourceDetails() {
     const [episodes, setEpisodes] = useState<Episode[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     // Library state
@@ -94,13 +95,23 @@ function AnimeSourceDetails() {
         loadData();
     }, [source, animeId]);
 
-    // Sort episodes
+    // Filter and Sort episodes
     const sortedEpisodes = useMemo(() => {
-        const sorted = [...episodes].sort((a, b) => {
+        let result = [...episodes];
+
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            result = result.filter(ep =>
+                ep.number.toString().includes(query) ||
+                (ep.title && ep.title.toLowerCase().includes(query))
+            );
+        }
+
+        const sorted = result.sort((a, b) => {
             return sortOrder === 'asc' ? a.number - b.number : b.number - a.number;
         });
         return sorted;
-    }, [episodes, sortOrder]);
+    }, [episodes, sortOrder, searchQuery]);
 
     const handleEpisodeClick = (episode: Episode) => {
         if (sourceId && anime) {
@@ -108,10 +119,23 @@ function AnimeSourceDetails() {
         }
     };
 
-    const handlePlayFirst = () => {
+    const handleResume = () => {
         if (episodes.length > 0) {
-            const firstEp = [...episodes].sort((a, b) => a.number - b.number)[0];
-            handleEpisodeClick(firstEp);
+            const sorted = [...episodes].sort((a, b) => a.number - b.number);
+
+            // If we have progress, try to find the next episode
+            if (localEntry && localEntry.episode > 0) {
+                const nextEpNumber = localEntry.episode + 1;
+                const nextEp = sorted.find(ep => ep.number === nextEpNumber);
+
+                if (nextEp) {
+                    handleEpisodeClick(nextEp);
+                    return;
+                }
+            }
+
+            // Fallback to the first episode if no progress or next episode not found
+            handleEpisodeClick(sorted[0]);
         }
     };
 
@@ -297,10 +321,15 @@ function AnimeSourceDetails() {
                                         <img
                                             src={localEntry.coverImage}
                                             alt={localEntry.title}
-                                            style={{ width: '40px', height: '56px', objectFit: 'cover', borderRadius: '4px' }}
+                                            style={{ width: '40px', height: '56px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }}
+                                            onClick={() => navigate(`/anime/${localEntry.anilistId}`)}
                                         />
                                     )}
-                                    <div className="tracking-info">
+                                    <div
+                                        className="tracking-info clickable"
+                                        onClick={() => navigate(`/anime/${localEntry.anilistId}`)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
                                         <span className="tracking-label">Linked to AniList</span>
                                         <span className="tracking-title">{localEntry.title}</span>
                                         {localEntry.episode > 0 && (
@@ -327,7 +356,7 @@ function AnimeSourceDetails() {
                         </div>
 
                         <div className="action-buttons">
-                            <button className="primary-btn" onClick={handlePlayFirst}>
+                            <button className="primary-btn" onClick={handleResume}>
                                 <PlayIcon size={20} fill="currentColor" />
                                 {localEntry && localEntry.episode > 0 ? `Continue Ep ${localEntry.episode + 1}` : "Start Watching"}
                             </button>
@@ -345,7 +374,11 @@ function AnimeSourceDetails() {
                                     aspectRatio: '1',
                                     display: 'flex',
                                     justifyContent: 'center'
-                                } : {}}
+                                } : {
+                                    width: 'auto',
+                                    padding: '0 1.25rem',
+                                    gap: '0.5rem'
+                                }}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={inLibrary ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
@@ -358,18 +391,32 @@ function AnimeSourceDetails() {
             </div>
 
             {/* Description */}
-            {anime.description && (
-                <div className="description-section">
-                    <h2>Synopsis</h2>
-                    <p>{anime.description}</p>
-                </div>
-            )}
+            {/* Description Removed as per request */}
 
             {/* Episodes Section */}
             <div className="episodes-section">
                 <div className="episodes-header">
                     <h2>Episodes ({episodes.length})</h2>
                     <div className="episode-controls">
+                        {/* Search Box */}
+                        <div className="chapter-search" style={{ marginRight: '10px' }}>
+                            <input
+                                type="text"
+                                placeholder="Search episodes..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '8px',
+                                    padding: '6px 12px',
+                                    color: 'white',
+                                    fontSize: '0.9rem',
+                                    width: '200px',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
                         <button
                             className="control-btn"
                             onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
@@ -390,35 +437,39 @@ function AnimeSourceDetails() {
                     {sortedEpisodes.length === 0 ? (
                         <div className="no-episodes">No episodes found</div>
                     ) : (
-                        sortedEpisodes.map((episode) => (
-                            <div
-                                key={episode.id}
-                                className="episode-item"
-                                onClick={() => handleEpisodeClick(episode)}
-                            >
-                                {episode.image && (
-                                    <img
-                                        src={episode.image}
-                                        alt={`Episode ${episode.number}`}
-                                        className="episode-thumb"
-                                    />
-                                )}
-                                <div className="episode-info">
-                                    <span className="episode-number">
-                                        Episode {episode.number}
-                                    </span>
-                                    {episode.title && (
-                                        <span className="episode-title">{episode.title}</span>
+                        sortedEpisodes.map((episode) => {
+                            const isWatched = localEntry && episode.number <= localEntry.episode;
+
+                            return (
+                                <div
+                                    key={episode.id}
+                                    className={`episode-item ${isWatched ? 'watched' : ''}`}
+                                    onClick={() => handleEpisodeClick(episode)}
+                                >
+                                    {episode.image && (
+                                        <img
+                                            src={episode.image}
+                                            alt={`Episode ${episode.number}`}
+                                            className="episode-thumb"
+                                        />
                                     )}
-                                    {episode.isFiller && (
-                                        <span className="filler-badge">Filler</span>
-                                    )}
+                                    <div className="episode-info">
+                                        <span className="episode-number">
+                                            Episode {episode.number}
+                                        </span>
+                                        {episode.title && (
+                                            <span className="episode-title">{episode.title}</span>
+                                        )}
+                                        {episode.isFiller && (
+                                            <span className="filler-badge">Filler</span>
+                                        )}
+                                    </div>
+                                    <div className="play-icon">
+                                        <PlayIcon size={20} fill="currentColor" />
+                                    </div>
                                 </div>
-                                <div className="play-icon">
-                                    <PlayIcon size={20} fill="currentColor" />
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>

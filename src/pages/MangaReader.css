@@ -66,8 +66,8 @@
     left: 0;
     right: 0;
     display: flex;
+    justify-content: center;
     align-items: center;
-    justify-content: space-between;
     padding: 1rem 1.5rem;
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.95), transparent);
     z-index: 100;
@@ -123,12 +123,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     color: white;
     cursor: pointer;
     transition: all 0.2s;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .control-btn:hover {
@@ -160,18 +162,23 @@
     pointer-events: auto;
 }
 
-.back-btn {
-    width: 44px;
-    height: 44px;
+.manga-reader .reader-controls-top .back-btn {
+    position: absolute;
+    left: 1.5rem;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
     color: white;
     cursor: pointer;
     transition: all 0.2s;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 10;
 }
 
 .back-btn:hover {
@@ -184,6 +191,9 @@
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
+    z-index: 1;
+    pointer-events: none;
+    /* Let clicks pass through if empty space, but text selects might be affected */
 }
 
 .manga-title {
@@ -192,10 +202,12 @@
     color: white;
     margin: 0;
     font-family: var(--font-rounded);
-    max-width: 400px;
+    max-width: 60vw;
+    /* Limit width to avoid hitting side controls */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
 }
 
 .chapter-number {
@@ -204,19 +216,24 @@
 }
 
 .reader-settings {
+    position: absolute;
+    right: 1.5rem;
     display: flex;
     gap: 0.75rem;
+    z-index: 2;
 }
 
 .mode-select {
     padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     color: white;
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .mode-select:hover {
@@ -375,14 +392,16 @@
 
 .chapter-nav-btn {
     padding: 0.6rem 1.25rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     color: white;
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 .chapter-nav-btn:hover:not(:disabled) {
@@ -400,10 +419,12 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.4);
     border-radius: 20px;
     font-size: 0.9rem;
     font-weight: 600;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: white;
 }
 

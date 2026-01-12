@@ -8,7 +8,8 @@ import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import { Dropdown } from '../components/ui/Dropdown'; // Import Dropdown
 import { useFolderMappings } from '../hooks/useFolderMappings';
 import { useAnimeData } from '../hooks/useAnimeData';
-import { useLocalMedia } from '../context/LocalMediaContext'; // Import context
+import { useLocalMedia } from '../context/LocalMediaContext';
+import { useNowPlaying } from '../context/NowPlayingContext';
 import { addMangaToLibrary } from '../lib/localMangaDb';
 import {
     FilmIcon,
@@ -172,6 +173,9 @@ function LocalFolder() {
     // Anime Data hook
     const { getAnimeDetails, getMangaDetails } = useAnimeData();
 
+    // Now Playing context for manual session tracking (Discord RPC)
+    const { startManualSession } = useNowPlaying();
+
     // Decode the path from URL
     const currentPath = folderPath ? decodeURIComponent(folderPath) : '';
     const folderName = currentPath.split(/[\\/]/).pop() || '';
@@ -248,6 +252,18 @@ function LocalFolder() {
         } else {
             // Open file in default application
             try {
+                // If it's a video and we have a mapping, start a manual session for RPC
+                if (isVideoFile(item.name) && currentMapping) {
+                    const episode = parseEpisode(item.name);
+                    startManualSession({
+                        anilistId: currentMapping.anilistId,
+                        animeName: currentMapping.animeName,
+                        coverImage: currentMapping.coverImage,
+                        episode: episode || watchedProgress || 0,
+                        filePath: item.path
+                    });
+                }
+
                 await openPath(item.path);
             } catch (err) {
                 console.error("Failed to open file:", err);
@@ -303,6 +319,17 @@ function LocalFolder() {
             if (isMangaFile(nextMediaFile.name)) {
                 navigate(`/read-local?path=${encodeURIComponent(nextMediaFile.path)}`);
             } else {
+                // If it's a video, start a manual session for RPC
+                if (isVideoFile(nextMediaFile.name)) {
+                    startManualSession({
+                        anilistId: currentMapping.anilistId,
+                        animeName: currentMapping.animeName,
+                        coverImage: currentMapping.coverImage,
+                        episode: nextMediaNumber,
+                        filePath: nextMediaFile.path
+                    });
+                }
+
                 await openPath(nextMediaFile.path);
             }
         } catch (err) {

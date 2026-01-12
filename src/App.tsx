@@ -181,6 +181,13 @@ import { checkAndRefreshCache } from './lib/cacheRefresh';
 import SplashScreen from './components/ui/SplashScreen';
 import { ExtensionManager } from './services/ExtensionManager';
 import { AnimeExtensionManager } from './services/AnimeExtensionManager';
+import { useDiscordRPC } from './hooks/useDiscordRPC';
+
+function GlobalHooks() {
+  const { settings } = useSettings();
+  useDiscordRPC(settings.discordRpcEnabled, settings.discordPrivacyLevel);
+  return null;
+}
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -264,6 +271,7 @@ function App() {
               <LocalMediaProvider>
                 <NowPlayingProvider>
                   <SearchBarProvider>
+                    <GlobalHooks />
                     <BrowserRouter>
                       <Routes>
                         {/* Root route - checks if onboarding needed */}

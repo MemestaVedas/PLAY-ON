@@ -16,7 +16,10 @@ const REPOS_STORAGE_KEY = 'anime-extension-repos';
 
 // Default repository - using the local public folder for now or a placeholder
 // Default repository - automatically added on first launch
-const DEFAULT_REPO_URL = 'http://localhost:1420/anime-extensions';
+// Default repository - automatically added on first launch
+const DEFAULT_REPO_URL = import.meta.env.PROD
+    ? 'https://PLAY-ON-EXTENSIONS.pages.dev/anime-extensions' // TODO: Replace with your actual production URL
+    : 'http://localhost:1420/anime-extensions';
 // Note: localhost URL is for dev mode. In prod, this should be a remote URL.
 
 interface AnimeRepositoryIndex {

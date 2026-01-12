@@ -108,6 +108,10 @@ interface StreamPlayerProps {
     title?: string;
     onProgress?: (progress: number, currentTime: number, duration: number) => void;
     onEnded?: () => void;
+    onNext?: () => void;
+    hasNextEpisode?: boolean;
+    onPrev?: () => void;
+    hasPrevEpisode?: boolean;
     startTime?: number;
     headers?: Record<string, string>;
 }
@@ -126,6 +130,10 @@ export default function StreamPlayer({
     title,
     onProgress,
     onEnded,
+    onNext,
+    hasNextEpisode,
+    onPrev,
+    hasPrevEpisode,
     startTime = 0,
     headers,
 }: StreamPlayerProps) {
@@ -137,8 +145,16 @@ export default function StreamPlayer({
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
-    const [volume, setVolume] = useState(1);
-    const [isMuted, setIsMuted] = useState(false);
+
+    // Persisted State
+    const [volume, setVolume] = useState(() => {
+        const s = localStorage.getItem('player_volume');
+        return s ? parseFloat(s) : 1;
+    });
+    const [isMuted, setIsMuted] = useState(() => {
+        return localStorage.getItem('player_muted') === 'true';
+    });
+
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
     // const [selectedSourceIdx, setSelectedSourceIdx] = useState(0); // Unused
@@ -146,14 +162,24 @@ export default function StreamPlayer({
     const [error, setError] = useState<string | null>(null);
 
     // Menu State
-    const [activeMenu, setActiveMenu] = useState<'none' | 'quality' | 'subtitles' | 'source'>('none');
+    const [activeMenu, setActiveMenu] = useState<'none' | 'quality' | 'subtitles' | 'speed' | 'source'>('none');
 
     // HLS quality levels (from the stream)
     const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
-    const [selectedQuality, setSelectedQuality] = useState(-1); // -1 = auto
+    const [selectedQuality, setSelectedQuality] = useState(() => {
+        const s = localStorage.getItem('player_quality');
+        return s ? parseInt(s) : -1;
+    });
 
     // Subtitle state
     const [selectedSubtitle, setSelectedSubtitle] = useState(-1); // -1 = off
+
+    // Playback Speed State
+    const [playbackSpeed, setPlaybackSpeed] = useState(() => {
+        const s = localStorage.getItem('player_speed');
+        return s ? parseFloat(s) : 1.0;
+    });
+    const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
     // Get current source
     const currentSource = sources[0] || sources[0]; // Simplified since selectedSourceIdx is unused
@@ -163,9 +189,21 @@ export default function StreamPlayer({
         if (hlsRef.current) {
             hlsRef.current.currentLevel = levelIndex;
             setSelectedQuality(levelIndex);
+            localStorage.setItem('player_quality', levelIndex.toString());
             console.log('[StreamPlayer] Quality changed to:', levelIndex);
             setActiveMenu('none');
         }
+    }, []);
+
+    // Handle speed change
+    const handleSpeedChange = useCallback((speed: number) => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.playbackRate = speed;
+        setPlaybackSpeed(speed);
+        localStorage.setItem('player_speed', speed.toString());
+        setActiveMenu('none');
     }, []);
 
     // Handle subtitle change
@@ -222,7 +260,12 @@ export default function StreamPlayer({
         setIsLoading(true);
         setError(null);
         setQualityLevels([]);
-        setSelectedQuality(-1);
+        // Don't reset selectedQuality, use persisted value
+
+        // Apply persisted video settings
+        video.volume = isMuted ? 0 : volume;
+        video.muted = isMuted;
+        video.playbackRate = playbackSpeed;
 
         // Cleanup previous HLS instance
         if (hlsRef.current) {
@@ -237,6 +280,7 @@ export default function StreamPlayer({
             const hls = new Hls({
                 loader: createTauriLoader(headers),
                 debug: false,
+                startLevel: selectedQuality // Start with saved quality
             });
 
             hls.loadSource(currentSource.url);
@@ -392,7 +436,11 @@ export default function StreamPlayer({
         const vol = parseFloat(e.target.value);
         video.volume = vol;
         setVolume(vol);
-        setIsMuted(vol === 0);
+        const muted = vol === 0;
+        setIsMuted(muted);
+
+        localStorage.setItem('player_volume', vol.toString());
+        localStorage.setItem('player_muted', muted.toString());
     }, []);
 
     const toggleMute = useCallback(() => {
@@ -401,6 +449,7 @@ export default function StreamPlayer({
 
         video.muted = !video.muted;
         setIsMuted(video.muted);
+        localStorage.setItem('player_muted', video.muted.toString());
     }, []);
 
     const toggleFullscreen = useCallback(async () => {
@@ -484,6 +533,104 @@ export default function StreamPlayer({
         );
     }
 
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if typing in an input or textarea
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            const video = videoRef.current;
+            if (!video) return;
+
+            switch (e.key.toLowerCase()) {
+                case ' ':
+                case 'k':
+                    e.preventDefault();
+                    togglePlay();
+                    break;
+                case 'arrowright':
+                case 'd':
+                    e.preventDefault();
+                    video.currentTime = Math.min(video.duration, video.currentTime + 5);
+                    setCurrentTime(video.currentTime);
+                    break;
+                case 'arrowleft':
+                case 'a':
+                    e.preventDefault();
+                    video.currentTime = Math.max(0, video.currentTime - 5);
+                    setCurrentTime(video.currentTime);
+                    break;
+                case 'arrowup':
+                case 'w':
+                    e.preventDefault();
+                    const newVolUp = Math.min(1, video.volume + 0.1);
+                    video.volume = newVolUp;
+                    setVolume(newVolUp);
+                    setIsMuted(newVolUp === 0);
+                    localStorage.setItem('player_volume', newVolUp.toString());
+                    break;
+                case 'arrowdown':
+                case 's':
+                    e.preventDefault();
+                    const newVolDown = Math.max(0, video.volume - 0.1);
+                    video.volume = newVolDown;
+                    setVolume(newVolDown);
+                    setIsMuted(newVolDown === 0);
+                    localStorage.setItem('player_volume', newVolDown.toString());
+                    break;
+                case 'm':
+                    e.preventDefault();
+                    toggleMute();
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    toggleFullscreen();
+                    break;
+                case '.':
+                    // Next frame (approx 1/24s)
+                    e.preventDefault();
+                    if (video.paused) {
+                        video.currentTime = Math.min(video.duration, video.currentTime + (1 / 24));
+                        setCurrentTime(video.currentTime);
+                    }
+                    break;
+                case ',':
+                    // Prev frame (approx 1/24s)
+                    e.preventDefault();
+                    if (video.paused) {
+                        video.currentTime = Math.max(0, video.currentTime - (1 / 24));
+                        setCurrentTime(video.currentTime);
+                    }
+                    break;
+                case 'c':
+                    e.preventDefault();
+                    // Toggle captions: If -1 (off), set to 0 (first). If >= 0, set to -1.
+                    const newSub = selectedSubtitle === -1 ? 0 : -1;
+                    // Only toggle if track 0 exists or we are turning off
+                    if (newSub === -1 || (subtitles.length > 0)) {
+                        handleSubtitleChange(newSub);
+                    }
+                    break;
+                case 'n':
+                    if (e.shiftKey && hasNextEpisode && onNext) {
+                        e.preventDefault();
+                        onNext();
+                    }
+                    break;
+                case 'p':
+                    if (e.shiftKey && hasPrevEpisode && onPrev) {
+                        e.preventDefault();
+                        onPrev();
+                    }
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [togglePlay, toggleMute, toggleFullscreen, hasNextEpisode, onNext, hasPrevEpisode, onPrev, handleSubtitleChange, subtitles.length, selectedSubtitle]);
     return (
         <div
             ref={containerRef}
@@ -498,12 +645,14 @@ export default function StreamPlayer({
                 onDoubleClick={toggleFullscreen}
             />
 
-            {isLoading && (
-                <div className="stream-loading">
-                    <div className="loader"></div>
-                    <p>Loading stream...</p>
-                </div>
-            )}
+            {
+                isLoading && (
+                    <div className="stream-loading">
+                        <div className="loader"></div>
+                        <p>Loading stream...</p>
+                    </div>
+                )
+            }
 
             <div className={`stream-controls ${showControls ? 'visible' : ''}`}>
                 {title && <div className="stream-title">{title}</div>}
@@ -525,6 +674,15 @@ export default function StreamPlayer({
 
                 <div className="stream-buttons">
                     <div className="left-controls">
+                        {/* Previous Button */}
+                        {hasPrevEpisode && (
+                            <button onClick={onPrev} className="control-btn" title="Previous Episode">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                                    <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+                                </svg>
+                            </button>
+                        )}
+
                         <button onClick={togglePlay} className="control-btn" title={isPlaying ? "Pause" : "Play"}>
                             {isPlaying ? (
                                 <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
@@ -532,6 +690,15 @@ export default function StreamPlayer({
                                 <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M8 5v14l11-7z" /></svg>
                             )}
                         </button>
+
+                        {/* Next Button */}
+                        {hasNextEpisode && (
+                            <button onClick={onNext} className="control-btn" title="Next Episode">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                                    <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                                </svg>
+                            </button>
+                        )}
 
                         <div className="volume-control">
                             <button onClick={toggleMute} className="control-btn" title={isMuted ? "Unmute" : "Mute"}>
@@ -618,8 +785,33 @@ export default function StreamPlayer({
                                     </div>
                                 )}
                             </div>
-                        )}
+                        )}{/* End of Quality condition */}
 
+                        {/* Playback Speed */}
+                        <div className="control-group">
+                            <button
+                                className={`control-btn ${activeMenu === 'speed' ? 'active' : ''}`}
+                                onClick={() => setActiveMenu(activeMenu === 'speed' ? 'none' : 'speed')}
+                                title="Playback Speed"
+                            >
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', width: '24px', textAlign: 'center' }}>
+                                    {playbackSpeed}x
+                                </span>
+                            </button>
+                            {activeMenu === 'speed' && (
+                                <div className="settings-menu">
+                                    {speedOptions.map((speed) => (
+                                        <div
+                                            key={speed}
+                                            className={`menu-item ${playbackSpeed === speed ? 'selected' : ''}`}
+                                            onClick={() => handleSpeedChange(speed)}
+                                        >
+                                            {speed}x
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <button
                             onClick={toggleFullscreen}
                             className="control-btn"
@@ -638,6 +830,6 @@ export default function StreamPlayer({
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

@@ -700,7 +700,7 @@ function MangaReader() {
                     <h1 className="manga-title">{manga?.title || mangaTitle || 'Unknown Manga'}</h1>
                     <span className="chapter-number">
                         Chapter {currentChapter?.number || '?'}
-                        {currentChapter?.title && ` - ${currentChapter.title}`}
+                        {currentChapter?.title && currentChapter.title !== `Chapter ${currentChapter.number}` && ` - ${currentChapter.title}`}
                     </span>
                 </div>
 

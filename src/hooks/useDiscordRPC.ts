@@ -308,6 +308,51 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                 return;
             }
 
+            // Case 4: Not Detecting specific anime, but player IS open
+            if (data.status === 'detected') {
+                // If we have a manual session, keep using it!
+                if (manualSession) {
+                    console.log('[useDiscordRPC] Player open, using manual session fallback:', manualSession.animeName);
+                    notDetectedCountRef.current = 0;
+
+                    const newDetection: LastDetection = {
+                        anilistId: manualSession.anilistId,
+                        animeName: manualSession.animeName,
+                        episode: manualSession.episode,
+                        season: null,
+                        coverImage: manualSession.coverImage || null,
+                        totalEpisodes: null,
+                        timestamp: manualSession.startedAt,
+                    };
+
+                    if (!isWatchingRef.current || lastDetectionRef.current?.anilistId !== manualSession.anilistId) {
+                        lastDetectionRef.current = newDetection;
+                        isWatchingRef.current = true;
+
+                        await updateAnimeActivity({
+                            animeName: manualSession.animeName,
+                            episode: manualSession.episode,
+                            season: null,
+                            anilistId: manualSession.anilistId,
+                            coverImage: manualSession.coverImage || null,
+                            totalEpisodes: null,
+                            privacyLevel,
+                            smallImage: user?.avatar?.medium || null,
+                            smallText: user?.name ? `Logged in as ${user.name}` : null,
+                        });
+                    }
+                    return;
+                }
+
+                // If no manual session, reset counter but don't update activity (stay in current state)
+                // This prevents flickering between Watching and Browsing when detection is flaky
+                if (isWatchingRef.current) {
+                    console.log('[useDiscordRPC] Player open but no match, maintaining current watching state');
+                    notDetectedCountRef.current = 0;
+                    return;
+                }
+            }
+
             console.log('[useDiscordRPC] Detection result:', data.status,
                 data.anilist_match?.id ? `AniList ID: ${data.anilist_match.id}` : 'No match');
 
@@ -333,16 +378,13 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                 const isDifferentSeason = lastDetectionRef.current?.season !== newDetection.season;
                 const wasNotWatching = !isWatchingRef.current;
 
-
-
                 if (isDifferentAnime || isDifferentEpisode || isDifferentSeason || wasNotWatching) {
                     lastDetectionRef.current = newDetection;
                     isWatchingRef.current = true;
 
                     // Send notification if it's a new anime or we weren't watching
-                    // We can also notify on episode change if desired
                     if (isDifferentAnime || isDifferentEpisode || wasNotWatching) {
-                        const seasonText = newDetection.season ? ` S${newDetection.season}` : '';
+                        const seasonText = newDetection.season && newDetection.season > 1 ? ` S${newDetection.season}` : '';
                         const episodeText = newDetection.episode ? ` Ep ${newDetection.episode}` : '';
                         const title = newDetection.animeName;
                         const body = `Now Watching${seasonText}${episodeText}`;
@@ -363,30 +405,24 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
                     });
                 }
             } else {
-                // Not detecting anime right now
+                // No player detected OR player detected but no match and no session
                 notDetectedCountRef.current++;
 
                 console.log('[useDiscordRPC] Not detected count:', notDetectedCountRef.current,
                     '/', BROWSING_DEBOUNCE_COUNT);
 
-                // Only switch to browsing after many consecutive failures AND we were watching
-                // If we weren't watching (and not detecting), we are already in browsing (or idle) state.
-                if (notDetectedCountRef.current >= BROWSING_DEBOUNCE_COUNT && isWatchingRef.current) {
+                if (notDetectedCountRef.current >= BROWSING_DEBOUNCE_COUNT && (isWatchingRef.current || manualSession)) {
                     console.log('[useDiscordRPC] Switching to browsing mode after debounce');
                     isWatchingRef.current = false;
                     lastDetectionRef.current = null;
 
-                    // Clear manual session when no media player is detected
                     if (manualSession) {
                         console.log('[useDiscordRPC] Clearing manual session - no media player detected');
                         clearManualSession();
                     }
 
-                    // Reset to default "Browsing App" status
                     await setBrowsingActivity(privacyLevel, user?.avatar?.medium || null, user?.name ? `Logged in as ${user.name}` : null);
                 }
-                // If count < debounce, we keep showing whatever status we had (Watching).
-                // If count >= debounce but !isWatching, we are already browsing/idle.
             }
         } catch (err) {
             console.error('[useDiscordRPC] Error checking media:', err);
