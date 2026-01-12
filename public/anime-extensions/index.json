@@ -1,0 +1,39 @@
+{
+    "name": "PLAY-ON! Anime Extensions",
+    "description": "Official anime streaming source extensions for PLAY-ON!",
+    "extensions": [
+        {
+            "id": "hianime",
+            "name": "HiAnime",
+            "type": "anime",
+            "version": "1.0.0",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://hianime.to/favicon.ico",
+            "bundleUrl": "hianime.js",
+            "description": "Stream anime with sub and dub options"
+        },
+        {
+            "id": "gogoanime",
+            "name": "GogoAnime",
+            "type": "anime",
+            "version": "1.0.0",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://gogoanime.pe/img/icon/logo.png",
+            "bundleUrl": "gogoanime.js",
+            "description": "Popular anime streaming source"
+        },
+        {
+            "id": "animepahe",
+            "name": "AnimePahe",
+            "type": "anime",
+            "version": "1.0.0",
+            "lang": "en",
+            "nsfw": false,
+            "iconUrl": "https://animepahe.ru/favicon.ico",
+            "bundleUrl": "animepahe.js",
+            "description": "Lightweight anime streaming with small file sizes"
+        }
+    ]
+}

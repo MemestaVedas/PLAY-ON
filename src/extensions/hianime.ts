@@ -477,7 +477,6 @@ async function extractFromEmbed(embedUrl: string): Promise<EpisodeSources | null
 
             if (clientKey && megacloudKey) {
                 const v3Url = `https://megacloud.blog/embed-2/v3/e-1/getSources?id=${videoId}&_k=${clientKey}`;
-                console.log(`[HiAnime] Trying v3 API: ${v3Url}`);
 
                 const res = await fetch(v3Url, {
                     headers: {
@@ -487,33 +486,22 @@ async function extractFromEmbed(embedUrl: string): Promise<EpisodeSources | null
                     }
                 });
 
-                console.log(`[HiAnime] v3 API response status: ${res.status}`);
-
                 if (res.status === 200) {
                     const data = await res.json();
-                    console.log('[HiAnime] v3 API response:', JSON.stringify(data).substring(0, 200) + '...');
 
                     let sources: any[];
 
                     if (data.encrypted && typeof data.sources === 'string') {
-                        console.log('[HiAnime] Decrypting sources...');
-                        console.log(`[HiAnime] Encrypted data length: ${data.sources.length}`);
-                        console.log(`[HiAnime] Client key: ${clientKey}`);
-                        console.log(`[HiAnime] Megacloud key: ${megacloudKey}`);
                         try {
                             const decrypted = decryptSrc2(data.sources, clientKey, megacloudKey);
-                            console.log(`[HiAnime] Decrypted result: ${decrypted.substring(0, 200)}...`);
                             sources = JSON.parse(decrypted);
-                            console.log(`[HiAnime] Successfully decrypted ${sources.length} sources`);
                         } catch (decryptError) {
                             console.error('[HiAnime] Decryption failed:', decryptError);
                             throw decryptError;
                         }
                     } else if (Array.isArray(data.sources)) {
-                        console.log(`[HiAnime] Got ${data.sources.length} unencrypted sources`);
                         sources = data.sources;
                     } else {
-                        console.error('[HiAnime] Invalid response structure:', Object.keys(data));
                         throw new Error('No valid sources in response');
                     }
 
@@ -536,13 +524,9 @@ async function extractFromEmbed(embedUrl: string): Promise<EpisodeSources | null
                             'Accept-Language': 'en-US,en;q=0.9',
                         }
                     };
-                    console.log(`[HiAnime] Returning ${result.sources.length} sources, first URL: ${result.sources[0]?.url?.substring(0, 50)}...`);
+                    console.log(`[HiAnime] Found ${result.sources.length} sources`);
                     return result;
-                } else {
-                    console.warn(`[HiAnime] v3 API returned non-200 status: ${res.status}`);
                 }
-            } else {
-                console.warn('[HiAnime] Missing keys - clientKey:', !!clientKey, 'megacloudKey:', !!megacloudKey);
             }
         } catch (e) {
             console.error('[HiAnime] v3 API extraction failed:', e);
@@ -557,7 +541,6 @@ async function extractFromEmbed(embedUrl: string): Promise<EpisodeSources | null
 
         for (const endpoint of endpoints) {
             try {
-                console.log(`[HiAnime] Trying legacy endpoint: ${endpoint}`);
                 const res = await fetch(endpoint, {
                     headers: {
                         ...HEADERS,
@@ -578,8 +561,7 @@ async function extractFromEmbed(embedUrl: string): Promise<EpisodeSources | null
 
                 // Check if sources are encrypted (can't handle without keys)
                 if (data.encrypted === true && typeof data.sources === 'string') {
-                    console.warn('[HiAnime] Legacy endpoint returned encrypted sources, skipping');
-                    continue;
+                    continue; // Skip encrypted responses from legacy endpoints
                 }
 
                 // Check for valid sources array
@@ -603,7 +585,7 @@ async function extractFromEmbed(embedUrl: string): Promise<EpisodeSources | null
                     };
                 }
             } catch (e) {
-                console.warn(`[HiAnime] Legacy endpoint failed:`, e);
+                // Ignore silent failures for fallbacks
             }
         }
 

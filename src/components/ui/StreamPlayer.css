@@ -7,6 +7,10 @@
     overflow: hidden;
 }
 
+.stream-player.hide-cursor {
+    cursor: none !important;
+}
+
 .stream-player.fullscreen {
     position: fixed;
     top: 0;
@@ -33,6 +37,7 @@
     align-items: center;
     gap: 1rem;
     color: #fff;
+    pointer-events: none;
 }
 
 .stream-loading .loader {
@@ -60,18 +65,21 @@
 }
 
 /* Controls Layer */
+/* Controls Layer */
 .stream-controls {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 1rem;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+    padding: 1.5rem;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.95));
     opacity: 0;
     transition: opacity 0.3s ease;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    box-sizing: border-box;
+    /* Fix padding causing overflow */
 }
 
 .stream-controls.visible {
@@ -81,12 +89,13 @@
 /* Title */
 .stream-title {
     color: #fff;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 500;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 0.5rem;
 }
 
 /* Progress Bar */
@@ -94,6 +103,7 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 .progress-bar {
@@ -101,19 +111,33 @@
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
     cursor: pointer;
+    background-image: linear-gradient(var(--color-zen-accent, #B4A2F6), var(--color-zen-accent, #B4A2F6));
+    background-size: 0% 100%;
+    background-repeat: no-repeat;
+    transition: height 0.2s ease;
+}
+
+.progress-bar:hover {
+    height: 6px;
 }
 
 .progress-bar::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 14px;
+    width: 0;
+    /* Hidden by default */
     height: 14px;
     background: var(--color-zen-accent, #B4A2F6);
     border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: width 0.2s ease;
+}
+
+.progress-bar:hover::-webkit-slider-thumb {
+    width: 14px;
 }
 
 .time-display {
@@ -122,33 +146,47 @@
     font-variant-numeric: tabular-nums;
     min-width: 100px;
     text-align: right;
+    font-weight: 500;
 }
 
-/* Control Buttons */
+/* Control Buttons Layout */
 .stream-buttons {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    width: 100%;
+    margin-top: 5px;
+    /* Add slight spacing from progress bar */
+}
+
+.left-controls,
+.right-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
 .control-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent;
     border: none;
-    color: #fff;
+    color: rgba(255, 255, 255, 0.85);
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 8px;
+    /* Squared with radius */
     cursor: pointer;
-    font-size: 1.2rem;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    padding: 8px;
 }
 
-.control-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
+.control-btn:hover,
+.control-btn.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transform: translateY(-2px);
 }
 
 /* Volume Control */
@@ -156,44 +194,107 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    margin-left: 0.5rem;
 }
 
 .volume-slider {
-    width: 80px;
+    width: 0;
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
     cursor: pointer;
+    transition: width 0.3s ease;
+    opacity: 0;
+    background-image: linear-gradient(#fff, #fff);
+    background-repeat: no-repeat;
+}
+
+.volume-control:hover .volume-slider {
+    width: 80px;
+    opacity: 1;
 }
 
 .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     background: #fff;
     border-radius: 50%;
     cursor: pointer;
 }
 
-/* Quality Selector */
-.quality-select {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
+/* Menus (Quality & Subtitles) */
+.control-group {
+    position: relative;
+}
+
+.settings-menu {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    right: -10px;
+    background: rgba(28, 28, 32, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.5rem;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    transform-origin: bottom right;
+    animation: menu-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes menu-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.menu-item {
+    padding: 0.6rem 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
     cursor: pointer;
-    font-size: 0.85rem;
-    margin-left: auto;
+    border-radius: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.quality-select:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.quality-select option {
-    background: #1a1a2e;
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
+}
+
+.menu-item.selected {
+    color: var(--color-zen-accent, #B4A2F6);
+    background: rgba(180, 162, 246, 0.1);
+    font-weight: 600;
+}
+
+/* Video subtitle styling */
+.stream-video::cue {
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    font-family: system-ui, -apple-system, sans-serif;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-bottom: 4rem;
+    /* Move up slightly */
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
 }

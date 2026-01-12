@@ -26,8 +26,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ label, icon, isActive, onClic
             }}
             style={{
                 width: '100%',
-                padding: '0.6rem 0.85rem',
-                marginBottom: '0.35rem',
+                padding: '0.45rem 0.85rem',
+                marginBottom: '0.15rem',
                 borderRadius: '12px',
                 border: '1px solid transparent', // explicit border width for animation (base style can stay transparent as animate overrides it, but framed prefers matchingtypes. 'rgba(0,0,0,0)' is safer)
                 borderColor: 'rgba(0,0,0,0)',

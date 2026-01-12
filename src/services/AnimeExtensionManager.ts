@@ -13,7 +13,7 @@
 import { AnimeSource } from './anime-sources/AnimeSource';
 import { AnimeLoader } from './anime-extensions/AnimeLoader';
 import { HiAnimeExtension } from '../extensions/hianime';
-import { HiAnimeExtension } from '../extensions/hianime';
+
 import { GogoAnimeExtension } from '../extensions/gogoanime';
 import { AnimePaheExtension } from '../extensions/animepahe';
 

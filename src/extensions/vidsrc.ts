@@ -7,7 +7,7 @@
  */
 
 import { AnimeSource, Anime, Episode, EpisodeSources, AnimeSearchResult, AnimeSearchFilter } from '../services/anime-sources/AnimeSource';
-import { fetch } from '@tauri-apps/plugin-http';
+// import { fetch } from '@tauri-apps/plugin-http'; // Unused
 
 const BASE_URL = 'https://vidsrc.to';
 
@@ -18,7 +18,7 @@ export const VidSrcExtension: AnimeSource = {
     lang: 'en',
     iconUrl: `${BASE_URL}/favicon.ico`,
 
-    async search(filter: AnimeSearchFilter): Promise<AnimeSearchResult> {
+    async search(_filter: AnimeSearchFilter): Promise<AnimeSearchResult> {
         // VidSrc doesn't have a direct search API for anime specifically
         // We might need to use TMDB search and then map to VidSrc
         // For now, let's try a direct search if available, or return empty
@@ -37,7 +37,7 @@ export const VidSrcExtension: AnimeSource = {
         };
     },
 
-    async getEpisodes(animeId: string): Promise<Episode[]> {
+    async getEpisodes(_animeId: string): Promise<Episode[]> {
         // VidSrc assumes we know the episode count or just tries to load them
         // This is tricky without a metadata provider like TMDB
         return [];

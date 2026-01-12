@@ -7,7 +7,7 @@ interface Position {
 
 interface SpotlightCardProps extends React.PropsWithChildren {
     className?: string;
-    spotlightColor?: `rgba(${number}, ${number}, ${number}, ${number})`;
+    spotlightColor?: string;
 }
 
 const SpotlightCard: React.FC<SpotlightCardProps> = ({

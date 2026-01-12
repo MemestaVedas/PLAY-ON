@@ -11,6 +11,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ExtensionManager, Manga } from '../services/ExtensionManager';
+import { SearchIcon } from '../components/ui/Icons';
+import { Dropdown } from '../components/ui/Dropdown';
 import './MangaBrowse.css';
 
 function MangaBrowse() {
@@ -22,6 +24,13 @@ function MangaBrowse() {
 
     // Refresh sources when component mounts (extensions may have been installed)
     useEffect(() => {
+        const initAndRefresh = async () => {
+            if (!ExtensionManager.isInitialized()) {
+                await ExtensionManager.initialize();
+            }
+            refreshSources();
+        };
+
         const refreshSources = () => {
             const newSources = ExtensionManager.getAllSources();
             console.log('[MangaBrowse] Refreshing sources, found:', newSources.length);
@@ -29,7 +38,7 @@ function MangaBrowse() {
         };
 
         // Initial load
-        refreshSources();
+        initAndRefresh();
 
         // Set up a listener for extension changes (polling for now)
         // In a real app, you'd use an event emitter pattern
@@ -126,30 +135,9 @@ function MangaBrowse() {
 
             {/* Controls */}
             <div className="browse-controls">
-                {/* Source Selector - Only show if multiple sources */}
-                {sources.length > 1 && (
-                    <div className="source-selector">
-                        {sources.map((source) => (
-                            <button
-                                key={source.id}
-                                className={`source-btn ${source.id === currentSourceId ? 'active' : ''}`}
-                                onClick={() => handleSourceChange(source.id)}
-                            >
-                                {source.iconUrl && (
-                                    <img src={source.iconUrl} alt="" className="source-icon" />
-                                )}
-                                {source.name}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
                 {/* Search Bar */}
-                <div className="search-bar">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
+                <div className="search-bar" style={{ flex: 1 }}>
+                    <SearchIcon size={20} />
                     <input
                         type="text"
                         value={query}
@@ -162,6 +150,22 @@ function MangaBrowse() {
                         </button>
                     )}
                 </div>
+
+                {/* Source Selector Dropdown */}
+                {sources.length > 0 && (
+                    <div style={{ marginLeft: 'auto' }}>
+                        <Dropdown
+                            value={currentSourceId}
+                            options={sources.map(s => ({
+                                value: s.id,
+                                label: s.name,
+                                icon: s.iconUrl ? <img src={s.iconUrl} alt="" style={{ width: 16, height: 16, borderRadius: 2 }} /> : undefined
+                            }))}
+                            onChange={(val) => handleSourceChange(val)}
+                            className="w-48"
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Error State */}
@@ -175,13 +179,14 @@ function MangaBrowse() {
             <div className="browse-results">
                 {sources.length === 0 ? (
                     <div className="browse-empty">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                        </svg>
-                        <h3>No Extensions Loaded</h3>
-                        <p>No active manga sources found. Extensions may have failed to load.</p>
+                        <div className="empty-icon text-white/20 mb-4">🔌</div>
+                        <h3>No Manga Extensions Active</h3>
+                        <p>Loading extensions... or none are installed.</p>
+                        <p style={{ color: 'var(--color-text-muted)', marginTop: '8px' }}>
+                            Go to Settings to manage extensions.
+                        </p>
                         <button
-                            className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg mt-4"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg mt-4"
                             onClick={() => navigate('/settings')}
                         >
                             Manage Extensions
@@ -189,12 +194,11 @@ function MangaBrowse() {
                     </div>
                 ) : !query.trim() && !loading ? (
                     <div className="browse-empty">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
+                        <div className="empty-icon text-white/20 mb-4">
+                            <SearchIcon size={64} />
+                        </div>
                         <h3>Search for manga</h3>
-                        <p>Enter a title to search on {currentSource?.name}</p>
+                        <p>Enter a title to search on {currentSource?.name || 'source'}...</p>
                     </div>
                 ) : null}
 

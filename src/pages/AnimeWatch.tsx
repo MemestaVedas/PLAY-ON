@@ -25,6 +25,7 @@ function AnimeWatch() {
     const animeId = searchParams.get('animeId');
 
     const [sources, setSources] = useState<StreamingSource[]>([]);
+    const [subtitles, setSubtitles] = useState<{ url: string; lang: string }[]>([]);
     const [headers, setHeaders] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -59,6 +60,13 @@ function AnimeWatch() {
                 }
 
                 setSources(convertSources(episodeSources));
+
+                // Set subtitles if available
+                if (episodeSources.subtitles && episodeSources.subtitles.length > 0) {
+                    console.log('[AnimeWatch] Subtitles found:', episodeSources.subtitles);
+                    setSubtitles(episodeSources.subtitles);
+                }
+
                 if (episodeSources.headers) {
                     setHeaders(episodeSources.headers);
                 }
@@ -139,6 +147,7 @@ function AnimeWatch() {
             {/* Video Player */}
             <StreamPlayer
                 sources={sources}
+                subtitles={subtitles}
                 title={`${animeTitle} - Episode ${episodeNum}`}
                 onEnded={handleEnded}
                 headers={headers}

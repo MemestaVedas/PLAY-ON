@@ -1,7 +1,11 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { exit } from '@tauri-apps/plugin-process';
+import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useAniListNotifications } from '../../hooks/useAniListNotifications';
+import { HistoryIcon, BellIcon } from '../ui/Icons';
 
 // Detect if running on macOS
 const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -16,6 +20,9 @@ const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 function Titlebar() {
     const appWindow = getCurrentWindow();
     const { settings } = useSettings();
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
+    const { unreadCount } = useAniListNotifications();
 
     const handleMinimize = async () => { await appWindow.minimize(); };
     const handleMaximize = async () => { await appWindow.toggleMaximize(); };
@@ -88,6 +95,94 @@ function Titlebar() {
         />
     );
 
+    const NavIcons = (
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            marginRight: '12px',
+            WebkitAppRegion: 'no-drag',
+        } as React.CSSProperties}>
+            {/* History Icon */}
+            <button
+                onClick={() => navigate('/history')}
+                style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
+                    e.currentTarget.style.color = 'var(--color-text-main)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--color-text-muted)';
+                }}
+                title="History"
+            >
+                <HistoryIcon size={16} />
+            </button>
+
+            {/* Notifications Icon */}
+            {isAuthenticated && (
+                <button
+                    onClick={() => navigate('/notifications')}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        position: 'relative',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
+                        e.currentTarget.style.color = 'var(--color-text-main)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text-muted)';
+                    }}
+                    title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+                >
+                    <BellIcon size={16} />
+                    {unreadCount > 0 && (
+                        <span style={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 2,
+                            background: 'var(--color-zen-accent)',
+                            color: '#000',
+                            borderRadius: '50%',
+                            width: 12,
+                            height: 12,
+                            fontSize: '0.5rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                </button>
+            )}
+        </div>
+    );
+
     const AppTitle = (
         <div style={{
             display: 'flex',
@@ -110,6 +205,7 @@ function Titlebar() {
     const WindowControls = (
         <div style={{
             display: 'flex',
+            alignItems: 'center', // Ensure alignment
             gap: '8px',
             WebkitAppRegion: 'no-drag',
         } as React.CSSProperties}>
@@ -117,8 +213,8 @@ function Titlebar() {
                 // macOS: Close, Minimize, Maximize (left to right)
                 <>{CloseButton}{MinimizeButton}{MaximizeButton}</>
             ) : (
-                // Windows: Minimize, Maximize, Close (left to right)
-                <>{MinimizeButton}{MaximizeButton}{CloseButton}</>
+                // Windows: NavIcons, Minimize, Maximize, Close
+                <>{NavIcons}{MinimizeButton}{MaximizeButton}{CloseButton}</>
             )}
         </div>
     );
@@ -143,7 +239,10 @@ function Titlebar() {
             } as React.CSSProperties}
         >
             {isMacOS ? (
-                // macOS: Controls left, title right
+                // macOS: Controls left, title right (Added NavIcons to title side for balance if desired, or keep hidden? User asked for next to minimize on Windows mainly)
+                // Let's keep NavIcons hidden on macOS for now unless requested, or put them right.
+                // Actually user said "next to the minimise button", which on macOS is on the left.
+                // Let's stick to Windows request specifically first.
                 <>{WindowControls}{AppTitle}</>
             ) : (
                 // Windows: Title left, controls right

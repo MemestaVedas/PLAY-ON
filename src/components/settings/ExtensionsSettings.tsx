@@ -6,7 +6,8 @@ import { ExtensionLoader } from '../../services/extensions/loader';
 import { AnimeExtensionManager } from '../../services/AnimeExtensionManager';
 import { AnimeExtensionStorage } from '../../services/anime-extensions/AnimeExtensionStorage';
 import { AnimeLoader } from '../../services/anime-extensions/AnimeLoader';
-import { AnimeExtensionMeta } from '../../services/anime-extensions/types';
+import { AnimeExtensionRepository } from '../../services/anime-extensions/AnimeExtensionRepository';
+import { AnimeExtensionMeta, InstalledAnimeExtension } from '../../services/anime-extensions/types';
 import {
     ExtensionMeta,
     ExtensionRepo,
@@ -35,61 +36,88 @@ import {
 
 // Sub-tabs for this section
 type ExtensionTab = 'installed' | 'browse' | 'repos';
-type ExtensionTypeFilter = 'all' | 'manga' | 'anime';
 
 export default function ExtensionsSettings() {
-    const [activeTab, setActiveTab] = useState<ExtensionTab>('installed');
-    const [typeFilter, setTypeFilter] = useState<ExtensionTypeFilter>('all');
-    const [repos, setRepos] = useState<ExtensionRepo[]>([]);
-    const [installedExtensions, setInstalledExtensions] = useState<InstalledExtension[]>([]);
-    const [installedAnimeExtensions, setInstalledAnimeExtensions] = useState<any[]>([]);
-    const [availableExtensions, setAvailableExtensions] = useState<{ repoUrl: string; repoName: string; extensions: ExtensionMeta[] }[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'manga' | 'anime'>('manga');
+    const [subTab, setSubTab] = useState<ExtensionTab>('installed');
 
-    // Add repo dialog state
-    const [isAddRepoOpen, setIsAddRepoOpen] = useState(false);
+    // Manga State
+    const [repos, setRepos] = useState<ExtensionRepo[]>([]);
+    const [extensions, setExtensions] = useState<{
+        repoUrl: string;
+        repoName: string;
+        extensions: ExtensionMeta[];
+    }[]>([]);
+    const [installed, setInstalled] = useState<InstalledExtension[]>([]);
+
+    // Anime State
+    const [animeRepos, setAnimeRepos] = useState<ExtensionRepo[]>([]);
+    const [animeExtensions, setAnimeExtensions] = useState<{
+        repoUrl: string;
+        repoName: string;
+        extensions: AnimeExtensionMeta[];
+    }[]>([]);
+    const [installedAnime, setInstalledAnime] = useState<InstalledAnimeExtension[]>([]);
+
     const [newRepoUrl, setNewRepoUrl] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isAddRepoOpen, setIsAddRepoOpen] = useState(false);
     const [addRepoLoading, setAddRepoLoading] = useState(false);
 
-    // Load data on mount
+    // Load data on mount and when tab changes
     useEffect(() => {
         const init = async () => {
+            // Ensure Anime Manager is ready
             if (!AnimeExtensionManager.isInitialized()) {
                 await AnimeExtensionManager.initialize();
             }
             loadData();
         };
         init();
-    }, []);
+    }, [activeTab]);
 
     const loadData = useCallback(() => {
-        setRepos(ExtensionRepository.getRepos());
-        setInstalledExtensions(ExtensionStorage.getAllExtensions());
-        // Use Manager to get ALL sources including built-ins
-        setInstalledAnimeExtensions(AnimeExtensionManager.getAllSources());
-    }, []);
+        // Load data based on active tab to keep things fresh
+        if (activeTab === 'manga') {
+            setRepos(ExtensionRepository.getRepos());
+            setInstalled(ExtensionStorage.getAllExtensions());
+        } else {
+            setAnimeRepos(AnimeExtensionRepository.getRepos());
+            // Use Manager for anime to get all sources (including built-ins if we want them listed)
+            // But for settings, we usually want installed extensions from storage
+            setInstalledAnime(AnimeExtensionStorage.getAllExtensions());
+        }
+    }, [activeTab]);
 
-    // Fetch available extensions from all repos
+    // Fetch available extensions
     const fetchAvailableExtensions = useCallback(async () => {
-        setIsLoading(true);
+        setLoading(true);
         setError(null);
         try {
-            const results = await ExtensionRepository.fetchAllExtensions();
-            setAvailableExtensions(results);
+            if (activeTab === 'manga') {
+                const results = await ExtensionRepository.fetchAllExtensions();
+                setExtensions(results);
+            } else {
+                const results = await AnimeExtensionRepository.fetchAllExtensions();
+                setAnimeExtensions(results);
+            }
         } catch (e) {
             setError(`Failed to fetch extensions: ${e}`);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
-    }, []);
+    }, [activeTab]);
 
     // Auto-fetch when switching to browse tab
     useEffect(() => {
-        if (activeTab === 'browse' && repos.length > 0) {
-            fetchAvailableExtensions();
+        if (subTab === 'browse') {
+            const hasRepos = activeTab === 'manga' ? repos.length > 0 : animeRepos.length > 0;
+            if (hasRepos) {
+                fetchAvailableExtensions();
+            }
         }
-    }, [activeTab, repos.length, fetchAvailableExtensions]);
+    }, [subTab, activeTab, repos.length, animeRepos.length, fetchAvailableExtensions]);
 
     // Add repository
     const handleAddRepo = async () => {
@@ -98,7 +126,11 @@ export default function ExtensionsSettings() {
         setAddRepoLoading(true);
         setError(null);
         try {
-            await ExtensionRepository.addRepo(newRepoUrl.trim());
+            if (activeTab === 'manga') {
+                await ExtensionRepository.addRepo(newRepoUrl.trim());
+            } else {
+                await AnimeExtensionRepository.addRepo(newRepoUrl.trim());
+            }
             setNewRepoUrl('');
             setIsAddRepoOpen(false);
             loadData();
@@ -112,14 +144,18 @@ export default function ExtensionsSettings() {
     // Remove repository
     const handleRemoveRepo = (url: string) => {
         if (confirm('Remove this repository? Installed extensions will not be affected.')) {
-            ExtensionRepository.removeRepo(url);
+            if (activeTab === 'manga') {
+                ExtensionRepository.removeRepo(url);
+            } else {
+                AnimeExtensionRepository.removeRepo(url);
+            }
             loadData();
         }
     };
 
-    // Install extension (handles both manga and anime)
-    const handleInstallExtension = async (meta: ExtensionMeta, repoUrl: string) => {
-        setIsLoading(true);
+    // Install extension
+    const handleInstallExtension = async (meta: ExtensionMeta | AnimeExtensionMeta, repoUrl: string) => {
+        setLoading(true);
         setError(null);
         try {
             // Construct the full bundle URL
@@ -127,14 +163,15 @@ export default function ExtensionsSettings() {
                 ? meta.bundleUrl
                 : `${repoUrl}/${meta.bundleUrl}`;
 
-            const bundleCode = await ExtensionRepository.fetchExtensionBundle(bundleUrl);
+            const bundleCode = activeTab === 'manga'
+                ? await ExtensionRepository.fetchExtensionBundle(bundleUrl)
+                : await AnimeExtensionRepository.fetchExtensionBundle(bundleUrl);
 
-            // Install based on type
-            if (meta.type === 'anime') {
+            if (activeTab === 'anime') {
                 AnimeExtensionStorage.installExtension(meta as unknown as AnimeExtensionMeta, repoUrl, bundleCode);
                 await AnimeExtensionManager.reload();
             } else {
-                ExtensionStorage.installExtension(meta, repoUrl, bundleCode);
+                ExtensionStorage.installExtension(meta as ExtensionMeta, repoUrl, bundleCode);
                 await ExtensionManager.reload();
             }
 
@@ -142,14 +179,14 @@ export default function ExtensionsSettings() {
         } catch (e) {
             setError(`Failed to install: ${e}`);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
-    // Uninstall extension (handles both manga and anime)
-    const handleUninstallExtension = async (id: string, type?: 'manga' | 'anime') => {
+    // Uninstall extension
+    const handleUninstallExtension = async (id: string) => {
         if (confirm('Uninstall this extension?')) {
-            if (type === 'anime') {
+            if (activeTab === 'anime') {
                 AnimeExtensionStorage.uninstallExtension(id);
                 await AnimeExtensionManager.reload();
             } else {
@@ -160,15 +197,14 @@ export default function ExtensionsSettings() {
         }
     };
 
-    // Toggle extension enabled state (handles both manga and anime)
-    const handleToggleExtension = async (id: string, type?: 'manga' | 'anime') => {
-        // Built-in HiAnime extension override - cannot be disabled for now
+    // Toggle extension
+    const handleToggleExtension = async (id: string) => {
         if (id === 'hianime') {
             alert('Built-in extensions cannot be disabled.');
             return;
         }
 
-        if (type === 'anime') {
+        if (activeTab === 'anime') {
             AnimeExtensionStorage.toggleExtension(id);
             await AnimeExtensionManager.reload();
         } else {
@@ -178,38 +214,45 @@ export default function ExtensionsSettings() {
         loadData();
     };
 
-    // Check if extension is installed (handles both manga and anime)
-    const isInstalled = (id: string, type?: 'manga' | 'anime'): boolean => {
-        if (type === 'anime') {
-            return installedAnimeExtensions.some(ext => ext.id === id);
+    // Check if installed
+    const isInstalledCheck = (id: string): boolean => {
+        if (activeTab === 'anime') {
+            return installedAnime.some(ext => ext.id === id);
         }
-        return installedExtensions.some(ext => ext.id === id);
+        return installed.some(ext => ext.id === id);
     };
 
-    // Get combined installed extensions for display
-    const allInstalledExtensions = [
-        ...installedExtensions.map(e => ({ ...e, type: (e.type || 'manga') as 'manga' | 'anime' })),
-        ...installedAnimeExtensions.map(e => ({
-            ...e,
-            type: 'anime' as const,
-            // Ensure built-in props exist
-            version: e.version || '1.0.0',
-            enabled: e.enabled !== undefined ? e.enabled : true,
-            lang: e.lang || 'en'
-        }))
-    ];
+    // DISPLAY LOGIC
+    // We filter display based on the top-level activeTab (Manga vs Anime)
+    // The 'typeFilter' is less useful now that we have top-level tabs, but we can keep it for 'installed' view if we want to show everything.
+    // However, to keep it simple and clean: Let's use activeTab to strictly show Manga OR Anime.
 
-    // Filter installed extensions by type
-    const filteredInstalledExtensions = typeFilter === 'all'
-        ? allInstalledExtensions
-        : allInstalledExtensions.filter(e => e.type === typeFilter);
+    const currentInstalled = activeTab === 'manga' ? installed : installedAnime;
+    const currentRepos = activeTab === 'manga' ? repos : animeRepos;
+    const currentAvailable = activeTab === 'manga' ? extensions : animeExtensions;
 
     return (
         <div className="settings-section">
             <h2 className="settings-section-title">Extensions</h2>
             <p className="settings-section-description">
-                Manage manga and anime source extensions
+                Manage {activeTab} source extensions
             </p>
+
+            {/* Main Type Tabs */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <button
+                    className={`setting-button ${activeTab === 'manga' ? 'primary' : ''}`}
+                    onClick={() => setActiveTab('manga')}
+                >
+                    Manga
+                </button>
+                <button
+                    className={`setting-button ${activeTab === 'anime' ? 'primary' : ''}`}
+                    onClick={() => setActiveTab('anime')}
+                >
+                    Anime
+                </button>
+            </div>
 
             {/* Sub-tabs */}
             <div style={{
@@ -222,15 +265,15 @@ export default function ExtensionsSettings() {
                 {(['installed', 'browse', 'repos'] as ExtensionTab[]).map(tab => (
                     <button
                         key={tab}
-                        onClick={() => setActiveTab(tab)}
+                        onClick={() => setSubTab(tab)}
                         style={{
                             padding: '8px 16px',
                             borderRadius: '8px',
                             border: 'none',
-                            background: activeTab === tab ? 'rgba(180, 162, 246, 0.2)' : 'transparent',
-                            color: activeTab === tab ? 'var(--color-lavender-mist)' : 'var(--color-text-muted)',
+                            background: subTab === tab ? 'rgba(180, 162, 246, 0.2)' : 'transparent',
+                            color: subTab === tab ? 'var(--color-lavender-mist)' : 'var(--color-text-muted)',
                             cursor: 'pointer',
-                            fontWeight: activeTab === tab ? '600' : '400',
+                            fontWeight: subTab === tab ? '600' : '400',
                             textTransform: 'capitalize',
                             transition: 'all 0.2s ease'
                         }}
@@ -256,44 +299,21 @@ export default function ExtensionsSettings() {
             )}
 
             {/* INSTALLED TAB */}
-            {activeTab === 'installed' && (
+            {subTab === 'installed' && (
                 <div className="setting-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3 className="setting-group-title" style={{ margin: 0 }}>Installed Extensions ({filteredInstalledExtensions.length})</h3>
-                        {/* Type Filter */}
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                            {(['all', 'manga', 'anime'] as ExtensionTypeFilter[]).map(filter => (
-                                <button
-                                    key={filter}
-                                    onClick={() => setTypeFilter(filter)}
-                                    style={{
-                                        padding: '4px 10px',
-                                        borderRadius: '6px',
-                                        border: 'none',
-                                        background: typeFilter === filter ? 'rgba(180, 162, 246, 0.3)' : 'rgba(255,255,255,0.05)',
-                                        color: typeFilter === filter ? 'var(--color-lavender-mist)' : 'var(--color-text-muted)',
-                                        cursor: 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: typeFilter === filter ? '600' : '400',
-                                        textTransform: 'capitalize',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                >
-                                    {filter}
-                                </button>
-                            ))}
-                        </div>
+                        <h3 className="setting-group-title" style={{ margin: 0 }}>Installed {activeTab === 'manga' ? 'Manga' : 'Anime'} Extensions ({currentInstalled.length})</h3>
                     </div>
 
-                    {filteredInstalledExtensions.length === 0 ? (
+                    {currentInstalled.length === 0 ? (
                         <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
                             No extensions installed. Go to the "Browse" tab to install some!
                         </p>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {filteredInstalledExtensions.map(ext => (
+                            {currentInstalled.map(ext => (
                                 <div
-                                    key={`${ext.type}-${ext.id}`}
+                                    key={ext.id}
                                     className="setting-row"
                                     style={{
                                         padding: '12px 16px',
@@ -318,18 +338,18 @@ export default function ExtensionsSettings() {
                                                     borderRadius: '4px',
                                                     fontSize: '10px',
                                                     fontWeight: 500,
-                                                    background: ext.type === 'anime' ? 'rgba(100, 180, 255, 0.2)' : 'rgba(180, 162, 246, 0.2)',
-                                                    color: ext.type === 'anime' ? '#64b4ff' : 'var(--color-lavender-mist)',
+                                                    background: activeTab === 'anime' ? 'rgba(100, 180, 255, 0.2)' : 'rgba(180, 162, 246, 0.2)',
+                                                    color: activeTab === 'anime' ? '#64b4ff' : 'var(--color-lavender-mist)',
                                                     textTransform: 'uppercase'
                                                 }}>
-                                                    {ext.type}
+                                                    {activeTab}
                                                 </span>
                                             </div>
                                             <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                                                 v{ext.version} • {ext.lang.toUpperCase()}
                                                 {ext.nsfw && <span style={{ color: '#ff6464', marginLeft: 8 }}>NSFW</span>}
                                             </div>
-                                            {ext.enabled && ext.type === 'manga' && !ExtensionLoader.isLoaded(ext.id) && (
+                                            {ext.enabled && activeTab === 'manga' && !ExtensionLoader.isLoaded(ext.id) && (
                                                 <div style={{
                                                     color: '#ff6464',
                                                     marginTop: 4,
@@ -342,7 +362,7 @@ export default function ExtensionsSettings() {
                                                     ⚠ Failed to load: {ExtensionLoader.getLoadError(ext.id) || 'Unknown error'}
                                                 </div>
                                             )}
-                                            {ext.enabled && ext.type === 'anime' && ext.id !== 'hianime' && ext.id !== 'gogoanime' && ext.id !== 'animepahe' && !AnimeLoader.isLoaded(ext.id) && (
+                                            {ext.enabled && activeTab === 'anime' && ext.id !== 'hianime' && !AnimeLoader.isLoaded(ext.id) && (
                                                 <div style={{
                                                     color: '#ff6464',
                                                     marginTop: 4,
@@ -360,13 +380,13 @@ export default function ExtensionsSettings() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         {/* Enable/Disable Toggle */}
                                         <button
-                                            onClick={() => handleToggleExtension(ext.id, ext.type)}
+                                            onClick={() => handleToggleExtension(ext.id)}
                                             className={`toggle-switch ${ext.enabled ? 'active' : ''}`}
                                             style={{ marginRight: '8px' }}
                                         />
                                         {/* Uninstall */}
                                         <button
-                                            onClick={() => handleUninstallExtension(ext.id, ext.type)}
+                                            onClick={() => handleUninstallExtension(ext.id)}
                                             className="setting-button danger"
                                             style={{ padding: '6px 12px' }}
                                         >
@@ -381,30 +401,30 @@ export default function ExtensionsSettings() {
             )}
 
             {/* BROWSE TAB */}
-            {activeTab === 'browse' && (
+            {subTab === 'browse' && (
                 <div className="setting-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3 className="setting-group-title" style={{ margin: 0 }}>Available Extensions</h3>
                         <button
                             className="setting-button"
                             onClick={fetchAvailableExtensions}
-                            disabled={isLoading}
+                            disabled={loading}
                         >
                             <RefreshIcon size={14} />
-                            {isLoading ? 'Loading...' : 'Refresh'}
+                            {loading ? 'Loading...' : 'Refresh'}
                         </button>
                     </div>
 
-                    {repos.length === 0 ? (
+                    {currentRepos.length === 0 ? (
                         <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
                             No repositories added. Go to the "Repos" tab to add one!
                         </p>
-                    ) : availableExtensions.length === 0 && !isLoading ? (
+                    ) : currentAvailable.length === 0 && !loading ? (
                         <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
                             No extensions found. Try refreshing or check your repositories.
                         </p>
                     ) : (
-                        availableExtensions.map(repo => (
+                        currentAvailable.map(repo => (
                             <div key={repo.repoUrl} style={{ marginBottom: '24px' }}>
                                 <h4 style={{
                                     fontSize: '14px',
@@ -444,11 +464,11 @@ export default function ExtensionsSettings() {
                                                             borderRadius: '4px',
                                                             fontSize: '10px',
                                                             fontWeight: 500,
-                                                            background: ext.type === 'anime' ? 'rgba(100, 180, 255, 0.2)' : 'rgba(180, 162, 246, 0.2)',
-                                                            color: ext.type === 'anime' ? '#64b4ff' : 'var(--color-lavender-mist)',
+                                                            background: activeTab === 'anime' ? 'rgba(100, 180, 255, 0.2)' : 'rgba(180, 162, 246, 0.2)',
+                                                            color: activeTab === 'anime' ? '#64b4ff' : 'var(--color-lavender-mist)',
                                                             textTransform: 'uppercase'
                                                         }}>
-                                                            {ext.type || 'manga'}
+                                                            {activeTab}
                                                         </span>
                                                     </div>
                                                     <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
@@ -457,7 +477,7 @@ export default function ExtensionsSettings() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            {isInstalled(ext.id, ext.type) ? (
+                                            {isInstalledCheck(ext.id) ? (
                                                 <span style={{
                                                     padding: '6px 12px',
                                                     fontSize: '12px',
@@ -471,7 +491,7 @@ export default function ExtensionsSettings() {
                                                 <button
                                                     onClick={() => handleInstallExtension(ext, repo.repoUrl)}
                                                     className="setting-button primary"
-                                                    disabled={isLoading}
+                                                    disabled={loading}
                                                     style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
                                                 >
                                                     <DownloadIcon size={14} />
@@ -488,10 +508,10 @@ export default function ExtensionsSettings() {
             )}
 
             {/* REPOS TAB */}
-            {activeTab === 'repos' && (
+            {subTab === 'repos' && (
                 <div className="setting-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3 className="setting-group-title" style={{ margin: 0 }}>Repositories ({repos.length})</h3>
+                        <h3 className="setting-group-title" style={{ margin: 0 }}>Repositories ({currentRepos.length})</h3>
                         <button
                             className="setting-button primary"
                             onClick={() => setIsAddRepoOpen(true)}
@@ -502,7 +522,7 @@ export default function ExtensionsSettings() {
                         </button>
                     </div>
 
-                    {repos.length === 0 ? (
+                    {currentRepos.length === 0 ? (
                         <div style={{
                             padding: '24px',
                             textAlign: 'center',
@@ -519,7 +539,7 @@ export default function ExtensionsSettings() {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {repos.map(repo => (
+                            {currentRepos.map(repo => (
                                 <div
                                     key={repo.url}
                                     style={{
@@ -576,7 +596,7 @@ export default function ExtensionsSettings() {
                         width: '400px',
                         maxWidth: '90vw'
                     }}>
-                        <h3 style={{ margin: '0 0 16px', fontSize: '18px' }}>Add Extension Repository</h3>
+                        <h3 style={{ margin: '0 0 16px', fontSize: '18px' }}>Add {activeTab === 'manga' ? 'Manga' : 'Anime'} Repository</h3>
                         <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
                             Enter the URL of an extension repository. The URL should point to a directory containing an index.json file.
                         </p>

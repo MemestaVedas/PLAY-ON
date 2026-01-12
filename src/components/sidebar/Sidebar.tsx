@@ -5,9 +5,8 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { HistoryIcon, HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, FilmIcon, PlayIcon, ChartIcon, BellIcon, CalendarIcon } from '../ui/Icons';
+import { HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, PlayIcon, ChartIcon, CalendarIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
-import { useAniListNotifications } from '../../hooks/useAniListNotifications';
 
 interface SidebarNavItem {
     label: string;
@@ -30,9 +29,6 @@ function Sidebar({ width: _width }: SidebarProps) {
     const { addFolder, animeFolders, mangaFolders } = useLocalMedia();
     console.log("Sidebar: animeFolders:", animeFolders, "mangaFolders:", mangaFolders);
 
-    // Fetch AniList notifications
-    const { unreadCount } = useAniListNotifications();
-
     // Navigation Sections
     const homeItem: SidebarNavItem[] = [
         { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> },
@@ -41,12 +37,11 @@ function Sidebar({ width: _width }: SidebarProps) {
     const calendarItem: SidebarNavItem = { label: 'Calendar', path: '/calendar', icon: <CalendarIcon size={20} /> };
 
     const animeSection: SidebarNavItem[] = [
-        { label: 'Anime List', path: '/anime-list', icon: <FilmIcon size={20} /> },
+        { label: 'Watch Anime', path: '/local-anime', icon: <PlayIcon size={20} /> },
         { label: 'Browse Anime', path: '/anime-browse', icon: <CompassIcon size={20} /> },
     ];
 
     const mangaSection: SidebarNavItem[] = [
-        { label: 'My Manga List', path: '/manga-list', icon: <LibraryIcon size={20} /> },
         { label: 'Read Manga', path: '/local-manga', icon: <PlayIcon size={20} /> },
         { label: 'Browse Manga', path: '/manga-browse', icon: <CompassIcon size={20} /> },
     ];
@@ -106,13 +101,20 @@ function Sidebar({ width: _width }: SidebarProps) {
                 flex: 1,
                 padding: '1rem 0.5rem',
                 overflowY: 'auto',
-            }}>
+                scrollbarWidth: 'thin', // Firefox
+                scrollbarColor: 'var(--color-bg-glass-hover) transparent', // Firefox
+            }}
+                className="custom-scrollbar" // We can target this class if needed in CSS
+            >
                 {/* Home - Top Level */}
                 <div style={{ marginBottom: '0.5rem' }}>
                     {homeItem.map(renderLink)}
                 </div>
-                {/* Calendar - Below Home */}
+
+                {/* My List & Calendar */}
                 <div style={{ marginBottom: '0.5rem' }}>
+                    {/* My List goes HERE above Calendar */}
+                    {renderLink({ label: 'My List', path: '/my-list', icon: <LibraryIcon size={20} /> })}
                     {renderLink(calendarItem)}
                 </div>
 
@@ -305,30 +307,27 @@ function Sidebar({ width: _width }: SidebarProps) {
                 </div>
             )}
 
-            {/* Profile Section */}
+            {/* Profile Section (Discord-style footer) */}
             <div style={{
                 padding: '0.75rem',
                 borderTop: '1px solid var(--color-border-subtle)',
-                background: 'transparent',
+                background: 'rgba(0, 0, 0, 0.2)', // Darker background for "footer" feel
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
             }}>
-                {/* User Avatar - clicks to profile page */}
+                {/* User Info - clicks to profile page */}
                 <div
                     style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        background: loading ? 'var(--color-bg-glass-hover)' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '1.25rem',
-                        flexShrink: 0,
-                        overflow: 'hidden',
+                        gap: '0.6rem',
                         cursor: 'pointer',
-                        transition: 'transform 0.2s',
+                        flex: 1, // Takes available space
+                        minWidth: 0, // Allow text truncation
+                        padding: '4px',
+                        borderRadius: '6px',
+                        transition: 'background 0.2s',
                     }}
                     onClick={() => {
                         if (isAuthenticated && user?.name) {
@@ -337,145 +336,102 @@ function Sidebar({ width: _width }: SidebarProps) {
                             navigate('/settings');
                         }
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-glass-hover)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     title={user?.name ? `View ${user.name}'s Profile` : 'Settings'}
                 >
-                    {loading ? (
-                        <div style={{
-                            width: '100%',
-                            height: '100%',
-                            backgroundImage: 'linear-gradient(90deg, var(--color-bg-glass-hover) 0%, var(--color-border-subtle) 50%, var(--color-bg-glass-hover) 100%)',
-                            backgroundSize: '200% 100%',
-                            animation: 'pulse 1.5s ease-in-out infinite',
-                        }} />
-                    ) : !isAuthenticated || error || !user?.avatar?.large ? (
-                        '👤'
-                    ) : (
-                        <img
-                            src={user.avatar.large}
-                            alt={`${user?.name}'s avatar`}
-                            style={{
+                    <div
+                        style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: loading ? 'var(--color-bg-glass-hover)' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.25rem',
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {loading ? (
+                            <div style={{
                                 width: '100%',
                                 height: '100%',
-                                objectFit: 'cover',
-                            }}
-                        />
-                    )}
+                                backgroundImage: 'linear-gradient(90deg, var(--color-bg-glass-hover) 0%, var(--color-border-subtle) 50%, var(--color-bg-glass-hover) 100%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'pulse 1.5s ease-in-out infinite',
+                            }} />
+                        ) : !isAuthenticated || error || !user?.avatar?.large ? (
+                            '👤'
+                        ) : (
+                            <img
+                                src={user.avatar.large}
+                                alt={`${user?.name}'s avatar`}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                }}
+                            />
+                        )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <span style={{
+                            fontSize: '0.85rem',
+                            fontWeight: '700',
+                            color: 'var(--color-text-main)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {isAuthenticated && user?.name ? user.name : 'Guest'}
+                        </span>
+                        <span style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--color-text-muted)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {isAuthenticated ? 'Online' : 'Not Logged In'}
+                        </span>
+                    </div>
                 </div>
 
-                {/* Spacer */}
-                <div style={{ flex: 1 }} />
-
-                {/* History Icon */}
-                <button
-                    onClick={() => navigate('/history')}
-                    style={{
-                        background: location.pathname === '/history' ? 'var(--color-bg-glass-hover)' : 'transparent',
-                        border: 'none',
-                        color: location.pathname === '/history' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
-                        cursor: 'pointer',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
-                        e.currentTarget.style.color = 'var(--color-text-main)';
-                    }}
-                    onMouseLeave={(e) => {
-                        if (location.pathname !== '/history') {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = 'var(--color-text-muted)';
-                        }
-                    }}
-                    title="History"
-                >
-                    <HistoryIcon size={20} />
-                </button>
-
-                {/* Notifications Icon */}
-                {isAuthenticated && (
+                {/* Utility Icons (Settings only) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    {/* Settings Icon */}
                     <button
-                        onClick={() => navigate('/notifications')}
+                        onClick={() => navigate('/settings')}
                         style={{
-                            background: 'transparent',
+                            background: location.pathname === '/settings' ? 'var(--color-bg-glass-hover)' : 'transparent',
                             border: 'none',
-                            color: 'var(--color-text-muted)',
+                            color: location.pathname === '/settings' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
                             cursor: 'pointer',
-                            padding: '8px',
-                            borderRadius: '8px',
+                            padding: '6px',
+                            borderRadius: '6px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             transition: 'all 0.2s',
-                            position: 'relative',
                         }}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
                             e.currentTarget.style.color = 'var(--color-text-main)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = 'var(--color-text-muted)';
+                            if (location.pathname !== '/settings') {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.color = 'var(--color-text-muted)';
+                            }
                         }}
-                        title={unreadCount > 0 ? `${unreadCount} unread notifications` : 'Notifications'}
+                        title="Settings"
                     >
-                        <BellIcon size={20} />
-                        {unreadCount > 0 && (
-                            <span style={{
-                                position: 'absolute',
-                                top: 2,
-                                right: 2,
-                                background: 'var(--color-zen-accent)',
-                                color: '#000',
-                                borderRadius: '50%',
-                                width: 16,
-                                height: 16,
-                                fontSize: '0.6rem',
-                                fontWeight: 700,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}>
-                                {unreadCount > 9 ? '9+' : unreadCount}
-                            </span>
-                        )}
+                        <SettingsIcon size={18} />
                     </button>
-                )}
-
-                {/* Settings Icon */}
-                <button
-                    onClick={() => navigate('/settings')}
-                    style={{
-                        background: location.pathname === '/settings' ? 'var(--color-bg-glass-hover)' : 'transparent',
-                        border: 'none',
-                        color: location.pathname === '/settings' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
-                        cursor: 'pointer',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
-                        e.currentTarget.style.color = 'var(--color-text-main)';
-                    }}
-                    onMouseLeave={(e) => {
-                        if (location.pathname !== '/settings') {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = 'var(--color-text-muted)';
-                        }
-                    }}
-                    title="Settings"
-                >
-                    <SettingsIcon size={20} />
-                </button>
+                </div>
             </div>
 
             {/* User Profile Dialog */}

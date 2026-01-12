@@ -3,7 +3,8 @@
  * 
  * Features:
  * - HLS stream support via hls.js
- * - Server/quality selection
+ * - Quality selection (from HLS levels)
+ * - Subtitle track selection
  * - Standard playback controls
  * - Keyboard shortcuts
  */
@@ -12,8 +13,13 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import { invoke } from '@tauri-apps/api/core';
 import type { StreamingSource } from '../../services/streamingService';
-import { Dropdown } from './Dropdown'; // Import Dropdown (same folder)
 import './StreamPlayer.css';
+
+// Subtitle type
+interface SubtitleTrack {
+    url: string;
+    lang: string;
+}
 
 // Custom HLS Loader that proxies requests through Tauri
 const createTauriLoader = (headers: Record<string, string> = {}) => {
@@ -35,7 +41,7 @@ const createTauriLoader = (headers: Record<string, string> = {}) => {
             };
         }
 
-        load(context: any, config: any, callbacks: any) {
+        load(context: any, _config: any, callbacks: any) {
             const { url } = context;
             const isPlaylist = url.includes('.m3u8') || context.type === 'manifest' || context.type === 'level';
 
@@ -43,7 +49,6 @@ const createTauriLoader = (headers: Record<string, string> = {}) => {
             this._stats.loading.start = performance.now();
 
             // Use Tauri proxy to fetch content
-            console.log(`[StreamProxy] Fetching: ${url.substring(0, 60)}... with headers:`, headers);
             invoke<number[]>('stream_proxy', { url, headers })
                 .then((response) => {
                     const now = performance.now();
@@ -61,8 +66,6 @@ const createTauriLoader = (headers: Record<string, string> = {}) => {
                     if (isPlaylist) {
                         // Decode as UTF-8 string for playlist files
                         data = new TextDecoder('utf-8').decode(uint8Array);
-                        // Debug: log what we received
-                        console.log(`[StreamProxy] Playlist response (${data.length} chars):`, data.substring(0, 300));
                     } else {
                         // Keep as ArrayBuffer for media segments
                         data = uint8Array.buffer;
@@ -101,6 +104,7 @@ const createTauriLoader = (headers: Record<string, string> = {}) => {
 
 interface StreamPlayerProps {
     sources: StreamingSource[];
+    subtitles?: SubtitleTrack[];
     title?: string;
     onProgress?: (progress: number, currentTime: number, duration: number) => void;
     onEnded?: () => void;
@@ -108,8 +112,17 @@ interface StreamPlayerProps {
     headers?: Record<string, string>;
 }
 
+// Quality level from HLS.js
+interface QualityLevel {
+    index: number;
+    height: number;
+    bitrate: number;
+    label: string;
+}
+
 export default function StreamPlayer({
     sources,
+    subtitles = [],
     title,
     onProgress,
     onEnded,
@@ -120,7 +133,6 @@ export default function StreamPlayer({
     const hlsRef = useRef<Hls | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const hideControlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -129,12 +141,78 @@ export default function StreamPlayer({
     const [isMuted, setIsMuted] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
-    const [selectedQuality, setSelectedQuality] = useState(0);
+    // const [selectedSourceIdx, setSelectedSourceIdx] = useState(0); // Unused
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Get best source (highest quality)
-    const currentSource = sources[selectedQuality] || sources[0];
+    // Menu State
+    const [activeMenu, setActiveMenu] = useState<'none' | 'quality' | 'subtitles' | 'source'>('none');
+
+    // HLS quality levels (from the stream)
+    const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
+    const [selectedQuality, setSelectedQuality] = useState(-1); // -1 = auto
+
+    // Subtitle state
+    const [selectedSubtitle, setSelectedSubtitle] = useState(-1); // -1 = off
+
+    // Get current source
+    const currentSource = sources[0] || sources[0]; // Simplified since selectedSourceIdx is unused
+
+    // Handle quality change
+    const handleQualityChange = useCallback((levelIndex: number) => {
+        if (hlsRef.current) {
+            hlsRef.current.currentLevel = levelIndex;
+            setSelectedQuality(levelIndex);
+            console.log('[StreamPlayer] Quality changed to:', levelIndex);
+            setActiveMenu('none');
+        }
+    }, []);
+
+    // Handle subtitle change
+    const handleSubtitleChange = useCallback((trackIndex: number) => {
+        setSelectedSubtitle(trackIndex);
+        setActiveMenu('none');
+
+        const video = videoRef.current;
+        if (!video) return;
+
+        // Remove existing text tracks
+        Array.from(video.textTracks).forEach((track) => {
+            track.mode = 'disabled';
+        });
+
+        if (trackIndex >= 0 && subtitles[trackIndex]) {
+            // Check if track already exists
+            let existingTrack: TextTrack | null = null;
+            for (let i = 0; i < video.textTracks.length; i++) {
+                if (video.textTracks[i].label === subtitles[trackIndex].lang) {
+                    existingTrack = video.textTracks[i];
+                    break;
+                }
+            }
+
+            if (existingTrack) {
+                existingTrack.mode = 'showing';
+            } else {
+                // Add new track
+                const track = document.createElement('track');
+                track.kind = 'subtitles';
+                track.label = subtitles[trackIndex].lang;
+                track.srclang = subtitles[trackIndex].lang.substring(0, 2).toLowerCase();
+                track.src = subtitles[trackIndex].url;
+                track.default = true;
+                video.appendChild(track);
+
+                // Enable the track after adding
+                setTimeout(() => {
+                    const newTrack = video.textTracks[video.textTracks.length - 1];
+                    if (newTrack) {
+                        newTrack.mode = 'showing';
+                    }
+                }, 100);
+            }
+        }
+    }, [subtitles]);
 
     // Initialize HLS or native playback
     useEffect(() => {
@@ -143,6 +221,8 @@ export default function StreamPlayer({
 
         setIsLoading(true);
         setError(null);
+        setQualityLevels([]);
+        setSelectedQuality(-1);
 
         // Cleanup previous HLS instance
         if (hlsRef.current) {
@@ -162,8 +242,21 @@ export default function StreamPlayer({
             hls.loadSource(currentSource.url);
             hls.attachMedia(video);
 
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
                 setIsLoading(false);
+
+                // Extract quality levels
+                const levels: QualityLevel[] = data.levels.map((level, index) => ({
+                    index,
+                    height: level.height,
+                    bitrate: level.bitrate,
+                    label: level.height ? `${level.height}p` : `${Math.round(level.bitrate / 1000)}kbps`
+                }));
+
+                // Add "Auto" option at the beginning
+                levels.unshift({ index: -1, height: 0, bitrate: 0, label: 'Auto' });
+                setQualityLevels(levels);
+
                 if (startTime > 0) {
                     video.currentTime = startTime;
                 }
@@ -180,18 +273,8 @@ export default function StreamPlayer({
             });
 
             hlsRef.current = hls;
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Safari native HLS support
-            video.src = currentSource.url;
-            video.addEventListener('loadedmetadata', () => {
-                setIsLoading(false);
-                if (startTime > 0) {
-                    video.currentTime = startTime;
-                }
-                video.play().catch(console.error);
-            });
         } else {
-            // Direct MP4 playback
+            // Native HLS or MP4
             video.src = currentSource.url;
             video.addEventListener('loadedmetadata', () => {
                 setIsLoading(false);
@@ -212,9 +295,7 @@ export default function StreamPlayer({
 
     // Progress tracking
     useEffect(() => {
-        if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-        }
+        if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
 
         progressIntervalRef.current = setInterval(() => {
             const video = videoRef.current;
@@ -230,26 +311,58 @@ export default function StreamPlayer({
         }, 1000);
 
         return () => {
-            if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-            }
+            if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
         };
     }, [onProgress]);
 
-    // Auto-hide controls
-    const resetHideTimer = useCallback(() => {
-        setShowControls(true);
+    // Enhanced Auto-hide controls
+    useEffect(() => {
+        let timer: ReturnType<typeof setTimeout>;
+        const container = containerRef.current;
 
-        if (hideControlsTimerRef.current) {
-            clearTimeout(hideControlsTimerRef.current);
+        const show = () => {
+            setShowControls(true);
+            container?.classList.remove('hide-cursor');
+            clearTimeout(timer);
+        };
+
+        const scheduleHide = () => {
+            clearTimeout(timer);
+            if (isPlaying && activeMenu === 'none') {
+                timer = setTimeout(() => {
+                    setShowControls(false);
+                    container?.classList.add('hide-cursor');
+                }, 3000); // 3 seconds inactivity
+            }
+        };
+
+        const handleActivity = () => {
+            show();
+            scheduleHide();
+        };
+
+        if (container) {
+            container.addEventListener('mousemove', handleActivity);
+            container.addEventListener('click', handleActivity);
+            container.addEventListener('keydown', handleActivity);
         }
 
-        hideControlsTimerRef.current = setTimeout(() => {
-            if (isPlaying) {
-                setShowControls(false);
+        // Trigger initial check or when playing state changes
+        if (isPlaying && activeMenu === 'none') {
+            scheduleHide();
+        } else {
+            show();
+        }
+
+        return () => {
+            if (container) {
+                container.removeEventListener('mousemove', handleActivity);
+                container.removeEventListener('click', handleActivity);
+                container.removeEventListener('keydown', handleActivity);
             }
-        }, 3000);
-    }, [isPlaying]);
+            clearTimeout(timer);
+        };
+    }, [isPlaying, activeMenu]);
 
     // Playback controls
     const togglePlay = useCallback(() => {
@@ -297,15 +410,25 @@ export default function StreamPlayer({
         try {
             if (!document.fullscreenElement) {
                 await container.requestFullscreen();
-                setIsFullscreen(true);
             } else {
                 await document.exitFullscreen();
-                setIsFullscreen(false);
             }
         } catch (e) {
             console.error('Fullscreen error:', e);
         }
     }, []);
+
+    // Smart Subtitle Toggle
+    const handleSubtitleClick = () => {
+        // If 1 track: Off (-1) <-> On (0)
+        // If >1 tracks: Open menu
+        if (subtitles.length === 1) {
+            if (selectedSubtitle === -1) handleSubtitleChange(0);
+            else handleSubtitleChange(-1);
+        } else {
+            setActiveMenu(activeMenu === 'subtitles' ? 'none' : 'subtitles');
+        }
+    };
 
     // Video event handlers
     useEffect(() => {
@@ -316,6 +439,7 @@ export default function StreamPlayer({
         const handlePause = () => setIsPlaying(false);
         const handleEnded = () => {
             setIsPlaying(false);
+            setShowControls(true);
             onEnded?.();
         };
         const handleError = () => {
@@ -336,50 +460,11 @@ export default function StreamPlayer({
         };
     }, [onEnded]);
 
-    // Keyboard shortcuts
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            const video = videoRef.current;
-            if (!video) return;
-
-            switch (e.key.toLowerCase()) {
-                case ' ':
-                case 'k':
-                    e.preventDefault();
-                    togglePlay();
-                    break;
-                case 'f':
-                    e.preventDefault();
-                    toggleFullscreen();
-                    break;
-                case 'm':
-                    e.preventDefault();
-                    toggleMute();
-                    break;
-                case 'arrowleft':
-                    e.preventDefault();
-                    video.currentTime = Math.max(0, video.currentTime - 10);
-                    break;
-                case 'arrowright':
-                    e.preventDefault();
-                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
-                    break;
-                case 'arrowup':
-                    e.preventDefault();
-                    video.volume = Math.min(1, video.volume + 0.1);
-                    setVolume(video.volume);
-                    break;
-                case 'arrowdown':
-                    e.preventDefault();
-                    video.volume = Math.max(0, video.volume - 0.1);
-                    setVolume(video.volume);
-                    break;
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [togglePlay, toggleFullscreen, toggleMute]);
+        const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
 
     // Format time
     const formatTime = (seconds: number): string => {
@@ -387,10 +472,7 @@ export default function StreamPlayer({
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = Math.floor(seconds % 60);
-
-        if (h > 0) {
-            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
+        if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
@@ -406,14 +488,14 @@ export default function StreamPlayer({
         <div
             ref={containerRef}
             className={`stream-player ${isFullscreen ? 'fullscreen' : ''}`}
-            onMouseMove={resetHideTimer}
-            onMouseLeave={() => isPlaying && setShowControls(false)}
         >
             <video
                 ref={videoRef}
                 className="stream-video"
                 onClick={togglePlay}
                 playsInline
+                crossOrigin="anonymous"
+                onDoubleClick={toggleFullscreen}
             />
 
             {isLoading && (
@@ -434,6 +516,7 @@ export default function StreamPlayer({
                         value={currentTime}
                         onChange={handleSeek}
                         className="progress-bar"
+                        style={{ backgroundSize: `${(currentTime * 100) / (duration || 1)}% 100%` }}
                     />
                     <span className="time-display">
                         {formatTime(currentTime)} / {formatTime(duration)}
@@ -441,40 +524,118 @@ export default function StreamPlayer({
                 </div>
 
                 <div className="stream-buttons">
-                    <button onClick={togglePlay} className="control-btn">
-                        {isPlaying ? '⏸' : '▶'}
-                    </button>
-
-                    <div className="volume-control">
-                        <button onClick={toggleMute} className="control-btn">
-                            {isMuted ? '🔇' : '🔊'}
+                    <div className="left-controls">
+                        <button onClick={togglePlay} className="control-btn" title={isPlaying ? "Pause" : "Play"}>
+                            {isPlaying ? (
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                            ) : (
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M8 5v14l11-7z" /></svg>
+                            )}
                         </button>
-                        <input
-                            type="range"
-                            min={0}
-                            max={1}
-                            step={0.1}
-                            value={isMuted ? 0 : volume}
-                            onChange={handleVolumeChange}
-                            className="volume-slider"
-                        />
+
+                        <div className="volume-control">
+                            <button onClick={toggleMute} className="control-btn" title={isMuted ? "Unmute" : "Mute"}>
+                                {isMuted || volume === 0 ? (
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" /></svg>
+                                ) : (
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" /></svg>
+                                )}
+                            </button>
+                            <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                value={isMuted ? 0 : volume}
+                                onChange={handleVolumeChange}
+                                className="volume-slider"
+                                style={{ backgroundSize: `${(isMuted ? 0 : volume) * 100}% 100%` }}
+                            />
+                        </div>
                     </div>
 
-                    {sources.length > 1 && (
-                        <Dropdown
-                            value={String(selectedQuality)}
-                            onChange={(val) => setSelectedQuality(parseInt(val))}
-                            options={sources.map((src, idx) => ({
-                                value: String(idx),
-                                label: src.quality
-                            }))}
-                            className="w-32"
-                        />
-                    )}
+                    <div className="right-controls">
+                        {/* Subtitles */}
+                        {subtitles.length > 0 && (
+                            <div className="control-group">
+                                <button
+                                    className={`control-btn ${selectedSubtitle !== -1 ? 'active' : ''}`}
+                                    onClick={handleSubtitleClick}
+                                    title="Subtitles"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                                        <path d="M2 5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" />
+                                        <path d="M10 9H8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2" />
+                                        <path d="M18 9h-2a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2" />
+                                    </svg>
+                                </button>
+                                {activeMenu === 'subtitles' && subtitles.length > 1 && (
+                                    <div className="settings-menu">
+                                        <div
+                                            className={`menu-item ${selectedSubtitle === -1 ? 'selected' : ''}`}
+                                            onClick={() => handleSubtitleChange(-1)}
+                                        >
+                                            Off
+                                        </div>
+                                        {subtitles.map((sub, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`menu-item ${selectedSubtitle === idx ? 'selected' : ''}`}
+                                                onClick={() => handleSubtitleChange(idx)}
+                                            >
+                                                {sub.lang}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                    <button onClick={toggleFullscreen} className="control-btn">
-                        {isFullscreen ? '⛶' : '⛶'}
-                    </button>
+                        {/* Quality */}
+                        {qualityLevels.length > 1 && (
+                            <div className="control-group">
+                                <button
+                                    className={`control-btn ${activeMenu === 'quality' ? 'active' : ''}`}
+                                    onClick={() => setActiveMenu(activeMenu === 'quality' ? 'none' : 'quality')}
+                                    title="Quality"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                    </svg>
+                                </button>
+                                {activeMenu === 'quality' && (
+                                    <div className="settings-menu">
+                                        {qualityLevels.map((level) => (
+                                            <div
+                                                key={level.index}
+                                                className={`menu-item ${selectedQuality === level.index ? 'selected' : ''}`}
+                                                onClick={() => handleQualityChange(level.index)}
+                                            >
+                                                {level.label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <button
+                            onClick={toggleFullscreen}
+                            className="control-btn"
+                            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                        >
+                            {isFullscreen ? (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                                    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                                </svg>
+                            ) : (
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                </svg>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

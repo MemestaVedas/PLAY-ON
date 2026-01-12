@@ -71,7 +71,7 @@ function MainLayout() {
     return (
         <div style={{
             display: 'flex',
-            minHeight: '100vh',
+            height: '100vh',
             /* background removed for transparency */
             position: 'relative',
             overflow: 'hidden',
@@ -87,6 +87,9 @@ function MainLayout() {
                 zIndex: 10,
                 width: `${sidebarWidth}px`,
                 flexShrink: 0,
+                height: '100%', // Ensure it takes full height
+                display: 'flex', // Flex context for child
+                flexDirection: 'column',
             }}>
                 <Sidebar width={sidebarWidth} />
 

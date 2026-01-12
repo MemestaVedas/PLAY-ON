@@ -107,11 +107,11 @@ function UserProfile() {
                         </div>
                         <div className="flex gap-6 text-sm font-bold text-white/60 tracking-wider">
                             <span className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                                <span className="w-2 h-2 rounded-full bg-[var(--theme-accent-primary)]"></span>
                                 ANIME: {user.statistics?.anime?.count || 0}
                             </span>
                             <span className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                                <span className="w-2 h-2 rounded-full bg-[var(--theme-accent-success)]"></span>
                                 MANGA: {user.statistics?.manga?.count || 0}
                             </span>
                         </div>
@@ -135,9 +135,9 @@ function UserProfile() {
                     {/* Anime Stats */}
                     <SpotlightCard
                         className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md"
-                        spotlightColor="rgba(59, 130, 246, 0.25)"
+                        spotlightColor="rgba(var(--theme-accent-primary-rgb), 0.25)"
                     >
-                        <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-blue-400">
+                        <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-[var(--theme-accent-primary)]">
                             <FilmIcon size={28} /> Anime Stats
                         </h3>
                         <div className="grid grid-cols-2 gap-6">
@@ -151,9 +151,9 @@ function UserProfile() {
                     {/* Manga Stats */}
                     <SpotlightCard
                         className="p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md"
-                        spotlightColor="rgba(34, 197, 94, 0.25)"
+                        spotlightColor="rgba(var(--theme-accent-success-rgb), 0.25)"
                     >
-                        <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-green-400">
+                        <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-[var(--theme-accent-success)]">
                             <BookIcon size={28} /> Manga Stats
                         </h3>
                         <div className="grid grid-cols-2 gap-6">

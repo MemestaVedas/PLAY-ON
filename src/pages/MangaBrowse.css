@@ -29,7 +29,8 @@
 /* Controls */
 .browse-controls {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 2rem;
 }
@@ -241,6 +242,8 @@
 .browse-empty h3 {
     color: var(--theme-text-main);
     margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
 }
 
 .browse-empty p {
