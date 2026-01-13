@@ -5,7 +5,7 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, PlayIcon, ChartIcon, CalendarIcon } from '../ui/Icons';
+import { HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, ChartIcon, CalendarIcon, FilmIcon, BookOpenIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
 
 interface SidebarNavItem {
@@ -37,12 +37,12 @@ function Sidebar({ width: _width }: SidebarProps) {
     const calendarItem: SidebarNavItem = { label: 'Calendar', path: '/calendar', icon: <CalendarIcon size={20} /> };
 
     const animeSection: SidebarNavItem[] = [
-        { label: 'Watch Anime', path: '/local-anime', icon: <PlayIcon size={20} /> },
+        { label: 'Watch Anime', path: '/local-anime', icon: <FilmIcon size={20} /> },
         { label: 'Browse Anime', path: '/anime-browse', icon: <CompassIcon size={20} /> },
     ];
 
     const mangaSection: SidebarNavItem[] = [
-        { label: 'Read Manga', path: '/local-manga', icon: <PlayIcon size={20} /> },
+        { label: 'Read Manga', path: '/local-manga', icon: <BookOpenIcon size={20} /> },
         { label: 'Browse Manga', path: '/manga-browse', icon: <CompassIcon size={20} /> },
     ];
 

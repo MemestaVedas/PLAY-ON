@@ -792,67 +792,86 @@ function KeyboardSettings() {
 // ============================================================================
 
 function AdvancedSettings() {
-    const { clearCache, resetSettings } = useSettings();
+    const { clearCache, resetSettings, factoryReset } = useSettings();
     const [isClearing, setIsClearing] = useState(false);
     const [appVersion, setAppVersion] = useState('...');
 
     // Fetch version from Tauri on mount
     useEffect(() => {
         import('@tauri-apps/api/app').then(({ getVersion }) => {
-            getVersion().then(setAppVersion).catch(() => setAppVersion('unknown'));
+            getVersion().then(setAppVersion).catch(console.error);
         });
     }, []);
 
-    const handleClearCache = useCallback(async () => {
+    const handleClearCache = async () => {
         setIsClearing(true);
-        try {
-            await clearCache();
-            // Show some feedback
-            setTimeout(() => setIsClearing(false), 1000);
-        } catch {
-            setIsClearing(false);
+        await clearCache();
+        setTimeout(() => setIsClearing(false), 1000);
+    };
+
+    const handleFactoryReset = async () => {
+        const { confirm } = await import('@tauri-apps/plugin-dialog');
+
+        const confirmed1 = await confirm(
+            "This will delete ALL data, including your library folders, settings, and accounts.\n\nThe app will restart as if it was just installed.\n\nAre you sure?",
+            { title: 'Factory Reset - DANGER', kind: 'warning' }
+        );
+
+        if (confirmed1) {
+            const confirmed2 = await confirm(
+                "Are you absolutely sure? This cannot be undone.",
+                { title: 'Final Confirmation', kind: 'warning' }
+            );
+
+            if (confirmed2) {
+                await factoryReset();
+            }
         }
-    }, [clearCache]);
+    }
 
     return (
         <div className="settings-section">
             <h2 className="settings-section-title">Advanced</h2>
             <p className="settings-section-description">
-                Developer options and system info
+                Developer tools and data management
             </p>
 
             <div className="setting-group">
+                <h3 className="setting-group-title">Data Management</h3>
 
+                <SettingRow
+                    label="Clear Cache"
+                    description="Clear temporary image and API data. Does not effect library."
+                >
+                    <button
+                        className="setting-button"
+                        onClick={handleClearCache}
+                        disabled={isClearing}
+                    >
+                        {isClearing ? 'Clearing...' : 'Clear Cache'}
+                    </button>
+                </SettingRow>
+
+                <SettingRow
+                    label="Factory Reset"
+                    description="Wipe all data and reset app to initial state."
+                >
+                    <button
+                        className="setting-button danger"
+                        onClick={handleFactoryReset}
+                        style={{ backgroundColor: 'rgba(244, 0, 53, 0.1)', color: '#f40035', border: '1px solid rgba(244, 0, 53, 0.2)' }}
+                    >
+                        Factory Reset
+                    </button>
+                </SettingRow>
             </div>
 
             <div className="setting-group">
-                <h3 className="setting-group-title">Cache</h3>
+                <h3 className="setting-group-title">Danger Zone</h3>
 
-                <SettingRow label="Clear Cache" description="Clear cached images and metadata">
-                    <div className="flex gap-2">
-                        <button
-                            className="setting-button"
-                            onClick={handleClearCache}
-                            disabled={isClearing}
-                        >
-                            {isClearing ? 'Clearing...' : 'Clear Cache'}
-                        </button>
-                    </div>
-                </SettingRow>
-
-                <SettingRow label="Clear & Restart" description="Clear cache and restart application">
-                    <button
-                        className="setting-button danger"
-                        onClick={async () => {
-                            if (confirm('This will delete all local cache and restart the application. Continue?')) {
-                                const { clearAllCache } = await import('../lib/cacheUtils');
-                                const { relaunch } = await import('@tauri-apps/plugin-process');
-                                await clearAllCache();
-                                await relaunch();
-                            }
-                        }}
-                    >
-                        Clear & Restart
+                <SettingRow label="Reset Settings" description="Restore all settings to defaults">
+                    <button className="setting-button danger" onClick={resetSettings}>
+                        Reset All Settings
                     </button>
                 </SettingRow>
             </div>
@@ -866,16 +885,6 @@ function AdvancedSettings() {
                             <span className="version-number">v{appVersion}</span>
                         </div>
                     </div>
-                </SettingRow>
-            </div>
-
-            <div className="setting-group">
-                <h3 className="setting-group-title">Danger Zone</h3>
-
-                <SettingRow label="Reset Settings" description="Restore all settings to defaults">
-                    <button className="setting-button danger" onClick={resetSettings}>
-                        Reset All Settings
-                    </button>
                 </SettingRow>
             </div>
         </div>

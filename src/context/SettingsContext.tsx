@@ -105,6 +105,7 @@ interface SettingsContextType {
     updateSettings: (updates: Partial<Settings>) => void;
     resetSettings: () => void;
     clearCache: () => Promise<void>;
+    factoryReset: () => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -194,13 +195,36 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.log('Cache cleared successfully');
     }, []);
 
+    const factoryReset = useCallback(async () => {
+        // Clear all local storage
+        localStorage.clear();
+
+        // Clear Apollo cache
+        try {
+            const { apolloClient } = await import('../lib/apollo');
+            await apolloClient.clearStore();
+        } catch (e) {
+            console.error('Failed to clear Apollo cache:', e);
+        }
+
+        // Reload the application to reset all state
+        try {
+            const { relaunch } = await import('@tauri-apps/plugin-process');
+            await relaunch();
+        } catch (e) {
+            console.error("Failed to relaunch, falling back to reload", e);
+            window.location.reload();
+        }
+    }, []);
+
     const value = React.useMemo<SettingsContextType>(() => ({
         settings,
         updateSetting,
         updateSettings,
         resetSettings,
         clearCache,
-    }), [settings, updateSetting, updateSettings, resetSettings, clearCache]);
+        factoryReset,
+    }), [settings, updateSetting, updateSettings, resetSettings, clearCache, factoryReset]);
 
     return (
         <SettingsContext.Provider value={value}>

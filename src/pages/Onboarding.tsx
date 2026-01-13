@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Aurora from '../components/ui/Aurora';
 import CurvedLoop from '../components/ui/CurvedLoop';
 import Stepper, { Step } from '../components/ui/Stepper';
+import { LinkIcon } from '../components/ui/Icons';
 import { useAuthContext } from '../context/AuthContext';
-import { useLocalMedia } from '../context/LocalMediaContext';
+
 
 /**
  * Onboarding Component
@@ -15,7 +16,7 @@ import { useLocalMedia } from '../context/LocalMediaContext';
 function Onboarding() {
     const navigate = useNavigate();
     const { login, isAuthenticated, user, loading: authLoading, loginWithCode } = useAuthContext();
-    const { addFolder, folders, removeFolder } = useLocalMedia();
+
 
     // Local state for username if they skip login or want to set a local name
     const [localName, setLocalName] = useState('');
@@ -51,7 +52,7 @@ function Onboarding() {
             {/* 1. Aurora Background */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
                 <Aurora
-                    colorStops={["#3A29FF", "#FF94B4", "#FF3232"]}
+                    colorStops={["#7B61FF", "#E88AB3", "#5A99C2"]}
                     blend={0.5}
                     amplitude={1.0}
                     speed={0.5}
@@ -64,55 +65,67 @@ function Onboarding() {
                 zIndex: 10,
                 height: '100%',
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: 'row',
                 justifyContent: 'center',
                 alignItems: 'center',
-                width: '100%'
+                width: '100%',
+                gap: '0rem'
             }}>
-                <div className="w-full max-w-4xl px-4">
+                {/* Vertical Sidebar Title */}
+                <div className="hidden lg:flex h-full pl-28 pr-0 items-center justify-center select-none z-20">
+                    <h1
+                        className="text-[12rem] font-heavy tracking-normal text-transparent bg-clip-text bg-gradient-to-t from-white/40 to-white/90 leading-none whitespace-nowrap"
+                        style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                    >
+                        PLAY-ON!
+                    </h1>
+                </div>
+
+                {/* Vertical Rotating Text (Outside Box) */}
+                <div className="hidden lg:flex h-full items-center justify-center -ml-40 -mr-12 z-0 pointer-events-none">
+                    <div className="transform -rotate-90 scale-[1.2] opacity-40 mix-blend-screen origin-center w-[600px] flex justify-center">
+                        <CurvedLoop
+                            marqueeText="TRACK ✦ WATCH ✦ DISCOVER ✦ READ ✦ "
+                            speed={2}
+                            curveAmount={200}
+                            direction="right"
+                            interactive={false}
+                        />
+                    </div>
+                </div>
+
+                <div className="w-full max-w-2xl px-4 z-20 -ml-48">
                     <Stepper
                         initialStep={1}
                         onFinalStepCompleted={handleComplete}
                         backButtonText="Previous"
                         nextButtonText="Next"
-                        stepCircleContainerClassName="bg-black/40 backdrop-blur-xl border border-white/10"
-                        contentClassName="min-h-[300px] flex flex-col justify-center"
-                        footerClassName="border-t border-white/5"
+                        stepCircleContainerClassName="bg-gradient-to-br from-white/10 to-black/20 backdrop-blur-2xl border border-white/20 shadow-2xl relative"
+                        contentClassName="min-h-[200px] flex flex-col justify-center relative overflow-hidden"
+                        footerClassName="border-t border-white/5 relative bg-black/20"
                     >
                         {/* Step 1: Welcome */}
                         <Step>
                             <div className="flex flex-col items-center text-center space-y-6">
-                                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                                    Welcome to PLAY-ON!
-                                </h1>
-                                <p className="text-lg text-gray-300 max-w-lg">
+                                <p className="text-xl text-gray-300 max-w-lg font-rounded font-bold">
                                     The ultimate anime tracking and streaming experience.
                                     Let's get you set up in just a few steps.
                                 </p>
-                                <div className="mt-8">
-                                    <CurvedLoop
-                                        marqueeText="TRACK ✦ WATCH ✦ DISCOVER ✦ "
-                                        speed={3}
-                                        curveAmount={50}
-                                        direction="right"
-                                        interactive={false}
-                                    />
-                                </div>
                             </div>
                         </Step>
 
                         {/* Step 2: Connect AniList */}
                         <Step>
                             <div className="flex flex-col items-center text-center space-y-8">
-                                <h2 className="text-3xl font-bold text-white">Connect Your Account</h2>
+                                <h2 className="text-3xl md:text-4xl font-display font-extrabold tracking-wide text-white drop-shadow-md uppercase">Connect your <span className="text-[#7B61FF]">Account</span></h2>
 
                                 {isAuthenticated && user ? (
                                     <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
-                                        <div className="w-24 h-24 rounded-full border-4 border-green-500 overflow-hidden mb-4 shadow-lg shadow-green-500/20">
+                                        <div className="w-24 h-24 rounded-full border-4 border-[#5CC281] overflow-hidden mb-4 shadow-lg shadow-[#5CC281]/20">
                                             <img src={user.avatar.large} alt={user.name} className="w-full h-full object-cover" />
                                         </div>
                                         <h3 className="text-2xl font-semibold text-white">Welcome back, {user.name}!</h3>
-                                        <p className="text-green-400 mt-2">✓ Account connected successfully</p>
+                                        <p className="text-[#5CC281] mt-2">✓ Account connected successfully</p>
                                     </div>
                                 ) : (
                                     <>
@@ -125,8 +138,10 @@ function Onboarding() {
                                                 login();
                                             }}
                                             disabled={authLoading}
-                                            className="px-8 py-3 bg-[#3DB4F2] hover:bg-[#3da5db] text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-blue-500/30 flex items-center gap-2"
+                                            className="group relative px-8 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all transform hover:scale-105 border border-[#7B61FF]/30 hover:border-[#7B61FF]/60 shadow-lg shadow-[#7B61FF]/10 flex items-center gap-3 overflow-hidden"
                                         >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-[#7B61FF]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <LinkIcon className="w-6 h-6 text-[#7B61FF]" />
                                             {authLoading ? 'Connecting...' : 'Login with AniList'}
                                         </button>
                                         <div className="flex flex-col items-center gap-2">
@@ -140,7 +155,7 @@ function Onboarding() {
                                                         loginWithCode(code);
                                                     }
                                                 }}
-                                                className="text-xs text-[#3DB4F2] hover:underline opacity-60 hover:opacity-100"
+                                                className="text-xs text-white/40 hover:text-white/80 transition-colors"
                                             >
                                                 Trouble logging in? Paste code manually
                                             </button>
@@ -150,49 +165,10 @@ function Onboarding() {
                             </div>
                         </Step>
 
-                        {/* Step 3: Setup Library */}
-                        <Step>
-                            <div className="flex flex-col items-center text-center space-y-6">
-                                <h2 className="text-3xl font-bold text-white">Setup Your Library</h2>
-                                <p className="text-gray-300 max-w-md">
-                                    Select a local folder where you keep your anime. We'll scan it and add it to your sidebar.
-                                </p>
-
-                                <div className="w-full max-w-md bg-white/5 rounded-xl p-4 min-h-[100px] flex flex-col items-center justify-center border border-white/10">
-                                    {folders.length > 0 ? (
-                                        <div className="space-y-2 w-full">
-                                            {folders.map(folder => (
-                                                <div key={folder.path} className="flex items-center gap-2 text-left bg-white/10 p-2 rounded group">
-                                                    <span className="text-xl">📁</span>
-                                                    <span className="text-sm text-white truncate flex-1">{folder.path}</span>
-                                                    <button
-                                                        onClick={() => removeFolder(folder.path)}
-                                                        className="text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded p-1 transition-all opacity-0 group-hover:opacity-100"
-                                                        title="Remove folder"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <span className="text-gray-500 italic">No folders selected yet</span>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={() => addFolder('anime')}
-                                    className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
-                                >
-                                    <span>+</span> Add Folder
-                                </button>
-                            </div>
-                        </Step>
-
                         {/* Step 4: Completion */}
                         <Step>
                             <div className="flex flex-col items-center text-center space-y-6">
-                                <h2 className="text-3xl font-bold text-white">You're All Set!</h2>
+                                <h2 className="text-3xl md:text-4xl font-display font-extrabold tracking-wide text-white drop-shadow-md uppercase">You're All Set!</h2>
                                 <div className="text-6xl my-4">🎉</div>
                                 <p className="text-gray-300">
                                     Your personal anime hub is ready.

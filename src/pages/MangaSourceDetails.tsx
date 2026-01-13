@@ -37,7 +37,7 @@ import { sendNotification } from '@tauri-apps/plugin-notification';
 import { syncMangaFromAniList } from '../lib/syncService';
 import { setBrowsingActivity } from '../services/discordRPC';
 import { useAuth } from '../hooks/useAuth';
-import { queueChapterDownload, queueMultipleChapters, onDownloadProgress, isDownloadFolderConfigured } from '../services/downloadService';
+import { queueChapterDownload, onDownloadProgress, isDownloadFolderConfigured } from '../services/downloadService';
 import { Dropdown } from '../components/ui/Dropdown';
 import AniListSearchDialog from '../components/ui/AniListSearchDialog';
 import { DownloadFolderDialog } from '../components/ui/DownloadFolderDialog';

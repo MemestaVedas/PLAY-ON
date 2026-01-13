@@ -8,6 +8,7 @@
 /* === FONTS === */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&family=Varela+Round&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
 @import url('https://fonts.cdnfonts.com/css/planet-kosmos');
 
 /* === THEME IMPORTS === */
@@ -38,6 +39,8 @@
   /* Font families */
   --font-mono: "Space Mono", monospace;
   --font-rounded: "Varela Round", sans-serif;
+  --font-display: "Nunito", sans-serif;
+  --font-heavy: "Anton", sans-serif;
 
   /* Legacy color aliases - map to theme */
   --color-lavender-mist: var(--theme-accent-primary);

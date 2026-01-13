@@ -80,7 +80,7 @@ function AnimeWatch() {
                 }
 
                 // Discord RPC Update
-                if (animeId) {
+                if (animeId && sourceId) {
                     const decodedAnimeId = decodeURIComponent(animeId);
                     const localEntry = getAnimeEntryBySourceId(sourceId, decodedAnimeId);
 
@@ -107,7 +107,7 @@ function AnimeWatch() {
         };
 
         fetchSources();
-    }, [source, episodeId]);
+    }, [source, episodeId, animeId, sourceId]);
 
     // Fetch Episode List to find Next/Prev
     useEffect(() => {
@@ -202,7 +202,8 @@ function AnimeWatch() {
                     // Update Local DB
                     updateAnimeProgress(localEntry.id, {
                         ...localEntry,
-                        episode: epNum
+                        episode: epNum,
+                        anilistId: localEntry.anilistId === null ? undefined : localEntry.anilistId
                     });
 
                     markAnimeAsSynced(localEntry.id);

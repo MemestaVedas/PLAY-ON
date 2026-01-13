@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import logo from '../../assets/logo.png';
-import SplitText from './SplitText';
+import Aurora from './Aurora';
 
 interface SplashScreenProps {
     onComplete: () => void;
@@ -9,134 +9,101 @@ interface SplashScreenProps {
 }
 
 /**
- * Animated Splash Screen Component
- * Shows on app startup with split screen design
- * Left: SplitText animation
- * Right: Logo animation
+ * Cinematic Splash Screen
+ * "Awwwards" worthy intro with Aurora background and glassmorphism.
  */
-function SplashScreen({ onComplete, minDuration = 2000 }: SplashScreenProps) {
+function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenProps) {
     const [isExiting, setIsExiting] = useState(false);
-    const [textComplete, setTextComplete] = useState(false);
 
     useEffect(() => {
-        // Minimum display time for splash screen
         const timer = setTimeout(() => {
-            if (textComplete) {
-                setIsExiting(true);
-            }
+            setIsExiting(true);
         }, minDuration);
 
         return () => clearTimeout(timer);
-    }, [minDuration, textComplete]);
-
-    // Trigger exit when text animation is done AND min duration is passed
-    useEffect(() => {
-        if (textComplete) {
-            const timer = setTimeout(() => {
-                setIsExiting(true);
-            }, 500); // Small buffer after text completes
-            return () => clearTimeout(timer);
-        }
-    }, [textComplete]);
-
-    const handleAnimationComplete = () => {
-        if (isExiting) {
-            onComplete();
-        }
-    };
-
-    const handleTextComplete = () => {
-        console.log('All letters have animated!');
-        setTextComplete(true);
-    };
+    }, [minDuration]);
 
     return (
-        <AnimatePresence>
+        <AnimatePresence onExitComplete={onComplete}>
             {!isExiting && (
                 <motion.div
+                    key="splash"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
-                    onAnimationComplete={handleAnimationComplete}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        display: 'flex',
-                        flexDirection: 'column', // Vertical layout
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        // Use main app background color
-                        backgroundColor: 'var(--color-bg-main)',
-                        zIndex: 99999,
-                        overflow: 'hidden',
-                    }}
+                    exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050505] overflow-hidden"
                 >
-                    {/* TOP SIDE: Logo Animation */}
-                    <div style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        flexDirection: 'column',
-                        width: '100%',
-                        paddingBottom: '2rem',
-                        background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)', // Top to bottom gradient
-                        borderBottom: '1px solid var(--color-border-subtle)',
-                    }}>
-                        <motion.img
-                            src={logo}
-                            alt="PLAY-ON!"
-                            initial={{ scale: 0, rotate: -180, opacity: 0 }}
-                            animate={{
-                                scale: 1,
-                                rotate: 0,
-                                opacity: 1
-                            }}
-                            transition={{
-                                type: 'spring',
-                                stiffness: 260,
-                                damping: 20,
-                                duration: 1.2,
-                                delay: 0.2
-                            }}
-                            style={{
-                                width: '200px', // Slightly smaller for vertical layout
-                                height: '200px',
-                                filter: 'drop-shadow(0 0 30px rgba(180, 162, 246, 0.4))', // Lavender glow
-                                marginBottom: '2rem'
-                            }}
+                    {/* Aurora Background Layer */}
+                    <div className="absolute inset-0 z-0 opacity-40">
+                        <Aurora
+                            colorStops={["#7B61FF", "#E88AB3", "#5A99C2"]}
+                            speed={0.5}
+                            amplitude={1.2}
                         />
                     </div>
 
-                    {/* BOTTOM SIDE: SplitText */}
-                    <div style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'center',
-                        width: '100%',
-                        paddingTop: '3rem',
-                    }}>
-                        <SplitText
-                            text="PLAY-ON!"
-                            // Added p-4 (all sides) and leading-normal to prevent clipping
-                            className="text-8xl font-black text-center font-planet p-4 leading-normal"
-                            delay={100}
-                            duration={0.6}
-                            ease="power3.out"
-                            splitType="chars"
-                            from={{ opacity: 0, y: 40 }}
-                            to={{ opacity: 1, y: 0 }}
-                            threshold={0.1}
-                            rootMargin="-100px"
-                            textAlign="center"
-                            onLetterAnimationComplete={handleTextComplete}
+                    {/* Vignette & Grain Overlay for Texture */}
+                    <div className="absolute inset-0 z-10 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,#000000_100%)] opacity-80" />
+
+                    {/* Main Content */}
+                    <motion.div
+                        className="relative z-20 flex flex-col items-center"
+                        initial={{ y: 20 }}
+                        animate={{ y: 0 }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                    >
+                        {/* Logo Animation */}
+                        <motion.div
+                            initial={{ scale: 0, rotate: -45, opacity: 0 }}
+                            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 200,
+                                damping: 20,
+                                delay: 0.2
+                            }}
+                            className="relative mb-8"
+                        >
+                            <div className="absolute inset-0 bg-[#7B61FF] rounded-full blur-3xl opacity-40 animate-pulse" />
+                            <img
+                                src={logo}
+                                alt="Logo"
+                                className="w-32 h-32 md:w-40 md:h-40 object-contain relative z-10 drop-shadow-[0_0_25px_rgba(123,97,255,0.5)]"
+                            />
+                        </motion.div>
+
+                        {/* Text Reveal Animation */}
+                        <div className="overflow-hidden">
+                            <motion.h1
+                                initial={{ y: "100%", opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{
+                                    delay: 0.4,
+                                    duration: 0.8,
+                                    ease: [0.22, 1, 0.36, 1]
+                                }}
+                                className="text-5xl md:text-7xl font-black text-white tracking-widest font-heavy text-center"
+                                style={{
+                                    textShadow: "0 0 40px rgba(123,97,255,0.3)",
+                                    background: "linear-gradient(to bottom right, #fff, #a5a5a5)",
+                                    WebkitBackgroundClip: "text",
+                                    WebkitTextFillColor: "transparent"
+                                }}
+                            >
+                                PLAY-ON!
+                            </motion.h1>
+                        </div>
+
+                        {/* Subtitle / Loader Line */}
+                        <motion.div
+                            initial={{ width: 0, opacity: 0 }}
+                            animate={{ width: "100px", opacity: 0.5 }}
+                            transition={{ delay: 0.8, duration: 1, ease: "circOut" }}
+                            className="h-[2px] bg-white/50 mt-6 rounded-full"
                         />
-                    </div>
+                    </motion.div>
+
                 </motion.div>
             )}
         </AnimatePresence>
