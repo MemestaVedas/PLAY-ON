@@ -25,6 +25,7 @@ import { motion } from 'framer-motion';
 import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
 import { useAuth } from '../hooks/useAuth';
 import { setBrowsingActivity } from '../services/discordRPC';
+import { useDynamicTheme } from '../context/DynamicThemeContext';
 
 // Status options for AniList
 const STATUS_OPTIONS = [
@@ -120,6 +121,18 @@ function MangaDetails() {
     const [isFavorite, setIsFavorite] = useState(false);
     const [favoriteUpdating, setFavoriteUpdating] = useState(false);
 
+    // Dynamic theme - use blurred cover art as ambient background
+    const coverImageUrl = manga?.coverImage?.extraLarge || manga?.coverImage?.large;
+    const { setCoverImage, clearTheme } = useDynamicTheme();
+
+    // Set cover image for dynamic theming when manga loads
+    useEffect(() => {
+        if (coverImageUrl) {
+            setCoverImage(coverImageUrl);
+        }
+        // Clear when leaving the page
+        return () => clearTheme();
+    }, [coverImageUrl, setCoverImage, clearTheme]);
 
     // Check if this manga is linked to a source in library
     const mangaMapping = manga ? getMappingByAnilistId(manga.id) : undefined;

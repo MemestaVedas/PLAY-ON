@@ -310,8 +310,8 @@ function UnifiedList() {
                     {/* The Sliding Toggle - Translucent Fill & Colored Outline */}
                     <div
                         className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full flex items-center justify-center gap-2 shadow-lg backdrop-blur-md transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) border ${listType === 'anime'
-                                ? 'left-1 bg-[rgba(var(--theme-accent-primary-rgb),0.1)] border-[var(--theme-accent-primary)] text-[var(--theme-accent-primary)] shadow-[0_0_15px_rgba(var(--theme-accent-primary-rgb),0.3)]'
-                                : 'left-[calc(50%+0px)] bg-[rgba(var(--theme-accent-success-rgb),0.1)] border-[var(--theme-accent-success)] text-[var(--theme-accent-success)] shadow-[0_0_15px_rgba(var(--theme-accent-success-rgb),0.3)]'
+                            ? 'left-1 bg-[rgba(var(--theme-accent-primary-rgb),0.1)] border-[var(--theme-accent-primary)] text-[var(--theme-accent-primary)] shadow-[0_0_15px_rgba(var(--theme-accent-primary-rgb),0.3)]'
+                            : 'left-[calc(50%+0px)] bg-[rgba(var(--theme-accent-success-rgb),0.1)] border-[var(--theme-accent-success)] text-[var(--theme-accent-success)] shadow-[0_0_15px_rgba(var(--theme-accent-success-rgb),0.3)]'
                             }`}
                     >
                         <div className={`transition-all duration-300 ${listType === 'anime' ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 rotate-90 absolute'}`}>

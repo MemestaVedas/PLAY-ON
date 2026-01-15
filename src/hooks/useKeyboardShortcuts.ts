@@ -108,6 +108,10 @@ export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
                         (document.activeElement as HTMLElement)?.blur?.();
                         navigate(-1);
                         break;
+                    case 'goForward':
+                        (document.activeElement as HTMLElement)?.blur?.();
+                        navigate(1);
+                        break;
                     case 'escape':
                         // Blur any focused element (exit from input)
                         (document.activeElement as HTMLElement)?.blur?.();

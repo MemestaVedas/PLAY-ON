@@ -4,14 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { SEASONAL_ANIME_QUERY } from '../api/anilistClient';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
+import SeasonPill from '../components/ui/SeasonPill';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronDown,
-    SnowflakeIcon,
-    FlowerIcon,
-    SunIcon,
-    LeafIcon,
     AlertTriangleIcon,
     CloudIcon
 } from '../components/ui/Icons';
@@ -20,11 +17,11 @@ import {
 type Season = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
 type SortOption = 'POPULARITY_DESC' | 'SCORE_DESC' | 'TITLE_ROMAJI';
 
-const SEASONS: { label: string; value: Season; icon: React.ReactNode }[] = [
-    { label: 'Winter', value: 'WINTER', icon: <SnowflakeIcon size={14} /> },
-    { label: 'Spring', value: 'SPRING', icon: <FlowerIcon size={14} /> },
-    { label: 'Summer', value: 'SUMMER', icon: <SunIcon size={14} /> },
-    { label: 'Fall', value: 'FALL', icon: <LeafIcon size={14} /> },
+const SEASONS: { label: string; value: Season }[] = [
+    { label: 'Winter', value: 'WINTER' },
+    { label: 'Spring', value: 'SPRING' },
+    { label: 'Summer', value: 'SUMMER' },
+    { label: 'Fall', value: 'FALL' },
 ];
 
 const SORT_OPTIONS: { label: string; value: SortOption }[] = [
@@ -166,29 +163,17 @@ function Calendar() {
             {/* Controls Row */}
             <div className="flex flex-wrap items-center gap-4 mb-8">
 
-                {/* Season Pills */}
+                {/* Season Pills with Animations */}
                 <div className="flex items-center gap-3">
-                    {SEASONS.map((season) => {
-                        const isActive = season.value === selectedSeason;
-                        return (
-                            <motion.button
-                                key={season.value}
-                                onClick={() => setSelectedSeason(season.value)}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="relative px-5 py-2.5 rounded-full text-sm font-bold transition-all z-10 flex items-center gap-2.5 border"
-                                style={{
-                                    color: isActive ? 'white' : 'rgba(255,255,255,0.6)',
-                                    background: isActive ? 'var(--theme-accent-primary)' : 'rgba(255,255,255,0.05)',
-                                    borderColor: isActive ? 'var(--theme-accent-primary)' : 'rgba(255,255,255,0.1)',
-                                    boxShadow: isActive ? '0 0 20px rgba(var(--theme-accent-primary-rgb), 0.4)' : 'none'
-                                }}
-                            >
-                                {season.icon && <span className="opacity-90">{season.icon}</span>}
-                                <span>{season.label}</span>
-                            </motion.button>
-                        );
-                    })}
+                    {SEASONS.map((season) => (
+                        <SeasonPill
+                            key={season.value}
+                            season={season.value}
+                            label={season.label}
+                            isActive={season.value === selectedSeason}
+                            onClick={() => setSelectedSeason(season.value)}
+                        />
+                    ))}
                 </div>
 
                 <div className="h-8 w-px bg-white/10 mx-2 hidden md:block" />

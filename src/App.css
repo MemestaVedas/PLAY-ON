@@ -89,14 +89,50 @@
 }
 
 /* === BODY STYLES === */
+/* Animated Background Mesh Keyframes */
+@keyframes meshFloat {
+
+  0%,
+  100% {
+    background-position: 15% 50%, 85% 30%;
+  }
+
+  25% {
+    background-position: 30% 30%, 70% 70%;
+  }
+
+  50% {
+    background-position: 85% 50%, 15% 70%;
+  }
+
+  75% {
+    background-position: 70% 70%, 30% 30%;
+  }
+}
+
 body {
   background-color: var(--theme-bg-main);
   background-image: var(--theme-gradient-bg-mesh);
   background-attachment: fixed;
+  background-size: 200% 200%;
+  animation: meshFloat 25s ease-in-out infinite;
   min-height: 100vh;
   color: var(--theme-text-main);
-  transition: background-color 0.3s ease, color 0.3s ease, background-image 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Global Noise Texture Overlay - Enhances glassmorphism */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.018;
+  mix-blend-mode: overlay;
+}
+
 
 /* === GLASS UTILITIES === */
 .glass-panel {
@@ -319,4 +355,183 @@ input[type=number]::-webkit-outer-spin-button {
 
 input[type=number] {
   -moz-appearance: textfield;
+}
+
+/* ============================================
+   VIEW TRANSITIONS API - Smooth Page Animations
+   ============================================ */
+
+/* Default cross-fade transition */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.35s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: fade-out-and-scale-down;
+}
+
+::view-transition-new(root) {
+  animation-name: fade-in-and-scale-up;
+}
+
+@keyframes fade-out-and-scale-down {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+    filter: blur(4px);
+  }
+}
+
+@keyframes fade-in-and-scale-up {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+    filter: blur(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   MICRO-INTERACTIONS - Enhanced Feedback
+   ============================================ */
+
+/* Global Button Interactions */
+button {
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Primary Button Glow on Hover */
+.btn-primary:hover,
+button[class*="primary"]:hover {
+  box-shadow: 0 4px 20px rgba(180, 162, 246, 0.25);
+}
+
+/* Danger Button Glow on Hover */
+.btn-danger:hover,
+button[class*="danger"]:hover {
+  box-shadow: 0 4px 20px rgba(244, 0, 53, 0.2);
+}
+
+/* Card Hover Polish */
+.card-hover {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease,
+    border-color 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Link Hover Effects */
+a {
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+/* Focus Ring for Accessibility */
+:focus-visible {
+  outline: 2px solid var(--theme-accent-primary);
+  outline-offset: 2px;
+}
+
+/* Input Focus Glow */
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 3px rgba(180, 162, 246, 0.15);
+}
+
+/* Smooth Icon Transitions */
+svg {
+  transition: transform 0.2s ease, fill 0.2s ease, stroke 0.2s ease;
+}
+
+/* Interactive Icon Hover */
+button svg,
+a svg {
+  will-change: transform;
+}
+
+button:hover svg,
+a:hover svg {
+  transform: scale(1.05);
+}
+
+/* Pulse Animation for Loading */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Bounce Animation for Attention */
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s ease infinite;
+}
+
+/* Spin Animation for Loaders */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }

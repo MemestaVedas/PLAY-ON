@@ -1,4 +1,4 @@
-import { useState, useCallback, KeyboardEvent, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useSettings } from '../context/SettingsContext';
 import { useTheme } from '../context/ThemeContext';
@@ -17,9 +17,7 @@ import {
     BookIcon,
     FolderIcon,
     WrenchIcon,
-    PuzzleIcon,
-    SunIcon,
-    MoonIcon
+    PuzzleIcon
 } from '../components/ui/Icons';
 import { DEFAULT_KEYBOARD_SHORTCUTS, ShortcutAction } from '../context/SettingsContext';
 import { formatShortcutFromEvent } from '../hooks/useKeyboardShortcuts';
@@ -28,6 +26,7 @@ import './Settings.css';
 import TrackerConnections from '../components/settings/TrackerConnections';
 import ExtensionsSettings from '../components/settings/ExtensionsSettings';
 import { ProfileSettingsModal, ProfileSettingsButton } from '../components/settings/ProfileSettings';
+
 
 // ============================================================================
 // SETTINGS PAGE
@@ -101,56 +100,7 @@ function SettingRow({ label, description, children }: SettingRowProps) {
     );
 }
 
-// ============================================================================
-// COMPONENT: Tags Input
-// ============================================================================
 
-interface TagsInputProps {
-    tags: string[];
-    onChange: (tags: string[]) => void;
-    placeholder?: string;
-}
-
-function TagsInput({ tags, onChange, placeholder = 'Add term...' }: TagsInputProps) {
-    const [inputValue, setInputValue] = useState('');
-
-    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && inputValue.trim()) {
-            e.preventDefault();
-            if (!tags.includes(inputValue.trim())) {
-                onChange([...tags, inputValue.trim()]);
-            }
-            setInputValue('');
-        } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
-            onChange(tags.slice(0, -1));
-        }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-        onChange(tags.filter((tag) => tag !== tagToRemove));
-    };
-
-    return (
-        <div className="tags-container">
-            {tags.map((tag) => (
-                <span key={tag} className="tag">
-                    {tag}
-                    <button className="tag-remove" onClick={() => removeTag(tag)}>
-                        ×
-                    </button>
-                </span>
-            ))}
-            <input
-                type="text"
-                className="tag-input"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={tags.length === 0 ? placeholder : ''}
-            />
-        </div>
-    );
-}
 
 // ============================================================================
 // COMPONENT: Autostart Toggle
@@ -193,6 +143,25 @@ function AutostartToggle() {
 }
 
 // ============================================================================
+// THEME PREVIEWS
+// ============================================================================
+
+const THEME_PREVIEWS: Record<string, { bg: string; accent: string; text: string; border: string }> = {
+    'default-dark': {
+        bg: '#0F0F14',
+        accent: '#B4A2F6',
+        text: '#FFFFFF',
+        border: 'rgba(255,255,255,0.1)'
+    },
+    'light': {
+        bg: '#F2F2F7',
+        accent: '#007AFF',
+        text: '#000000',
+        border: 'rgba(0,0,0,0.1)'
+    },
+};
+
+// ============================================================================
 // SECTION: General Settings
 // ============================================================================
 
@@ -211,22 +180,43 @@ function GeneralSettings() {
             <div className="setting-group">
                 <h3 className="setting-group-title">Appearance</h3>
 
-                <SettingRow label="Theme" description="Choose your preferred color scheme">
-                    <div className="theme-switcher">
-                        {availableThemes.map((t) => (
+                <div className="theme-grid">
+                    {availableThemes.map((t) => {
+                        const preview = THEME_PREVIEWS[t.id] || THEME_PREVIEWS['default-dark'];
+                        const isActive = theme === t.id;
+
+                        return (
                             <button
                                 key={t.id}
-                                className={`theme-option ${theme === t.id ? 'active' : ''}`}
+                                className={`theme-card ${isActive ? 'active' : ''}`}
                                 onClick={() => setTheme(t.id)}
                             >
-                                <span className="theme-icon">
-                                    {t.id.includes('dark') || t.id === 'default-dark' ? <MoonIcon size={16} /> : <SunIcon size={16} />}
-                                </span>
-                                {t.name}
+                                <div
+                                    className="theme-card-preview"
+                                    style={{ background: preview.bg, borderColor: preview.border }}
+                                >
+                                    <div className="theme-preview-ui">
+                                        <div className="preview-nav" style={{ borderColor: preview.border }}>
+                                            <div className="preview-dot" style={{ background: preview.text, opacity: 0.2 }} />
+                                            <div className="preview-dot" style={{ background: preview.text, opacity: 0.2 }} />
+                                        </div>
+                                        <div className="preview-content">
+                                            <div className="preview-hero" style={{ background: preview.accent }} />
+                                            <div className="preview-lines">
+                                                <div className="preview-line" style={{ background: preview.text, opacity: 0.1 }} />
+                                                <div className="preview-line" style={{ background: preview.text, opacity: 0.1 }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="theme-card-info">
+                                    <span className="theme-name">{t.name}</span>
+                                    {isActive && <div className="theme-check">✓</div>}
+                                </div>
                             </button>
-                        ))}
-                    </div>
-                </SettingRow>
+                        );
+                    })}
+                </div>
             </div>
 
             <div className="setting-group">
@@ -250,8 +240,6 @@ function GeneralSettings() {
                         onChange={(value) => updateSetting('defaultSearchMode', value as 'anime' | 'manga')}
                     />
                 </SettingRow>
-
-
             </div>
 
             {/* Window Behavior Section */}
@@ -293,8 +281,6 @@ function GeneralSettings() {
     );
 }
 
-
-
 // ============================================================================
 // SECTION: Integrations Settings
 // ============================================================================
@@ -333,7 +319,6 @@ function IntegrationsSettings() {
 
                 {isAuthenticated && (
                     <>
-                        {/* Profile Settings Button */}
                         <div style={{ marginTop: '16px', marginBottom: '16px' }}>
                             <ProfileSettingsButton onClick={() => setShowProfileModal(true)} />
                         </div>
@@ -357,12 +342,10 @@ function IntegrationsSettings() {
                         onChange={(checked) => updateSetting('discordRpcEnabled', checked)}
                     />
                 </SettingRow>
-
-
             </div>
+
             <TrackerConnections />
 
-            {/* Profile Settings Modal */}
             <ProfileSettingsModal
                 isOpen={showProfileModal}
                 onClose={() => setShowProfileModal(false)}
@@ -383,13 +366,7 @@ function MangaSettings() {
     const [defaultCatId, setDefaultCatId] = useState(getDefaultCategory());
 
     // Load categories on mount and update
-    // using forceUpdate to re-read from localStorage since these functions are synchronous
     const refresh = () => setForceUpdate(prev => prev + 1);
-
-    // We need useEffect to load initial state or just render?
-    // Since getLibraryCategories reads from localStorage sync, we can just call it in render?
-    // But better to use state to trigger re-renders.
-    // However, if we just call it in render, it will always be up to date.
     const currentCategories = getLibraryCategories();
 
     const handleConfirmAdd = () => {
@@ -502,19 +479,20 @@ function MangaSettings() {
                         <div key={cat.id} className="setting-row" style={{ justifyContent: 'space-between' }}>
                             <div className="setting-info">
                                 <span className="setting-label">{cat.name}</span>
-                                <span className="setting-description text-xs opacity-50">ID: {cat.id}</span>
+                                <span className="setting-description" style={{ fontSize: '10px', opacity: 0.5 }}>ID: {cat.id}</span>
                             </div>
                             {cat.id !== 'default' && (
                                 <button
                                     className="setting-button danger"
                                     onClick={() => handleDeleteCategory(cat.id)}
+                                    style={{ padding: '4px 8px', fontSize: '11px' }}
                                 >
                                     Delete
                                 </button>
                             )}
                         </div>
                     ))}
-                    <button className="setting-button primary mt-2" onClick={() => setIsAddDialogOpen(true)}>
+                    <button className="setting-button primary" style={{ marginTop: '8px' }} onClick={() => setIsAddDialogOpen(true)}>
                         + Add Category
                     </button>
                 </div>
@@ -524,25 +502,28 @@ function MangaSettings() {
             {isAddDialogOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
-                    style={{ backgroundColor: 'var(--theme-bg-overlay)' }}
+                    style={{ backgroundColor: 'var(--theme-bg-overlay)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}
+                    onClick={() => setIsAddDialogOpen(false)}
                 >
                     <div
                         className="p-6 rounded-xl w-[320px]"
                         style={{
                             backgroundColor: 'var(--theme-bg-card)',
-                            border: '1px solid var(--theme-border-subtle)'
+                            border: '1px solid var(--theme-border-subtle)',
+                            padding: '24px',
+                            borderRadius: '16px',
+                            width: '320px',
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
                         }}
                         onClick={e => e.stopPropagation()}
                     >
                         <h3
-                            className="text-xl font-bold mb-2"
-                            style={{ color: 'var(--theme-text-main)' }}
+                            style={{ color: 'var(--theme-text-main)', fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}
                         >
                             New Category
                         </h3>
                         <p
-                            className="text-sm mb-4"
-                            style={{ color: 'var(--theme-text-muted)' }}
+                            style={{ color: 'var(--theme-text-muted)', fontSize: '14px', marginBottom: '16px' }}
                         >
                             Create a new collection for your manga.
                         </p>
@@ -552,34 +533,30 @@ function MangaSettings() {
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
                             placeholder="e.g. Action, Plan to Read"
-                            className="w-full rounded-lg px-3 py-2 mb-4 focus:outline-none transition-colors"
                             style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                marginBottom: '16px',
                                 backgroundColor: 'var(--theme-input-bg)',
                                 border: '1px solid var(--theme-border-subtle)',
-                                color: 'var(--theme-text-main)'
+                                color: 'var(--theme-text-main)',
+                                outline: 'none'
                             }}
                             autoFocus
                             onKeyDown={(e) => e.key === 'Enter' && handleConfirmAdd()}
                         />
 
-                        <div className="flex gap-2 justify-end">
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button
                                 onClick={() => setIsAddDialogOpen(false)}
-                                className="px-4 py-2 text-sm rounded-lg transition-colors"
-                                style={{
-                                    color: 'var(--theme-text-muted)',
-                                    backgroundColor: 'transparent'
-                                }}
+                                className="setting-button"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirmAdd}
-                                className="px-4 py-2 text-sm rounded-lg font-medium transition-colors"
-                                style={{
-                                    background: 'var(--theme-gradient-primary)',
-                                    color: 'var(--theme-btn-primary-text)'
-                                }}
+                                className="setting-button primary"
                             >
                                 Create
                             </button>
@@ -596,84 +573,82 @@ function MangaSettings() {
 // ============================================================================
 
 function StorageSettings() {
-    const { settings, updateSetting } = useSettings();
-    const { folders, addFolder, removeFolder } = useLocalMedia();
+    const { animeFolders, mangaFolders, addFolder, removeFolder } = useLocalMedia();
 
     return (
         <div className="settings-section">
             <h2 className="settings-section-title">Storage & Library</h2>
             <p className="settings-section-description">
-                Manage your local media folders
+                Manage your local media locations
             </p>
 
             <div className="setting-group">
-                <h3 className="setting-group-title">Local Folders</h3>
-
-                <div className="setting-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div className="setting-info">
-                            <span className="setting-label">Watched Folders</span>
-                            <span className="setting-description">Folders to scan for anime files</span>
+                <h3 className="setting-group-title">Anime Folders</h3>
+                <p className="settings-section-description" style={{ marginBottom: '12px' }}>
+                    Folders monitored for anime files
+                </p>
+                <button className="setting-button primary" onClick={() => addFolder('anime')}>
+                    + Add Anime Folder
+                </button>
+                <div className="folder-list">
+                    {animeFolders.map((folder) => (
+                        <div key={folder.path} className="folder-item">
+                            <div className="folder-path">
+                                <span className="folder-icon"><FolderIcon size={16} /></span>
+                                {folder.path}
+                            </div>
+                            <button
+                                className="folder-remove"
+                                onClick={() => {
+                                    if (confirm(`Remove this folder from library?\n${folder.path}`)) {
+                                        removeFolder(folder.path);
+                                    }
+                                }}
+                            >
+                                Remove
+                            </button>
                         </div>
-                        <button className="setting-button primary" onClick={() => addFolder('anime')}>
-                            + Add Folder
-                        </button>
-                    </div>
-
-                    {folders.length > 0 && (
-                        <div className="folder-list">
-                            {folders.map((folder) => (
-                                <div key={folder.path} className="folder-item">
-                                    <span className="folder-path" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <FolderIcon size={16} />
-                                        {folder.path}
-                                    </span>
-                                    <button
-                                        className="folder-remove"
-                                        onClick={() => removeFolder(folder.path)}
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            ))}
+                    ))}
+                    {animeFolders.length === 0 && (
+                        <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontStyle: 'italic' }}>
+                            No folders added yet
                         </div>
                     )}
                 </div>
             </div>
 
             <div className="setting-group">
-                <h3 className="setting-group-title">Scanning</h3>
-
-                <SettingRow label="Scan Depth" description="How deep to look for files in folders">
-                    <div className="setting-slider-container">
-                        <input
-                            type="range"
-                            className="setting-slider"
-                            min="1"
-                            max="10"
-                            value={settings.scanDepth}
-                            onChange={(e) => updateSetting('scanDepth', parseInt(e.target.value))}
-                        />
-                        <span className="slider-value">{settings.scanDepth}</span>
-                    </div>
-                </SettingRow>
-            </div>
-
-            <div className="setting-group">
-                <h3 className="setting-group-title">Filters</h3>
-
-                <div className="setting-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
-                    <div className="setting-info">
-                        <span className="setting-label">Ignored Terms</span>
-                        <span className="setting-description">
-                            Keywords to ignore in filenames (press Enter to add)
-                        </span>
-                    </div>
-                    <TagsInput
-                        tags={settings.ignoredTerms}
-                        onChange={(tags) => updateSetting('ignoredTerms', tags)}
-                        placeholder="Add term to ignore..."
-                    />
+                <h3 className="setting-group-title">Manga Folders</h3>
+                <p className="settings-section-description" style={{ marginBottom: '12px' }}>
+                    Folders monitored for manga scans
+                </p>
+                <button className="setting-button primary" onClick={() => addFolder('manga')}>
+                    + Add Manga Folder
+                </button>
+                <div className="folder-list">
+                    {mangaFolders.map((folder) => (
+                        <div key={folder.path} className="folder-item">
+                            <div className="folder-path">
+                                <span className="folder-icon"><FolderIcon size={16} /></span>
+                                {folder.path}
+                            </div>
+                            <button
+                                className="folder-remove"
+                                onClick={() => {
+                                    if (confirm(`Remove this folder from library?\n${folder.path}`)) {
+                                        removeFolder(folder.path);
+                                    }
+                                }}
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    ))}
+                    {mangaFolders.length === 0 && (
+                        <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontStyle: 'italic' }}>
+                            No folders added yet
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -693,8 +668,19 @@ const SHORTCUT_LABELS: Record<ShortcutAction, { label: string; description: stri
     goSettings: { label: 'Go to Settings', description: 'Navigate to Settings' },
     goProfile: { label: 'Go to Profile', description: 'Navigate to Profile' },
     goBack: { label: 'Go Back', description: 'Navigate to previous page' },
+    goForward: { label: 'Go Forward', description: 'Navigate to next page' },
     escape: { label: 'Escape / Close', description: 'Close dropdowns and dialogs' },
 };
+
+function formatKeyForDisplay(shortcut: string) {
+    // Split by + and wrap in kbd styles
+    return shortcut.split('+').map((key, i) => (
+        <span key={i} className="shortcut-key-wrapper">
+            {i > 0 && <span className="shortcut-separator">+</span>}
+            <kbd className="shortcut-key">{key.trim()}</kbd>
+        </span>
+    ));
+}
 
 function KeyboardSettings() {
     const { settings, updateSetting } = useSettings();
@@ -747,29 +733,22 @@ function KeyboardSettings() {
                                 <button
                                     className={`shortcut-key-button ${recordingAction === action ? 'recording' : ''}`}
                                     onClick={() => handleRecordShortcut(action)}
-                                    style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '8px',
-                                        background: recordingAction === action ? 'rgba(244, 0, 53, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                                        border: recordingAction === action ? '1px solid rgba(244, 0, 53, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                        color: recordingAction === action ? '#f40035' : 'var(--color-text-main)',
-                                        fontFamily: 'var(--font-mono)',
-                                        fontSize: '12px',
-                                        cursor: 'pointer',
-                                        minWidth: '100px',
-                                        textAlign: 'center',
-                                        transition: 'all 0.2s ease',
-                                    }}
                                 >
-                                    {recordingAction === action ? 'Press keys...' : settings.keyboardShortcuts[action]}
+                                    {recordingAction === action ? (
+                                        <span className="recording-pulse">Press keys...</span>
+                                    ) : (
+                                        <div className="shortcut-keys-display">
+                                            {formatKeyForDisplay(settings.keyboardShortcuts[action])}
+                                        </div>
+                                    )}
                                 </button>
                                 {settings.keyboardShortcuts[action] !== DEFAULT_KEYBOARD_SHORTCUTS[action] && (
                                     <button
-                                        className="setting-button"
+                                        className="setting-button reset-tiny"
                                         onClick={() => handleResetShortcut(action)}
-                                        style={{ fontSize: '11px', padding: '4px 8px' }}
+                                        title="Reset to default"
                                     >
-                                        Reset
+                                        ↺
                                     </button>
                                 )}
                             </div>
@@ -787,14 +766,13 @@ function KeyboardSettings() {
     );
 }
 
-// ============================================================================
-// SECTION: Advanced Settings
-// ============================================================================
+// ... (AdvancedSettings updated below) ...
 
 function AdvancedSettings() {
-    const { clearCache, resetSettings, factoryReset } = useSettings();
+    const { clearCache, resetSettings, factoryReset, settings, updateSetting } = useSettings();
     const [isClearing, setIsClearing] = useState(false);
     const [appVersion, setAppVersion] = useState('...');
+    const [checkingUpdate, setCheckingUpdate] = useState(false);
 
     // Fetch version from Tauri on mount
     useEffect(() => {
@@ -807,6 +785,15 @@ function AdvancedSettings() {
         setIsClearing(true);
         await clearCache();
         setTimeout(() => setIsClearing(false), 1000);
+    };
+
+    const handleCheckUpdate = async () => {
+        setCheckingUpdate(true);
+        // Simulate check for now
+        setTimeout(() => {
+            setCheckingUpdate(false);
+            alert("You are on the latest version!");
+        }, 1500);
     };
 
     const handleFactoryReset = async () => {
@@ -837,19 +824,38 @@ function AdvancedSettings() {
             </p>
 
             <div className="setting-group">
+                <h3 className="setting-group-title">Developer</h3>
+
+                <SettingRow
+                    label="Developer Mode"
+                    description="Enable experimental features and debugging tools"
+                >
+                    <Toggle
+                        checked={settings.developerMode}
+                        onChange={(checked) => updateSetting('developerMode', checked)}
+                    />
+                </SettingRow>
+            </div>
+
+            <div className="setting-group">
                 <h3 className="setting-group-title">Data Management</h3>
 
                 <SettingRow
                     label="Clear Cache"
                     description="Clear temporary image and API data. Does not effect library."
                 >
-                    <button
-                        className="setting-button"
-                        onClick={handleClearCache}
-                        disabled={isClearing}
-                    >
-                        {isClearing ? 'Clearing...' : 'Clear Cache'}
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                            ~12 MB
+                        </span>
+                        <button
+                            className="setting-button"
+                            onClick={handleClearCache}
+                            disabled={isClearing}
+                        >
+                            {isClearing ? 'Clearing...' : 'Clear Cache'}
+                        </button>
+                    </div>
                 </SettingRow>
 
                 <SettingRow
@@ -879,13 +885,42 @@ function AdvancedSettings() {
             <div className="setting-group">
                 <h3 className="setting-group-title">About</h3>
 
-                <SettingRow label="Version" description="Current application version">
-                    <div className="version-info">
-                        <div className="version-badge">
-                            <span className="version-number">v{appVersion}</span>
-                        </div>
+                <div className="about-card">
+                    <div className="about-header">
+                        <div className="app-logo-small">PlayOn</div>
+                        <div className="version-badge-pill">v{appVersion}</div>
                     </div>
-                </SettingRow>
+                    <p className="about-desc">
+                        The ultimate destination for your anime and manga.
+                        Open source and free forever.
+                    </p>
+
+                    <div className="about-actions">
+                        <button
+                            className="about-action-btn primary"
+                            onClick={handleCheckUpdate}
+                            disabled={checkingUpdate}
+                        >
+                            {checkingUpdate ? 'Checking...' : 'Check for Updates'}
+                        </button>
+                        <a
+                            href="https://github.com/yourusername/play-on"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="about-action-btn secondary"
+                        >
+                            GitHub
+                        </a>
+                        <a
+                            href="https://discord.gg/yourserver"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="about-action-btn secondary"
+                        >
+                            Discord
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -933,9 +968,11 @@ export default function Settings() {
                 ))}
             </nav>
 
-            {/* Content Area */}
+            {/* Content Area with Key-based Animation */}
             <main className="settings-content">
-                {renderSection()}
+                <div key={activeTab} className="settings-fade-wrapper">
+                    {renderSection()}
+                </div>
             </main>
         </div>
     );

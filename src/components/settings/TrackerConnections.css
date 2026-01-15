@@ -58,6 +58,13 @@
     align-items: center;
     justify-content: center;
     color: white;
+    flex-shrink: 0;
+}
+
+.tracker-logo svg {
+    display: block;
+    width: 24px;
+    height: 24px;
 }
 
 .tracker-logo.anilist {
@@ -140,4 +147,56 @@
     border-radius: 8px;
     color: #ef4444;
     font-size: 0.875rem;
+}
+
+/* Primary Badge */
+.tracker-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    margin-left: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+}
+
+.tracker-badge.primary {
+    background: linear-gradient(135deg, #f40035, #ff6b6b);
+    color: white;
+}
+
+/* Sync Section */
+.tracker-sync-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    text-align: center;
+}
+
+.tracker-sync-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #f40035, #ff6b6b);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tracker-sync-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(244, 0, 53, 0.3);
+}
+
+.tracker-sync-hint {
+    margin: 8px 0 0 0;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+    font-size: 12px;
 }

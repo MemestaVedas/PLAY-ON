@@ -20,6 +20,8 @@ import {
     PlusIcon,
     LinkIcon
 } from '../ui/Icons';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
 
 /**
  * ====================================================================
@@ -64,6 +66,17 @@ export default function ExtensionsSettings() {
     const [error, setError] = useState<string | null>(null);
     const [isAddRepoOpen, setIsAddRepoOpen] = useState(false);
     const [addRepoLoading, setAddRepoLoading] = useState(false);
+
+    // Confirmation dialog state
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+
+    // Toast notifications
+    const { toast } = useToast();
 
     // Load data on mount and when tab changes
     useEffect(() => {
@@ -142,15 +155,22 @@ export default function ExtensionsSettings() {
     };
 
     // Remove repository
-    const handleRemoveRepo = (url: string) => {
-        if (confirm('Remove this repository? Installed extensions will not be affected.')) {
-            if (activeTab === 'manga') {
-                ExtensionRepository.removeRepo(url);
-            } else {
-                AnimeExtensionRepository.removeRepo(url);
+    const handleRemoveRepo = (url: string, repoName: string) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Remove Repository',
+            message: `Remove "${repoName}"? Installed extensions will not be affected.`,
+            onConfirm: () => {
+                if (activeTab === 'manga') {
+                    ExtensionRepository.removeRepo(url);
+                } else {
+                    AnimeExtensionRepository.removeRepo(url);
+                }
+                loadData();
+                toast.success('Repository removed');
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             }
-            loadData();
-        }
+        });
     };
 
     // Install extension
@@ -176,25 +196,34 @@ export default function ExtensionsSettings() {
             }
 
             loadData();
+            toast.success(`${meta.name} installed successfully`);
         } catch (e) {
             setError(`Failed to install: ${e}`);
+            toast.error(`Failed to install: ${e}`);
         } finally {
             setLoading(false);
         }
     };
 
     // Uninstall extension
-    const handleUninstallExtension = async (id: string) => {
-        if (confirm('Uninstall this extension?')) {
-            if (activeTab === 'anime') {
-                AnimeExtensionStorage.uninstallExtension(id);
-                await AnimeExtensionManager.reload();
-            } else {
-                ExtensionStorage.uninstallExtension(id);
-                await ExtensionManager.reload();
+    const handleUninstallExtension = async (id: string, name: string) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Uninstall Extension',
+            message: `Are you sure you want to uninstall "${name}"? This action cannot be undone.`,
+            onConfirm: async () => {
+                if (activeTab === 'anime') {
+                    AnimeExtensionStorage.uninstallExtension(id);
+                    await AnimeExtensionManager.reload();
+                } else {
+                    ExtensionStorage.uninstallExtension(id);
+                    await ExtensionManager.reload();
+                }
+                loadData();
+                toast.success(`${name} uninstalled`);
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             }
-            loadData();
-        }
+        });
     };
 
     // Toggle extension
@@ -386,9 +415,10 @@ export default function ExtensionsSettings() {
                                         />
                                         {/* Uninstall */}
                                         <button
-                                            onClick={() => handleUninstallExtension(ext.id)}
+                                            onClick={() => handleUninstallExtension(ext.id, ext.name)}
                                             className="setting-button danger"
                                             style={{ padding: '6px 12px' }}
+                                            aria-label={`Uninstall ${ext.name}`}
                                         >
                                             <TrashIcon size={14} />
                                         </button>
@@ -563,9 +593,10 @@ export default function ExtensionsSettings() {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => handleRemoveRepo(repo.url)}
+                                        onClick={() => handleRemoveRepo(repo.url, repo.name)}
                                         className="setting-button danger"
                                         style={{ padding: '6px 12px' }}
+                                        aria-label={`Remove ${repo.name}`}
                                     >
                                         <TrashIcon size={14} />
                                     </button>
@@ -637,6 +668,17 @@ export default function ExtensionsSettings() {
                     </div>
                 </div>
             )}
+            {/* Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                confirmText="Confirm"
+                cancelText="Cancel"
+                confirmVariant="danger"
+                onConfirm={confirmDialog.onConfirm}
+                onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 }

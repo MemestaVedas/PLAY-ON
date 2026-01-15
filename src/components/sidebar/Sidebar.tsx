@@ -5,7 +5,7 @@ import colors from '../../styles/colors';
 import { useAuth } from '../../hooks/useAuth'; // Our custom hook that asks Context for data
 import { useLocalMedia } from '../../context/LocalMediaContext';
 import SidebarItem from './SidebarItem';
-import { HomeIcon, FolderIcon, SettingsIcon, LibraryIcon, CompassIcon, ChartIcon, CalendarIcon, FilmIcon, BookOpenIcon } from '../ui/Icons';
+import { HomeIcon, FolderIcon, LibraryIcon, CompassIcon, ChartIcon, CalendarIcon, FilmIcon, BookOpenIcon } from '../ui/Icons';
 import UserProfileDialog from '../ui/UserProfileDialog';
 
 interface SidebarNavItem {
@@ -85,6 +85,8 @@ function Sidebar({ width: _width }: SidebarProps) {
 
     return (
         <div
+            role="navigation"
+            aria-label="Main navigation"
             style={{
                 width: '100%',
                 height: '100%',
@@ -163,7 +165,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                             e.currentTarget.style.color = 'var(--color-text-muted)';
                             e.currentTarget.style.background = 'transparent';
                         }}
-                        title="Add Anime Folder"
+                        aria-label="Add Anime Folder"
                     >
                         +
                     </button>
@@ -227,7 +229,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                             e.currentTarget.style.color = 'var(--color-text-muted)';
                             e.currentTarget.style.background = 'transparent';
                         }}
-                        title="Add Manga Folder"
+                        aria-label="Add Manga Folder"
                     >
                         +
                     </button>
@@ -309,128 +311,109 @@ function Sidebar({ width: _width }: SidebarProps) {
 
             {/* Profile Section (Discord-style footer) */}
             <div style={{
-                padding: '0.75rem',
+                padding: '0.8rem',
                 borderTop: '1px solid var(--color-border-subtle)',
-                background: 'rgba(0, 0, 0, 0.2)', // Darker background for "footer" feel
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
             }}>
-                {/* User Info - clicks to profile page */}
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.6rem',
-                        cursor: 'pointer',
-                        flex: 1, // Takes available space
-                        minWidth: 0, // Allow text truncation
-                        padding: '4px',
-                        borderRadius: '6px',
-                        transition: 'background 0.2s',
-                    }}
-                    onClick={() => {
-                        if (isAuthenticated && user?.name) {
-                            navigate(`/user/${user.name}`);
-                        } else {
-                            navigate('/settings');
-                        }
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-bg-glass-hover)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    title={user?.name ? `View ${user.name}'s Profile` : 'Settings'}
-                >
+                {/* User Card Container */}
+                <div style={{
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    background: user?.bannerImage
+                        ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.7)), url("${user.bannerImage}")`
+                        : 'rgba(255, 255, 255, 0.03)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    transition: 'all 0.2s ease',
+                }}>
+                    {/* Clickable Area */}
                     <div
                         style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: loading ? 'var(--color-bg-glass-hover)' : (!isAuthenticated || error || !user?.avatar?.large) ? colors.lavenderMist : 'transparent',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '1.25rem',
-                            flexShrink: 0,
-                            overflow: 'hidden',
-                        }}
-                    >
-                        {loading ? (
-                            <div style={{
-                                width: '100%',
-                                height: '100%',
-                                backgroundImage: 'linear-gradient(90deg, var(--color-bg-glass-hover) 0%, var(--color-border-subtle) 50%, var(--color-bg-glass-hover) 100%)',
-                                backgroundSize: '200% 100%',
-                                animation: 'pulse 1.5s ease-in-out infinite',
-                            }} />
-                        ) : !isAuthenticated || error || !user?.avatar?.large ? (
-                            '👤'
-                        ) : (
-                            <img
-                                src={user.avatar.large}
-                                alt={`${user?.name}'s avatar`}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                }}
-                            />
-                        )}
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        <span style={{
-                            fontSize: '0.85rem',
-                            fontWeight: '700',
-                            color: 'var(--color-text-main)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                        }}>
-                            {isAuthenticated && user?.name ? user.name : 'Guest'}
-                        </span>
-                        <span style={{
-                            fontSize: '0.7rem',
-                            color: 'var(--color-text-muted)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                        }}>
-                            {isAuthenticated ? 'Online' : 'Not Logged In'}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Utility Icons (Settings only) */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                    {/* Settings Icon */}
-                    <button
-                        onClick={() => navigate('/settings')}
-                        style={{
-                            background: location.pathname === '/settings' ? 'var(--color-bg-glass-hover)' : 'transparent',
-                            border: 'none',
-                            color: location.pathname === '/settings' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                            gap: '0.8rem',
                             cursor: 'pointer',
-                            padding: '6px',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
+                            padding: '12px',
+                            transition: 'background 0.2s',
+                            background: 'transparent',
                         }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--color-bg-glass-hover)';
-                            e.currentTarget.style.color = 'var(--color-text-main)';
-                        }}
-                        onMouseLeave={(e) => {
-                            if (location.pathname !== '/settings') {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = 'var(--color-text-muted)';
+                        onClick={() => {
+                            if (isAuthenticated && user?.name) {
+                                navigate(`/user/${user.name}`);
+                            } else {
+                                navigate('/settings');
                             }
                         }}
-                        title="Settings"
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                        title={user?.name ? `View ${user.name}'s Profile` : 'Settings'}
                     >
-                        <SettingsIcon size={18} />
-                    </button>
+                        <div
+                            style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '10px',
+                                background: loading ? 'var(--color-bg-glass-hover)' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.4rem',
+                                flexShrink: 0,
+                                overflow: 'hidden',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                            }}
+                        >
+                            {loading ? (
+                                <div style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    backgroundImage: 'linear-gradient(90deg, var(--color-bg-glass-hover) 0%, var(--color-border-subtle) 50%, var(--color-bg-glass-hover) 100%)',
+                                    backgroundSize: '200% 100%',
+                                    animation: 'pulse 1.5s ease-in-out infinite',
+                                }} />
+                            ) : !isAuthenticated || error || !user?.avatar?.large ? (
+                                '👤'
+                            ) : (
+                                <img
+                                    src={user.avatar.large}
+                                    alt={`${user?.name}'s avatar`}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                    }}
+                                />
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', justifyContent: 'center', minWidth: 0 }}>
+                            <span style={{
+                                fontSize: '0.9rem',
+                                fontWeight: '700',
+                                color: '#fff',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            }}>
+                                {isAuthenticated && user?.name ? user.name : 'Guest'}
+                            </span>
+                            <span style={{
+                                fontSize: '0.75rem',
+                                color: 'rgba(255,255,255,0.8)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {isAuthenticated ? 'Online' : 'Not Logged In'}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
 

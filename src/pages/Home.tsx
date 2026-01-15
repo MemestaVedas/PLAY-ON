@@ -2,7 +2,6 @@ import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/ui/AnimeCard';
 import RefreshButton from '../components/ui/RefreshButton';
-import Loading from '../components/ui/Loading';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
 import { USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY, USER_STATUS_ANIME_COLLECTION_QUERY } from '../api/anilistClient';
@@ -11,10 +10,14 @@ import { useFolderMappings } from '../hooks/useFolderMappings';
 import { getMangaEntryByAnilistId, updateMangaCache } from '../lib/localMangaDb';
 import { ExtensionManager } from '../services/ExtensionManager';
 import { getStats, formatTime, getActivityStreak, UserStats } from '../services/StatsService';
+import { useViewTransition } from '../hooks/useViewTransition';
+import { SkeletonGrid, FadeIn } from '../components/ui/SkeletonLoader';
+
 
 
 function Home() {
     const navigate = useNavigate();
+    const navigateWithTransition = useViewTransition();
     const { user, isAuthenticated } = useAuth();
     const { mappings: mangaMappings } = useMangaMappings();
     const { mappings: folderMappings } = useFolderMappings();
@@ -146,7 +149,7 @@ function Home() {
     }, [isAuthenticated, animeList, planningData]);
 
     const handleAnimeClick = (id: number) => {
-        navigate(`/anime/${id}`);
+        navigateWithTransition(`/anime/${id}`);
     };
 
     // Resume button handler for anime with linked folders
@@ -158,7 +161,7 @@ function Home() {
     }, [navigate]);
 
     const handleMangaClick = (id: number) => {
-        navigate(`/manga-details/${id}`);
+        navigateWithTransition(`/manga-details/${id}`);
     };
 
     const handleMangaResume = useCallback(async (manga: any) => {
@@ -278,9 +281,9 @@ function Home() {
                         </div>
 
                         {!userData && animeLoading ? (
-                            <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
+                            <SkeletonGrid count={8} />
                         ) : animeList.length > 0 ? (
-                            <div className="">
+                            <FadeIn className="">
                                 {/* Responsive Grid: 
                                     - Default (Windowed 1200px): 2 cols (Large posters), 4 items visible
                                     - Fullscreen (1536px+): 4 cols (Normal posters), 8 items visible ("Bento" style)
@@ -304,9 +307,9 @@ function Home() {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </FadeIn>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5">
+                            <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5 p-8">
                                 <p className="text-sm">No anime in list</p>
                             </div>
                         )}
@@ -342,9 +345,9 @@ function Home() {
                             </div>
 
                             {!mangaData && mangaLoading ? (
-                                <div className="flex-1 flex items-center justify-center"><Loading inline /></div>
+                                <SkeletonGrid count={8} />
                             ) : mangaList.length > 0 ? (
-                                <div className="">
+                                <FadeIn className="">
                                     {/* Responsive Grid: 2 cols (Windowed) -> 4 cols (Fullscreen) */}
                                     <div className="grid grid-cols-2 2xl:grid-cols-4 gap-4 2xl:gap-3">
                                         {mangaList.slice(0, 8).map((manga: any, index: number) => (
@@ -366,9 +369,9 @@ function Home() {
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+                                </FadeIn>
                             ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5">
+                                <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5 p-8">
                                     <p className="text-sm">No manga in list</p>
                                 </div>
                             )}

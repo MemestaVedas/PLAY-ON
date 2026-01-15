@@ -1,0 +1,182 @@
+/**
+ * ============================================================================
+ * THEME TEMPLATE - Copy this file to create new themes
+ * ============================================================================
+ * 
+ * HOW TO CREATE A NEW THEME:
+ * 1. Copy this file and rename it (e.g., "sakura.theme.css")
+ * 2. Change the [data-theme="THEME_NAME"] selector to your theme name
+ * 3. Modify ONLY the values (colors) - keep all property names the same
+ * 4. Import your new theme in /src/themes/index.ts
+ * 5. Add to AVAILABLE_THEMES array in index.ts
+ * 
+ * COLOR TIPS:
+ * - Use hex (#RRGGBB) or rgba() for colors
+ * - For accent colors, provide both hex and RGB values for opacity variations
+ * - Test in both bright and dim lighting conditions
+ * 
+ * ============================================================================
+ */
+
+/* Replace "new-theme" with your theme name (lowercase, hyphenated) */
+:root[data-theme="new-theme"] {
+
+    /* =========================================================================
+     SECTION 1: BACKGROUNDS
+     =========================================================================
+     These define the main surfaces of the app.
+     - bgMain: Base app background
+     - bgContent: Content area behind cards
+     - bgCard: Individual card backgrounds
+     - bgGlass: Glassmorphic overlays
+     ========================================================================= */
+
+    --theme-bg-main: #0c0c0e;
+    /* Darkest - app shell */
+    --theme-bg-content: rgba(20, 20, 25, 0.65);
+    /* Content areas */
+    --theme-bg-card: #1a1a20;
+    /* Card surfaces */
+    --theme-bg-glass: rgba(18, 18, 20, 0.65);
+    /* Glass panels */
+    --theme-bg-glass-hover: rgba(255, 255, 255, 0.08);
+    --theme-bg-overlay: rgba(0, 0, 0, 0.6);
+    /* Modal overlays */
+
+    /* Zen palette (used in specific UI elements) */
+    --theme-zen-black: #09090b;
+    --theme-zen-gray: #27272a;
+    --theme-zen-surface-low: #18181b;
+    --theme-zen-surface-high: #27272a;
+
+    /* =========================================================================
+     SECTION 2: TEXT COLORS
+     =========================================================================
+     - textMain: Primary readable text
+     - textMuted: Secondary/helper text
+     - textHighlight: Links, emphasis
+     ========================================================================= */
+
+    --theme-text-main: #ededed;
+    /* Main text - should contrast well */
+    --theme-text-muted: #cdcdcd;
+    /* Muted/secondary text */
+    --theme-text-highlight: #6a6a9e;
+    /* Highlighted/accent text */
+    --theme-text-inverse: #000000;
+    /* Text on accent buttons */
+
+    /* =========================================================================
+     SECTION 3: ACCENT COLORS (The Identity of Your Theme!)
+     =========================================================================
+     These are the most important colors for your theme's personality.
+     Each accent needs: hex value, RGB values, and muted (low opacity) version.
+     ========================================================================= */
+
+    /* Primary Accent - The main theme color (buttons, active states) */
+    --theme-accent-primary: #B4A2F6;
+    /* CHANGE THIS! */
+    --theme-accent-primary-rgb: 180, 162, 246;
+    --theme-accent-primary-hover: #C7B8FF;
+    --theme-accent-primary-muted: rgba(180, 162, 246, 0.15);
+
+    /* Secondary Accent - Complements primary (links, info) */
+    --theme-accent-secondary: #A5DBF8;
+    /* CHANGE THIS! */
+    --theme-accent-secondary-rgb: 165, 219, 248;
+    --theme-accent-secondary-hover: #B8E5FF;
+    --theme-accent-secondary-muted: rgba(165, 219, 248, 0.15);
+
+    /* Tertiary Accent - Third color for variety */
+    --theme-accent-tertiary: #FFBE98;
+    /* CHANGE THIS! */
+    --theme-accent-tertiary-rgb: 255, 190, 152;
+    --theme-accent-tertiary-muted: rgba(255, 190, 152, 0.15);
+
+    /* =========================================================================
+     SECTION 4: SEMANTIC COLORS (Usually Keep These Standard)
+     =========================================================================
+     These convey meaning and are typically consistent across themes.
+     ========================================================================= */
+
+    /* Success - Green tones */
+    --theme-accent-success: #9DF0B3;
+    --theme-accent-success-rgb: 157, 240, 179;
+    --theme-accent-success-muted: rgba(157, 240, 179, 0.15);
+
+    /* Warning - Yellow/orange tones */
+    --theme-accent-warning: #FFF4BD;
+    --theme-accent-warning-rgb: 255, 244, 189;
+    --theme-accent-warning-muted: rgba(255, 244, 189, 0.15);
+
+    /* Danger - Red tones */
+    --theme-accent-danger: #FCA5A5;
+    --theme-accent-danger-rgb: 252, 165, 165;
+    --theme-accent-danger-muted: rgba(252, 165, 165, 0.15);
+    --theme-accent-danger-strong: #ff6b6b;
+
+    /* Info - Blue tones */
+    --theme-accent-info: #93C5FD;
+    --theme-accent-info-rgb: 147, 197, 253;
+    --theme-accent-info-muted: rgba(147, 197, 253, 0.15);
+
+    /* =========================================================================
+     SECTION 5: BORDERS
+     ========================================================================= */
+
+    --theme-border-subtle: rgba(255, 255, 255, 0.08);
+    --theme-border-highlight: rgba(255, 255, 255, 0.15);
+    --theme-border-accent: rgba(180, 162, 246, 0.3);
+    /* Use primary RGB */
+    --theme-border-accent-strong: rgba(180, 162, 246, 0.5);
+
+    /* =========================================================================
+     SECTION 6: SHADOWS & EFFECTS
+     ========================================================================= */
+
+    --theme-shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --theme-shadow-glow: 0 0 20px rgba(180, 162, 246, 0.15);
+    /* Primary color glow */
+    --theme-shadow-elevated: 0 10px 30px rgba(0, 0, 0, 0.3);
+    --theme-shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.3);
+    --theme-shadow-button: 0 4px 15px rgba(180, 162, 246, 0.25);
+
+    /* =========================================================================
+     SECTION 7: GRADIENTS
+     ========================================================================= */
+
+    /* Primary accent gradient (buttons) */
+    --theme-gradient-primary: linear-gradient(135deg, #B4A2F6 0%, #a594e6 100%);
+
+    /* Secondary gradient option */
+    --theme-gradient-secondary: linear-gradient(135deg, #A5DBF8 0%, #7dd3fc 100%);
+
+    /* Background mesh gradient */
+    --theme-gradient-bg-mesh: radial-gradient(ellipse at top, rgba(180, 162, 246, 0.08) 0%, transparent 50%);
+
+    /* Overlay gradient (for cards) */
+    --theme-gradient-overlay: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+
+    /* =========================================================================
+     SECTION 8: INTERACTIVE STATES
+     ========================================================================= */
+
+    --theme-hover-bg: rgba(255, 255, 255, 0.05);
+    --theme-active-bg: rgba(255, 255, 255, 0.08);
+    --theme-focus-ring: 0 0 0 2px rgba(180, 162, 246, 0.5);
+
+    /* =========================================================================
+     SECTION 9: SCROLLBAR
+     ========================================================================= */
+
+    --theme-scrollbar-thumb: rgba(255, 255, 255, 0.2);
+    --theme-scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+    --theme-scrollbar-track: transparent;
+
+    /* =========================================================================
+     SECTION 10: SELECTION
+     ========================================================================= */
+
+    --theme-selection-bg: rgba(180, 162, 246, 0.3);
+    --theme-selection-text: #ffffff;
+}

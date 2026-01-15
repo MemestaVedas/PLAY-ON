@@ -48,27 +48,34 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
+    // OPTIMIZATION: Initialize state directly from localStorage to prevent UI flash
+    const [user, setUser] = useState<UserProfile | null>(() => {
+        try {
+            const storedUser = localStorage.getItem('user_profile');
+            if (storedUser) {
+                console.log("AuthContext: Hydrating user from cache:", JSON.parse(storedUser).name);
+                return JSON.parse(storedUser);
+            }
+        } catch (e) {
+            console.error("AuthContext: Failed to parse stored user", e);
+        }
+        return null;
+    });
+
+    const [loading, setLoading] = useState(() => !user);
     const [error, setError] = useState<string | null>(null);
     const processingRef = useRef<string | null>(null);
 
     // Initial load and deep link listener
     useEffect(() => {
         const init = async () => {
-            // OPTIMIZATION: Load user from localStorage immediately for instant UI
-            const storedUser = localStorage.getItem('user_profile');
+            // Verify token exists
             const storedToken = localStorage.getItem('token') || localStorage.getItem('anilist_token');
 
-            if (storedUser && storedToken) {
-                try {
-                    const parsedUser = JSON.parse(storedUser);
-                    console.log("AuthContext: Loaded optimistic user:", parsedUser.name);
-                    setUser(parsedUser);
-                    setLoading(false); // Enable UI immediately
-                } catch (e) {
-                    console.error("AuthContext: Failed to parse stored user", e);
-                }
+            if (!storedToken) {
+                // If no token but we have user, clear it (logout happened elsewhere?)
+                if (user) setUser(null);
+                setLoading(false);
             }
 
             // Sync with Apollo Cache and verify token

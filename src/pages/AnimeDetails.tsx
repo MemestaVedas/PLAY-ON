@@ -14,6 +14,7 @@ import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
 import { StatusDropdown } from '../components/ui/StatusDropdown';
 import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon, HeartIcon } from '../components/ui/Icons';
 import { motion } from 'framer-motion';
+import { useDynamicTheme } from '../context/DynamicThemeContext';
 
 // Status options for AniList
 const STATUS_OPTIONS = [
@@ -47,6 +48,19 @@ function AnimeDetails() {
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [favoriteUpdating, setFavoriteUpdating] = useState(false);
+
+    // Dynamic theme - use blurred cover art as ambient background
+    const coverImageUrl = anime?.coverImage?.extraLarge || anime?.coverImage?.large;
+    const { setCoverImage, clearTheme } = useDynamicTheme();
+
+    // Set cover image for dynamic theming when anime loads
+    useEffect(() => {
+        if (coverImageUrl) {
+            setCoverImage(coverImageUrl);
+        }
+        // Clear when leaving the page
+        return () => clearTheme();
+    }, [coverImageUrl, setCoverImage, clearTheme]);
 
     // Check if this anime is linked to a local folder
     const folderMapping = anime ? getMappingByAnilistId(anime.id) : undefined;

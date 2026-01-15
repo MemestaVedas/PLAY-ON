@@ -9,6 +9,7 @@ import Breadcrumbs from '../components/ui/Breadcrumbs';
 import FloatingNowPlaying from '../components/ui/FloatingNowPlaying';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useSearchBar } from '../context/SearchBarContext';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * MainLayout Component
@@ -18,6 +19,25 @@ import { useSearchBar } from '../context/SearchBarContext';
 function MainLayout() {
     const [sidebarWidth, setSidebarWidth] = useState(200);
     const [isResizing, setIsResizing] = useState(false);
+    const { user } = useAuth();
+
+    // Dynamically adjust sidebar width for long usernames
+    useEffect(() => {
+        if (user?.name) {
+            // Approx 10px per character + 110px base (48px avatar + margins/padding)
+            // "MemestaVedas" (12 chars) -> 120 + 110 = 230px
+            const nameWidth = user.name.length * 10;
+            const requiredWidth = 110 + nameWidth;
+
+            // Only auto-expand if current width is too small
+            // And limit max auto-expansion to 300px to avoid taking too much space
+            if (sidebarWidth < requiredWidth) {
+                const newWidth = Math.min(requiredWidth, 300);
+                // Ensure we don't shrink below 200 default
+                setSidebarWidth(Math.max(200, newWidth));
+            }
+        }
+    }, [user?.name]); // Check when username changes (e.g. login)
 
     // Keyboard Shortcuts
     const { focusSearch } = useSearchBar();

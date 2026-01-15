@@ -15,6 +15,7 @@ export type ShortcutAction =
     | 'goSettings'
     | 'goProfile'
     | 'goBack'
+    | 'goForward'
     | 'escape';
 
 export interface Settings {
@@ -60,7 +61,8 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: Record<ShortcutAction, string> = {
     goMangaList: 'Ctrl+Shift+M',
     goSettings: 'Ctrl+,',
     goProfile: 'Ctrl+P',
-    goBack: 'Ctrl+Backspace',
+    goBack: 'Alt+ArrowLeft',
+    goForward: 'Alt+ArrowRight',
     escape: 'Escape',
 };
 

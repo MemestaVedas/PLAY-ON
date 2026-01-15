@@ -660,15 +660,22 @@ export default function StreamPlayer({
                 {title && <div className="stream-title">{title}</div>}
 
                 <div className="stream-progress">
-                    <input
-                        type="range"
-                        min={0}
-                        max={duration || 100}
-                        value={currentTime}
-                        onChange={handleSeek}
-                        className="progress-bar"
-                        style={{ backgroundSize: `${(currentTime * 100) / (duration || 1)}% 100%` }}
-                    />
+                    <div className="progress-container">
+                        <div
+                            className={`visual-track ${isPlaying ? 'squiggly' : ''}`}
+                            style={{
+                                '--progress-percent': `${(currentTime / (duration || 1)) * 100}%`
+                            } as React.CSSProperties}
+                        />
+                        <input
+                            type="range"
+                            min={0}
+                            max={duration || 100}
+                            value={currentTime}
+                            onChange={handleSeek}
+                            className="interactive-slider"
+                        />
+                    </div>
                     <span className="time-display">
                         {formatTime(currentTime)} / {formatTime(duration)}
                     </span>

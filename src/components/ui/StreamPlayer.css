@@ -98,7 +98,7 @@
     margin-bottom: 0.5rem;
 }
 
-/* Progress Bar */
+/* Progress Bar Container */
 .stream-progress {
     display: flex;
     align-items: center;
@@ -106,38 +106,87 @@
     margin-bottom: 0.5rem;
 }
 
-.progress-bar {
+.progress-container {
+    position: relative;
     flex: 1;
+    height: 16px;
+    display: flex;
+    align-items: center;
+}
+
+/* Visual Track (Background & Fill) */
+.visual-track {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     height: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+
+    /* Fill gradient */
+    background-image: linear-gradient(var(--color-zen-accent, #B4A2F6), var(--color-zen-accent, #B4A2F6));
+    background-size: var(--progress-percent) 100%;
+    background-repeat: no-repeat;
+
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Squiggly Effect (Android style) */
+.visual-track.squiggly {
+    height: 12px;
+    /* Sine wave mask */
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='12' viewBox='0 0 20 12'%3E%3Cpath d='M0 6 Q5 0 10 6 T20 6' stroke='white' stroke-width='4' fill='none' stroke-linecap='round' /%3E%3C/svg%3E");
+    mask-repeat: repeat-x;
+    mask-position: 0 center;
+    mask-size: 20px 100%;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='12' viewBox='0 0 20 12'%3E%3Cpath d='M0 6 Q5 0 10 6 T20 6' stroke='white' stroke-width='4' fill='none' stroke-linecap='round' /%3E%3C/svg%3E");
+    -webkit-mask-repeat: repeat-x;
+    -webkit-mask-position: 0 center;
+    -webkit-mask-size: 20px 100%;
+
+    /* Make background fill full height of wave */
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Interactive Slider (Invisible but clickable track, visible thumb) */
+.interactive-slider {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 1;
     -webkit-appearance: none;
     appearance: none;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
+    background: transparent;
     cursor: pointer;
-    background-image: linear-gradient(var(--color-zen-accent, #B4A2F6), var(--color-zen-accent, #B4A2F6));
-    background-size: 0% 100%;
-    background-repeat: no-repeat;
-    transition: height 0.2s ease;
+    z-index: 2;
 }
 
-.progress-bar:hover {
-    height: 6px;
-}
-
-.progress-bar::-webkit-slider-thumb {
+.interactive-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 0;
-    /* Hidden by default */
+    width: 14px;
     height: 14px;
-    background: var(--color-zen-accent, #B4A2F6);
+    background: #fff;
     border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: width 0.2s ease;
+    transition: transform 0.2s ease;
+    transform: scale(0);
+    /* Hide thumb usually, show on hover? Or always show? */
+    /* Android player usually hides thumb or shows small dot. I'll make it visible but small. */
+    transform: scale(1);
+    margin-top: 0;
 }
 
-.progress-bar:hover::-webkit-slider-thumb {
-    width: 14px;
+.interactive-slider:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+}
+
+/* Hover effect on track */
+.progress-container:hover .visual-track {
+    filter: brightness(1.2);
 }
 
 .time-display {

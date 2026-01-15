@@ -1,7 +1,9 @@
 /**
  * Unified Tracking Sync Service
  * 
- * Provides hooks to sync anime/manga progress to both AniList and MAL simultaneously.
+ * Provides hooks to sync anime/manga progress to both AniList and MAL.
+ * AniList is the PRIMARY tracker - updates go there first.
+ * MAL is secondary - synced after AniList succeeds.
  * Handles ID mapping and status conversion between the two services.
  */
 
@@ -41,19 +43,19 @@ export function useTrackingSync() {
             mal: { success: false },
         };
 
-        // Sync to AniList
+        // Sync to AniList FIRST (primary tracker)
         if (anilistAuth.isAuthenticated) {
             try {
                 await updateAnilistAnimeProgress(anilistId, progress, status);
                 result.anilist.success = true;
-                console.log(`[Sync] AniList anime ${anilistId} updated to episode ${progress}`);
+                console.log(`[Sync] AniList (PRIMARY) anime ${anilistId} updated to episode ${progress}`);
             } catch (e) {
                 result.anilist.error = String(e);
                 console.error('[Sync] AniList anime update failed:', e);
             }
         }
 
-        // Sync to MAL
+        // Sync to MAL (secondary tracker)
         if (malAuth.isAuthenticated && malAuth.accessToken && malId) {
             try {
                 const malStatus = status ? malClient.anilistToMalAnimeStatus(status) : undefined;
@@ -90,19 +92,19 @@ export function useTrackingSync() {
             mal: { success: false },
         };
 
-        // Sync to AniList
+        // Sync to AniList FIRST (primary tracker)
         if (anilistAuth.isAuthenticated) {
             try {
                 await updateAnilistMangaProgress(anilistId, chaptersRead, status);
                 result.anilist.success = true;
-                console.log(`[Sync] AniList manga ${anilistId} updated to chapter ${chaptersRead}`);
+                console.log(`[Sync] AniList (PRIMARY) manga ${anilistId} updated to chapter ${chaptersRead}`);
             } catch (e) {
                 result.anilist.error = String(e);
                 console.error('[Sync] AniList manga update failed:', e);
             }
         }
 
-        // Sync to MAL
+        // Sync to MAL (secondary tracker)
         if (malAuth.isAuthenticated && malAuth.accessToken && malId) {
             try {
                 const malStatus = status ? malClient.anilistToMalMangaStatus(status) : undefined;
