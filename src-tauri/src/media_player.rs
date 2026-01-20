@@ -76,6 +76,7 @@ pub fn detect_media_player(title: &str) -> Option<MediaPlayer> {
         || title_lower.contains("funimation")
         || title_lower.contains("hidive")
         || title_lower.contains("hianime")
+        || title_lower.contains("9anime")
     {
         return Some(MediaPlayer::Browser);
     }
@@ -122,11 +123,12 @@ mod tests {
     }
 }
 
-    #[test]
-    fn test_chrome_hianime_detection() {
-        let title = "Chitose Is In The Ramune Bottle Episode 1 English Sub at Hianime - Google Chrome – Suraj";
-        let result = detect_media_player(title);
-        println!("Detection result for Chrome/Hianime title: {:?}", result);
-        assert!(result.is_some(), "Should detect as browser");
-        assert_eq!(result, Some(MediaPlayer::Browser));
-    }
+#[test]
+fn test_chrome_hianime_detection() {
+    let title =
+        "Chitose Is In The Ramune Bottle Episode 1 English Sub at Hianime - Google Chrome – Suraj";
+    let result = detect_media_player(title);
+    println!("Detection result for Chrome/Hianime title: {:?}", result);
+    assert!(result.is_some(), "Should detect as browser");
+    assert_eq!(result, Some(MediaPlayer::Browser));
+}

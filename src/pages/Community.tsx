@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchFollowingActivity } from '../api/anilistClient';
 import { useAuth } from '../hooks/useAuth';
 import { SkeletonGrid, FadeIn } from '../components/ui/SkeletonLoader';
-import { CONTENT_COLORS } from '../lib/theme';
+
 import RefreshButton from '../components/ui/RefreshButton';
 
 interface ActivityItem {

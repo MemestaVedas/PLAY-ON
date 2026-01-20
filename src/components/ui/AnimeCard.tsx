@@ -8,10 +8,11 @@ interface AnimeCardProps {
     progress?: number;
     onResume?: () => void; // Optional resume callback for linked manga
     isResuming?: boolean; // Optional loading state for resume action
+    onDismiss?: () => void; // Optional dismiss callback for recommendations
     compact?: boolean;
 }
 
-const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResume, isResuming = false, compact = false }) => {
+const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResume, isResuming = false, onDismiss, compact = false }) => {
     const title = anime.title.english || anime.title.romaji;
     const episodes = anime.episodes || '?';
     const hasProgress = progress !== undefined;
@@ -23,6 +24,11 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResum
         if (!isResuming) {
             onResume?.();
         }
+    };
+
+    const handleDismissClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent card click
+        onDismiss?.();
     };
 
     // Keyboard accessibility for card
@@ -83,6 +89,21 @@ const AnimeCard: React.FC<AnimeCardProps> = ({ anime, onClick, progress, onResum
                             <polygon points="5 3 19 12 5 21 5 3" />
                         </svg>
                     )}
+                </button>
+            )}
+
+            {/* Dismiss Button - for recommendations */}
+            {onDismiss && (
+                <button
+                    className="anime-card__dismiss-btn"
+                    onClick={handleDismissClick}
+                    aria-label={`Don't suggest ${title}`}
+                    title="Don't suggest this"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
                 </button>
             )}
 

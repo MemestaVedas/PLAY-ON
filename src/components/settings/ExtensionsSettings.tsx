@@ -639,8 +639,8 @@ export default function ExtensionsSettings() {
                             style={{
                                 width: '100%',
                                 padding: '12px 16px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--color-border-subtle)',
+                                borderRadius: '50px',
+                                border: 'none',
                                 background: 'rgba(255,255,255,0.05)',
                                 color: 'var(--color-text-main)',
                                 fontSize: '14px',

@@ -235,10 +235,10 @@
    ============================================================================ */
 
 .dropdown-select {
-    padding: 10px 36px 10px 14px;
+    padding: 10px 36px 10px 20px;
     background: var(--color-bg-glass-hover);
     border: 1px solid var(--color-border-subtle);
-    border-radius: 10px;
+    border-radius: 100px;
     color: var(--color-text-main);
     font-size: 14px;
     cursor: pointer;
@@ -252,12 +252,6 @@
 
 .dropdown-select:hover {
     background-color: var(--color-border-subtle);
-}
-
-.dropdown-select:focus {
-    outline: none;
-    border-color: var(--theme-accent-primary);
-    box-shadow: var(--theme-focus-ring);
 }
 
 .dropdown-select option {
@@ -313,25 +307,7 @@
    ============================================================================ */
 
 .setting-input {
-    padding: 10px 14px;
-    background: var(--color-bg-glass-hover);
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 10px;
-    color: var(--color-text-main);
-    font-size: 14px;
     width: 200px;
-    transition: all 0.2s ease;
-}
-
-.setting-input:focus {
-    outline: none;
-    border-color: var(--theme-accent-primary);
-    box-shadow: var(--theme-focus-ring);
-}
-
-.setting-input::placeholder {
-    color: var(--color-text-muted);
-    opacity: 0.5;
 }
 
 /* ============================================================================
@@ -385,7 +361,7 @@
     gap: 8px;
     padding: 12px;
     background: var(--color-bg-glass);
-    border-radius: 12px;
+    border-radius: 24px;
     border: 1px solid var(--color-border-subtle);
     min-height: 48px;
 }

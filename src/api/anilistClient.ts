@@ -52,12 +52,13 @@ query ($userId: Int, $status: MediaListStatus) {
 
 export const USER_STATUS_ANIME_COLLECTION_QUERY = gql`
 query ($userId: Int, $status: MediaListStatus) {
-  MediaListCollection(userId: $userId, type: ANIME, status: $status) {
+  MediaListCollection(userId: $userId, type: ANIME, status: $status, sort: UPDATED_TIME_DESC) {
     lists {
       name
       entries {
         id
         progress
+        updatedAt
         media {
           id
           title {
@@ -133,6 +134,8 @@ query ($userId: Int) {
           }
           episodes
           status
+          genres
+          averageScore
           nextAiringEpisode {
             episode
             timeUntilAiring
@@ -370,6 +373,8 @@ query ($userId: Int) {
           chapters
           volumes
           status
+          genres
+          averageScore
         }
       }
     }
@@ -405,11 +410,11 @@ query ($search: String, $page: Int, $perPage: Int) {
 }
 `;
 
-// Query for personalized anime recommendations based on genre
+// Query for personalized anime recommendations based on multiple genres
 export const GENRE_RECOMMENDATIONS_QUERY = gql`
-query ($genre: String, $perPage: Int) {
+query ($genres: [String], $perPage: Int) {
   Page(perPage: $perPage) {
-    media(genre: $genre, type: ANIME, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
+    media(genre_in: $genres, type: ANIME, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
       id
       title {
         english
@@ -427,11 +432,11 @@ query ($genre: String, $perPage: Int) {
 }
 `;
 
-// Query for personalized manga recommendations based on genre
+// Query for personalized manga recommendations based on multiple genres
 export const MANGA_GENRE_RECOMMENDATIONS_QUERY = gql`
-query ($genre: String, $perPage: Int) {
+query ($genres: [String], $perPage: Int) {
   Page(perPage: $perPage) {
-    media(genre: $genre, type: MANGA, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
+    media(genre_in: $genres, type: MANGA, sort: POPULARITY_DESC, status_not: NOT_YET_RELEASED) {
       id
       title {
         english

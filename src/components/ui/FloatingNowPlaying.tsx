@@ -4,6 +4,7 @@ import { updateProgress } from '../../lib/localAnimeDb';
 import { syncEntryToAniList } from '../../lib/syncService';
 import { useFolderMappings, FolderAnimeMapping } from '../../hooks/useFolderMappings';
 import { useNowPlaying } from '../../context/NowPlayingContext';
+import { trackAnimeSession } from '../../services/StatsService';
 import './FloatingNowPlaying.css';
 
 interface DetectionResult {
@@ -345,6 +346,31 @@ export function FloatingNowPlaying({ onAnimeDetected }: FloatingNowPlayingProps)
         const interval = setInterval(detectAnime, 3000);
         return () => clearInterval(interval);
     }, [onAnimeDetected, getMappingForFilePath, createMatchFromMapping, manualSession, clearManualSession]);
+
+    // Track local stats every minute
+    useEffect(() => {
+        const isPlaying = detection?.status === 'detected';
+        const episode = detection?.parsed?.episode;
+
+        if (!isPlaying || !episode || !detection) return;
+
+        const { parsed, anilist_match: match } = detection;
+        const title = match?.title.english || match?.title.romaji || parsed?.title || 'Unknown';
+        const animeId = match?.id || 0;
+        const cover = match?.coverImage.medium;
+
+        // Track immediately on start/change? No, usually after 1 minute of watching.
+        const interval = setInterval(() => {
+            trackAnimeSession(animeId, title, cover, 1, []);
+        }, 60000);
+
+        return () => clearInterval(interval);
+    }, [
+        detection?.status,
+        detection?.parsed?.episode,
+        detection?.anilist_match?.id,
+        detection?.parsed?.title
+    ]);
 
     const isPlaying = detection?.status === 'detected';
     const hasMatch = isPlaying && detection?.anilist_match;

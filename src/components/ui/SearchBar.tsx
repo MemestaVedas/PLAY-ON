@@ -108,10 +108,10 @@ const SearchBar: React.FC = () => {
     return (
         <div ref={containerRef} className="relative group/search">
             <div
-                className="glass-panel pl-2 pr-4 py-2 flex items-center gap-3 rounded-full border border-white/5 backdrop-blur-md transition-all duration-300 ease-out hover:border-white/20 hover:bg-white/[0.07] focus-within:border-white/30 focus-within:bg-white/10"
+                className="glass-panel pl-2 pr-4 py-2 flex items-center gap-3 rounded-full backdrop-blur-md transition-all duration-300 ease-out hover:bg-white/[0.07] focus-within:bg-white/10"
                 style={{
                     background: 'var(--color-bg-glass)',
-                    borderColor: 'var(--color-border-subtle)',
+                    borderRadius: '100px',
                 }}
             >
                 {/* Mode Toggle */}
@@ -184,6 +184,8 @@ const SearchBar: React.FC = () => {
                         color: 'var(--color-text-main)',
                         outline: 'none',
                         boxShadow: 'none',
+                        border: 'none',
+                        background: 'transparent',
                         WebkitAppearance: 'none',
                     }}
                 />

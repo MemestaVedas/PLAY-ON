@@ -77,6 +77,7 @@ export function getStats(): UserStats {
 function saveStats(stats: UserStats): void {
     try {
         localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats));
+        window.dispatchEvent(new Event('stats-updated'));
     } catch (e) {
         console.error('[StatsService] Failed to save stats:', e);
     }

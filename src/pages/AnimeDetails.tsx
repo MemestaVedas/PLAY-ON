@@ -7,16 +7,17 @@ import { useMalAuth } from '../context/MalAuthContext';
 import { useAuthContext } from '../context/AuthContext';
 import * as malClient from '../api/malClient';
 import AnimeCard from '../components/ui/AnimeCard';
-import Loading from '../components/ui/Loading';
+
 import { AnimeStats } from '../components/anime/AnimeStats';
 import { AnimeProgressCard } from '../components/anime/AnimeProgressCard';
 import { AnimeResumeButton } from '../components/anime/AnimeResumeButton';
 import { MediaRelations } from '../components/media/MediaRelations';
 import { ReadMoreText } from '../components/ui/ReadMoreText';
 import { StatusDropdown } from '../components/ui/StatusDropdown';
-import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon, HeartIcon } from '../components/ui/Icons';
+import { PlayIcon, CheckIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon, HeartIcon, ArrowRightIcon } from '../components/ui/Icons';
 import { motion } from 'framer-motion';
 import { useDynamicTheme } from '../context/DynamicThemeContext';
+import { DetailsSkeleton } from '../components/ui/SkeletonLoader';
 
 // Status options for AniList
 const STATUS_OPTIONS = [
@@ -163,7 +164,7 @@ function AnimeDetails() {
         }
     };
 
-    if (loading) return <Loading />;
+    if (loading) return <DetailsSkeleton />;
 
     if (!anime) return (
         <div className="flex h-screen items-center justify-center font-mono text-red-400">
@@ -317,6 +318,71 @@ function AnimeDetails() {
                             onUpdate={handleProgressUpdate}
                             updating={updating}
                         />
+
+                        {/* Action Button - Search or Browse Extensions */}
+                        <motion.button
+                            onClick={() => {
+                                if (folderMapping) {
+                                    // Navigate to local folder
+                                    navigate(`/local/${encodeURIComponent(folderMapping.folderPath)}`);
+                                } else {
+                                    // Search in browse
+                                    // Default to 9anime or similar if we had an extension linking system, 
+                                    // for now just go to browse with query
+                                    navigate(`/anime-browse?q=${encodeURIComponent(title)}`);
+                                }
+                            }}
+                            whileHover={{ scale: 1.01, borderColor: folderMapping ? 'rgba(56, 189, 248, 0.5)' : 'rgba(180, 162, 246, 0.5)' }}
+                            whileTap={{ scale: 0.98 }}
+                            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1e] to-[#121214] border border-white/10 p-4 text-left shadow-lg"
+                        >
+                            {/* Hover Gradient */}
+                            <motion.div
+                                className={`absolute inset-0 bg-gradient-to-r ${folderMapping ? 'from-mint-tonic/10' : 'from-lavender-mist/10'} to-transparent`}
+                                initial={{ opacity: 0 }}
+                                whileHover={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                            />
+
+                            <div className="relative flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    {/* Icon Box */}
+                                    <motion.div
+                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${folderMapping ? 'bg-mint-tonic/10 text-mint-tonic border-mint-tonic/20' : 'bg-lavender-mist/10 text-lavender-mist border-lavender-mist/20'} border`}
+                                        whileHover={{ rotate: 15, scale: 1.1 }}
+                                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                    >
+                                        <PlayIcon size={20} />
+                                    </motion.div>
+
+                                    {/* Text */}
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className={`font-mono text-[10px] uppercase tracking-widest ${folderMapping ? 'text-mint-tonic' : 'text-lavender-mist'} font-bold`}>
+                                            {folderMapping ? 'CONTINUE WATCHING' : 'SEARCH THIS ANIME'}
+                                        </span>
+                                        <motion.span
+                                            className="font-bold text-white text-lg truncate max-w-[200px] md:max-w-[300px]"
+                                            whileHover={{ color: folderMapping ? '#A0E9E5' : '#B4A2F6', x: 2 }}
+                                        >
+                                            {folderMapping ? 'Local Folder' : 'Browse Extensions'}
+                                        </motion.span>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <motion.div
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/40"
+                                    whileHover={{
+                                        backgroundColor: folderMapping ? '#A0E9E5' : '#B4A2F6',
+                                        color: '#121214',
+                                        borderColor: folderMapping ? '#A0E9E5' : '#B4A2F6',
+                                        x: 5
+                                    }}
+                                >
+                                    <ArrowRightIcon size={16} />
+                                </motion.div>
+                            </div>
+                        </motion.button>
                     </div>
 
                 </div>
@@ -324,6 +390,32 @@ function AnimeDetails() {
                 {/* Relations Section */}
                 <div className="-mt-8">
                     <MediaRelations relations={anime.relations} />
+                </div>
+
+                {/* Alternative Titles */}
+                <div className="mt-10 mb-8 border-t border-white/10 pt-8">
+                    <h3 className="text-sm font-mono text-white/40 uppercase tracking-widest mb-4">Alternative Titles</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {anime.title?.romaji && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">Romaji</span>
+                                <span className="text-white/80 font-medium">{anime.title.romaji}</span>
+                            </div>
+                        )}
+                        {anime.title?.english && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">English</span>
+                                <span className="text-white/80 font-medium">{anime.title.english}</span>
+                            </div>
+                        )}
+                        {anime.title?.native && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">Native</span>
+                                <span className="text-white/80 font-medium font-jp">{anime.title.native}</span>
+                            </div>
+                        )}
+                        {/* Synonyms if available could go here, but type def doesn't show them yet */}
+                    </div>
                 </div>
 
                 {/* Because You Liked Section */}

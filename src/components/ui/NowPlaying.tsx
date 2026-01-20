@@ -155,26 +155,38 @@ export function NowPlaying({ onAnimeDetected }: NowPlayingProps) {
 
     // Track detailed stats (minutes watched) locally
     useEffect(() => {
-        if (!detection || detection.status !== 'detected' || !detection.parsed?.episode) return;
+        const isPlaying = detection?.status === 'detected';
+        const episode = detection?.parsed?.episode;
+
+        if (!isPlaying || !episode || !detection) return;
 
         // Only track if we have a title
         const title = detection.anilist_match?.title.english ||
             detection.anilist_match?.title.romaji ||
-            detection.parsed.title ||
+            detection.parsed?.title ||
             'Unknown Anime';
+
+        const { anilist_match: match } = detection;
+        const animeId = match?.id || 0;
+        const cover = match?.coverImage.medium;
 
         const interval = setInterval(() => {
             trackAnimeSession(
-                detection.anilist_match?.id || 0, // 0 if no match, handled by service
+                animeId,
                 title,
-                detection.anilist_match?.coverImage.medium,
+                cover,
                 1, // 1 minute
                 [] // Genres not easily available here without extra call, sending empty
             );
         }, 60 * 1000); // Every minute
 
         return () => clearInterval(interval);
-    }, [detection]);
+    }, [
+        detection?.status,
+        detection?.parsed?.episode,
+        detection?.anilist_match?.id,
+        detection?.parsed?.title
+    ]);
 
     useEffect(() => {
         const detectAnime = async () => {

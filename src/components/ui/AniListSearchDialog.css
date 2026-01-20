@@ -92,8 +92,8 @@
     width: 100%;
     padding: 14px 18px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border: none;
+    border-radius: 50px;
     color: white;
     font-family: var(--font-rounded);
     font-size: 1rem;
@@ -106,7 +106,6 @@
 }
 
 .anilist-search-input:focus {
-    border-color: var(--color-zen-accent);
     background: rgba(255, 255, 255, 0.08);
 }
 

@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
 import AnimeCard from '../components/ui/AnimeCard';
 import RefreshButton from '../components/ui/RefreshButton';
-import { FilmIcon, BookOpenIcon } from '../components/ui/Icons';
+import { FilmIcon, BookOpenIcon, SearchIcon } from '../components/ui/Icons';
+import { GenreNetworkGraph } from '../components/ui/GenreNetworkGraph';
 import { useAuth } from '../hooks/useAuth';
 import { USER_ANIME_COLLECTION_QUERY, USER_MANGA_COLLECTION_QUERY } from '../api/anilistClient';
 import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
@@ -31,14 +32,47 @@ interface ListEntry {
         episodes?: number;
         chapters?: number;
         status: string;
+        genres?: string[];
+        averageScore?: number;
         nextAiringEpisode?: {
             episode: number;
             timeUntilAiring: number;
         };
-        averageScore?: number;
         format?: string;
     };
-}
+};
+
+
+// Stable Virtuoso Components
+const GridListContainer = forwardRef(({ style, children, ...props }: any, ref) => (
+    <div
+        ref={ref}
+        {...props}
+        style={style}
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-20"
+    >
+        {children}
+    </div>
+));
+
+const GridItemContainer = forwardRef(({ children, ...props }: any, ref) => (
+    <div ref={ref} {...props}>
+        {children}
+    </div>
+));
+
+const ListHeaderContainer = () => (
+    <div className="grid grid-cols-[80px_1fr_100px_100px] gap-4 px-6 py-4 text-xs font-bold text-white/40 uppercase tracking-widest border-b border-white/5 mb-4 sticky top-[72px] bg-black/40 backdrop-blur-xl z-20 rounded-xl">
+        <div>Image</div>
+        <div>Title</div>
+        <div>Score</div>
+        <div>Progress</div>
+    </div>
+);
+
+const ListItemContainer = forwardRef(({ style, children, ...props }: any, ref) => (
+    <div ref={ref} {...props} style={style} className="flex flex-col gap-3 pb-20">{children}</div>
+));
 
 function UnifiedList() {
     const navigate = useNavigate();
@@ -48,7 +82,7 @@ function UnifiedList() {
     // State for list type (Anime vs Manga)
     const [listType, setListType] = useState<'anime' | 'manga'>('anime');
 
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'graph'>('grid');
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchHovered, setIsSearchHovered] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -146,11 +180,14 @@ function UnifiedList() {
     }, [fullList, selectedStatus, searchQuery]);
 
 
-    const handleItemClick = (id: number) => {
+    const handleItemClick = (id: string | number) => {
+        const numericId = typeof id === 'string' ? parseInt(id) : id;
+        if (isNaN(numericId)) return; // Ignore genre cluster clicks for now
+
         if (listType === 'anime') {
-            navigate(`/anime/${id}`);
+            navigate(`/anime/${numericId}`);
         } else {
-            navigate(`/manga-details/${id}`);
+            navigate(`/manga-details/${numericId}`);
         }
     };
 
@@ -196,7 +233,7 @@ function UnifiedList() {
                         className="absolute left-0 top-0 w-[52px] h-full flex items-center justify-center transition-colors pointer-events-none"
                         style={{ color: 'var(--theme-text-muted)' }}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <SearchIcon size={20} />
                     </div>
                     <input
                         type="text"
@@ -204,11 +241,12 @@ function UnifiedList() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => setIsSearchFocused(true)}
                         onBlur={() => setIsSearchFocused(false)}
-                        placeholder={`Search ${listType}...`}
+                        placeholder={isSearchHovered || isSearchFocused ? `Search ${listType}...` : ''}
                         className="w-full h-full bg-transparent border-none outline-none text-sm font-medium pl-14 pr-4 cursor-pointer focus:cursor-text"
                         style={{
                             fontFamily: 'var(--font-rounded)',
-                            color: 'var(--theme-text-main)'
+                            color: 'var(--theme-text-main)',
+                            paddingLeft: '3.5rem' // Force padding to prevent icon overlap
                         }}
                     />
                 </div>
@@ -224,6 +262,7 @@ function UnifiedList() {
                     {/* Status Buttons */}
                     <div className="flex flex-wrap items-center gap-1">
                         {(['All', 'Current', 'Completed', 'Paused', 'Dropped', 'Planning'] as ListStatus[]).map((status) => {
+                            // Only compact filters if search has text or is focused (prevent glitching on simple hover)
                             const isCompact = searchQuery || isSearchHovered || isSearchFocused;
                             // Map 'Current' to 'Watching' or 'Reading' for display
                             let displayLabel: string = status;
@@ -290,6 +329,28 @@ function UnifiedList() {
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className="p-2 rounded-full transition-all"
+                            style={{
+                                backgroundColor: viewMode === 'list' ? 'var(--theme-active-bg)' : 'transparent',
+                                color: viewMode === 'list' ? 'var(--theme-text-main)' : 'var(--theme-text-muted)'
+                            }}
+                            title="List View"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                        </button>
+                        <button
+                            onClick={() => setViewMode('graph')}
+                            className="p-2 rounded-full transition-all"
+                            style={{
+                                backgroundColor: viewMode === 'graph' ? 'var(--theme-active-bg)' : 'transparent',
+                                color: viewMode === 'graph' ? 'var(--theme-text-main)' : 'var(--theme-text-muted)'
+                            }}
+                            title="Graph View"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                        </button>
                     </div>
                 </div>
 
@@ -330,28 +391,22 @@ function UnifiedList() {
                     <div className="animate-pulse">Loading...</div>
                 </div>
             ) : filteredList.length > 0 ? (
-                viewMode === 'grid' ? (
+                viewMode === 'graph' ? (
+                    // Graph View
+                    <GenreNetworkGraph
+                        entries={filteredList}
+                        onNodeClick={handleItemClick}
+                        type={listType}
+                    />
+                ) : viewMode === 'grid' ? (
                     <VirtuosoGrid
                         customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}
                         data={filteredList}
                         totalCount={filteredList.length}
                         overscan={200}
                         components={{
-                            List: forwardRef(({ style, children, ...props }: any, ref) => (
-                                <div
-                                    ref={ref}
-                                    {...props}
-                                    style={style}
-                                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pb-20"
-                                >
-                                    {children}
-                                </div>
-                            )),
-                            Item: forwardRef(({ children, ...props }: any, ref) => (
-                                <div ref={ref} {...props}>
-                                    {children}
-                                </div>
-                            ))
+                            List: GridListContainer,
+                            Item: GridItemContainer
                         }}
                         itemContent={(_index, entry) => (
                             <AnimeCard
@@ -373,17 +428,8 @@ function UnifiedList() {
                         totalCount={filteredList.length}
                         overscan={200}
                         components={{
-                            Header: () => (
-                                <div className="grid grid-cols-[80px_1fr_100px_100px] gap-4 px-6 py-4 text-xs font-bold text-white/40 uppercase tracking-widest border-b border-white/5 mb-4 sticky top-[72px] bg-black/40 backdrop-blur-xl z-20 rounded-xl">
-                                    <div>Image</div>
-                                    <div>Title</div>
-                                    <div>Score</div>
-                                    <div>Progress</div>
-                                </div>
-                            ),
-                            List: forwardRef(({ style, children, ...props }: any, ref) => (
-                                <div ref={ref} {...props} style={style} className="flex flex-col gap-3 pb-20">{children}</div>
-                            ))
+                            Header: ListHeaderContainer,
+                            List: ListItemContainer
                         }}
                         itemContent={(_index, entry) => (
                             <div

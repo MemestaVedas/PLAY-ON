@@ -280,3 +280,41 @@
         transform: rotate(360deg);
     }
 }
+
+/* --- Dismiss Button --- */
+.anime-card__dismiss-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 30;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.7);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.anime-card:hover .anime-card__dismiss-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.anime-card__dismiss-btn:hover {
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    transform: scale(1.1) !important;
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4);
+}
+
+.anime-card__dismiss-btn:active {
+    transform: scale(0.95) !important;
+}

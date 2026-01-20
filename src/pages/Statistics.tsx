@@ -9,11 +9,13 @@ import {
     getActivityStreak
 } from '../services/StatsService';
 import { useAuth } from '../hooks/useAuth';
-import { fetchUserStats } from '../api/anilistClient';
+import { useQuery } from '@apollo/client';
+import { USER_ANIME_COLLECTION_QUERY, USER_MANGA_COLLECTION_QUERY, fetchUserStats } from '../api/anilistClient';
 import { ChartIcon, FilmIcon, BookIcon, FlameIcon } from '../components/ui/Icons';
+import { TasteProfile } from '../components/ui/TasteProfile';
 
 function Statistics() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [stats, setStats] = useState<UserStats | null>(null);
     const [anilistStats, setAnilistStats] = useState<{
         minutesWatched: number;
@@ -23,7 +25,30 @@ function Statistics() {
         animeGenres: { genre: string; count: number; meanScore: number; minutesWatched: number }[];
         mangaGenres: { genre: string; count: number; meanScore: number; chaptersRead: number }[];
     } | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'anime' | 'manga'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'anime' | 'manga' | 'taste'>('overview');
+
+    // Fetch full anime/manga lists for the Graph in TasteProfile
+    const { data: animeData } = useQuery(USER_ANIME_COLLECTION_QUERY, {
+        variables: { userId: user?.id },
+        skip: !isAuthenticated || !user?.id,
+        fetchPolicy: 'cache-first'
+    });
+
+    const { data: mangaData } = useQuery(USER_MANGA_COLLECTION_QUERY, {
+        variables: { userId: user?.id },
+        skip: !isAuthenticated || !user?.id,
+        fetchPolicy: 'cache-first'
+    });
+
+    const animeList = useMemo(() => {
+        if (!animeData?.MediaListCollection?.lists) return [];
+        return animeData.MediaListCollection.lists.flatMap((list: any) => list.entries);
+    }, [animeData]);
+
+    const mangaList = useMemo(() => {
+        if (!mangaData?.MediaListCollection?.lists) return [];
+        return mangaData.MediaListCollection.lists.flatMap((list: any) => list.entries);
+    }, [mangaData]);
 
     // Load stats on mount
     useEffect(() => {
@@ -89,6 +114,13 @@ function Statistics() {
         { id: 'overview', label: 'Overview', icon: <ChartIcon size={18} /> },
         { id: 'anime', label: 'Anime', icon: <FilmIcon size={18} /> },
         { id: 'manga', label: 'Manga', icon: <BookIcon size={18} /> },
+        {
+            id: 'taste', label: 'Taste Profile', icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+            )
+        },
     ] as const;
 
     return (
@@ -538,6 +570,34 @@ function Statistics() {
                                         ))
                                 }
                             </div>
+                        </motion.div>
+                    )}
+                </div>
+            )}
+
+            {/* Taste Tab */}
+            {activeTab === 'taste' && (
+                <div className="space-y-6">
+                    {/* Header */}
+                    {/* Header Removed - Content moved to 'i' button in TasteProfile */}
+                    <div className="mb-4"></div>
+
+                    {/* Taste Profile Component */}
+                    {isAuthenticated && anilistStats ? (
+                        <TasteProfile
+                            animeGenres={anilistStats.animeGenres || []}
+                            mangaGenres={anilistStats.mangaGenres || []}
+                            animeList={animeList}
+                            mangaList={mangaList}
+                        />
+                    ) : (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-center py-12 rounded-xl bg-white/5 border border-white/10"
+                        >
+                            <div className="text-white/40 mb-2">Connect to AniList to see your taste profile</div>
+                            <div className="text-sm text-white/30">We need your watch history to calculate your preferences</div>
                         </motion.div>
                     )}
                 </div>

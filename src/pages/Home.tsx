@@ -2,6 +2,7 @@ import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/ui/AnimeCard';
 import RefreshButton from '../components/ui/RefreshButton';
+import { TasteProfile } from '../components/ui/TasteProfile';
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
 import { USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY, USER_STATUS_ANIME_COLLECTION_QUERY, GENRE_RECOMMENDATIONS_QUERY, USER_STATS_QUERY, USER_ANIME_COLLECTION_QUERY, MANGA_GENRE_RECOMMENDATIONS_QUERY, USER_MANGA_COLLECTION_QUERY } from '../api/anilistClient';
@@ -12,6 +13,8 @@ import { ExtensionManager } from '../services/ExtensionManager';
 import { getStats, formatTime, getActivityStreak, UserStats } from '../services/StatsService';
 import { useViewTransition } from '../hooks/useViewTransition';
 import { SkeletonGrid, FadeIn } from '../components/ui/SkeletonLoader';
+import { getTopGenres, formatGenresForDisplay } from '../lib/recommendationEngine';
+import { useDismissedRecommendations } from '../hooks/useDismissedRecommendations';
 
 
 
@@ -27,6 +30,10 @@ function Home() {
 
     useEffect(() => {
         setStats(getStats());
+
+        const handleStatsUpdate = () => setStats(getStats());
+        window.addEventListener('stats-updated', handleStatsUpdate);
+        return () => window.removeEventListener('stats-updated', handleStatsUpdate);
     }, []);
 
     // Fetch Anime Data with useQuery for instant cache access
@@ -72,35 +79,36 @@ function Home() {
         fetchPolicy: 'cache-and-network'
     });
 
-    // Get user's top genre (by minutes watched - most consumed)
-    const topAnimeGenre = useMemo(() => {
+    // Get user's top 3 genres using multi-factor Genre Affinity Score
+    const topAnimeGenres = useMemo(() => {
         const genreStats = userStatsData?.User?.statistics?.anime?.genres || [];
-        // Sort by minutes watched (most consumed genre)
-        const sorted = [...genreStats]
-            .filter((g: any) => g.count >= 3)
-            .sort((a: any, b: any) => b.minutesWatched - a.minutesWatched);
-        return sorted.length > 0 ? sorted[0].genre : 'Action';
+        const topGenres = getTopGenres(genreStats, 'anime', 3);
+        return topGenres.length > 0 ? topGenres : ['Action', 'Comedy', 'Adventure'];
     }, [userStatsData]);
 
-    // Get user's top manga genre (by chapters read)
-    const topMangaGenre = useMemo(() => {
+    // For display label (e.g., "Based on your love for Slice of Life, Romance & Comedy")
+    const topAnimeGenreDisplay = formatGenresForDisplay(topAnimeGenres);
+
+    // Get user's top 3 manga genres using multi-factor scoring
+    const topMangaGenres = useMemo(() => {
         const genreStats = userStatsData?.User?.statistics?.manga?.genres || [];
-        const sorted = [...genreStats]
-            .filter((g: any) => g.count >= 3)
-            .sort((a: any, b: any) => b.chaptersRead - a.chaptersRead);
-        return sorted.length > 0 ? sorted[0].genre : 'Action';
+        const topGenres = getTopGenres(genreStats, 'manga', 3);
+        return topGenres.length > 0 ? topGenres : ['Action', 'Comedy', 'Adventure'];
     }, [userStatsData]);
 
-    // Fetch personalized anime recommendations (based on user's top genre)
+    // For display label
+    const topMangaGenreDisplay = formatGenresForDisplay(topMangaGenres);
+
+    // Fetch personalized anime recommendations (based on user's top genres)
     const { data: recommendationsData } = useQuery(GENRE_RECOMMENDATIONS_QUERY, {
-        variables: { genre: topAnimeGenre, perPage: 30 },
+        variables: { genres: topAnimeGenres, perPage: 30 },
         skip: !isAuthenticated,
         fetchPolicy: 'cache-and-network'
     });
 
-    // Fetch personalized manga recommendations (based on user's top manga genre)
+    // Fetch personalized manga recommendations (based on user's top manga genres)
     const { data: mangaRecommendationsData } = useQuery(MANGA_GENRE_RECOMMENDATIONS_QUERY, {
-        variables: { genre: topMangaGenre, perPage: 30 },
+        variables: { genres: topMangaGenres, perPage: 30 },
         skip: !isAuthenticated,
         fetchPolicy: 'cache-and-network'
     });
@@ -202,7 +210,10 @@ function Home() {
             .slice(0, 6);
     }, [isAuthenticated, animeList, planningData]);
 
-    // Filter recommendations to exclude anime already on ANY user list
+    // Dismissed recommendations hook
+    const { dismissedAnime, dismissedManga, dismissAnime, dismissManga } = useDismissedRecommendations();
+
+    // Filter recommendations to exclude anime already on ANY user list AND dismissed
     const filteredRecommendations = useMemo(() => {
         if (!recommendationsData?.Page?.media) return [];
 
@@ -215,13 +226,13 @@ function Home() {
                 .forEach((e: any) => userAnimeIds.add(e.media.id));
         }
 
-        // Filter recommendations
+        // Filter recommendations - exclude user's list AND dismissed items
         return recommendationsData.Page.media
-            .filter((anime: any) => !userAnimeIds.has(anime.id))
+            .filter((anime: any) => !userAnimeIds.has(anime.id) && !dismissedAnime.includes(anime.id))
             .slice(0, 8);
-    }, [recommendationsData, fullAnimeListData]);
+    }, [recommendationsData, fullAnimeListData, dismissedAnime]);
 
-    // Filter manga recommendations to exclude manga already on ANY user list
+    // Filter manga recommendations to exclude manga already on ANY user list AND dismissed
     const filteredMangaRecommendations = useMemo(() => {
         if (!mangaRecommendationsData?.Page?.media) return [];
 
@@ -233,10 +244,11 @@ function Home() {
                 .forEach((e: any) => userMangaIds.add(e.media.id));
         }
 
+        // Filter - exclude user's list AND dismissed items
         return mangaRecommendationsData.Page.media
-            .filter((manga: any) => !userMangaIds.has(manga.id))
+            .filter((manga: any) => !userMangaIds.has(manga.id) && !dismissedManga.includes(manga.id))
             .slice(0, 8);
-    }, [mangaRecommendationsData, fullMangaListData]);
+    }, [mangaRecommendationsData, fullMangaListData, dismissedManga]);
 
     const handleAnimeClick = useCallback((id: number) => {
         navigateWithTransition(`/anime/${id}`);
@@ -399,8 +411,14 @@ function Home() {
                                 </div>
                             </FadeIn>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5 p-8">
-                                <p className="text-sm">No anime in list</p>
+                            <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5 p-8 text-center group/empty transition-colors hover:bg-white/10 hover:border-white/10">
+                                <p className="text-sm mb-3">Your anime list is empty</p>
+                                <button
+                                    onClick={() => navigate('/anime-browse')}
+                                    className="px-4 py-2 bg-[var(--color-zen-accent)]/10 text-[var(--color-zen-accent)] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[var(--color-zen-accent)]/20 transition-all active:scale-95"
+                                >
+                                    Browse Anime
+                                </button>
                             </div>
                         )}
                     </div>
@@ -461,8 +479,14 @@ function Home() {
                                     </div>
                                 </FadeIn>
                             ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5 p-8">
-                                    <p className="text-sm">No manga in list</p>
+                                <div className="flex-1 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/5 rounded-xl bg-white/5 p-8 text-center group/empty transition-colors hover:bg-white/10 hover:border-white/10">
+                                    <p className="text-sm mb-3">Your manga list is empty</p>
+                                    <button
+                                        onClick={() => navigate('/manga-browse')}
+                                        className="px-4 py-2 bg-[#38bdf8]/10 text-[#38bdf8] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#38bdf8]/20 transition-all active:scale-95"
+                                    >
+                                        Browse Manga
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -516,6 +540,13 @@ function Home() {
                     </div>
                 )}
 
+                {/* Taste Profile Visualization */}
+                {isAuthenticated && userStatsData?.User?.statistics && (
+                    <TasteProfile
+                        animeGenres={userStatsData.User.statistics.anime?.genres || []}
+                        mangaGenres={userStatsData.User.statistics.manga?.genres || []}
+                    />
+                )}
 
                 {/* Upcoming Episodes Section */}
                 {isAuthenticated && upcomingEpisodes.length > 0 && (
@@ -587,7 +618,7 @@ function Home() {
                                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--theme-accent-primary)] shadow-[0_0_8px_var(--theme-accent-primary)]"></div>
                                 RECOMMENDED FOR YOU
                                 <span className="ml-2 text-[10px] font-normal opacity-60">
-                                    Based on your love for {topAnimeGenre}
+                                    Based on your love for {topAnimeGenreDisplay}
                                 </span>
                             </h3>
                         </div>
@@ -605,6 +636,7 @@ function Home() {
                                             format: anime.format,
                                         }}
                                         onClick={() => handleAnimeClick(anime.id)}
+                                        onDismiss={() => dismissAnime(anime.id)}
                                     />
                                 </FadeIn>
                             ))}
@@ -625,7 +657,7 @@ function Home() {
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] shadow-[0_0_8px_#4ade80]"></div>
                                 MANGA FOR YOU
                                 <span className="ml-2 text-[10px] font-normal opacity-60">
-                                    Based on your love for {topMangaGenre}
+                                    Based on your love for {topMangaGenreDisplay}
                                 </span>
                             </h3>
                         </div>
@@ -643,6 +675,7 @@ function Home() {
                                             format: manga.format,
                                         }}
                                         onClick={() => handleMangaClick(manga.id)}
+                                        onDismiss={() => dismissManga(manga.id)}
                                     />
                                 </FadeIn>
                             ))}

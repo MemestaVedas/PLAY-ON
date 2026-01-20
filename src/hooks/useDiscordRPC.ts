@@ -42,8 +42,8 @@ function parseEpisodeFromString(str: string): number | null {
         /(\d+)x(\d+)/i,                    // 1x01 format -> returns episode
         /S\d+E(\d+)/i,                     // S01E01 format
         /(?:E|EP|Episode)\s*(\d+)/i,       // E01, EP01, Episode 01
-        /\s-\s(\d{1,3})(?:\s|\.|\[)/,      // " - 01 " or " - 01." or " - 01["
-        /(\d{1,3})(?:v\d)?\.(?:mkv|mp4|avi)/i,  // 01.mkv, 01v2.mkv
+        /\s-\s(\d+)(?:\s|\.|\[)/,          // " - 01 " or " - 01." or " - 01[" (Unlimited digits)
+        /(\d+)(?:v\d)?\.(?:mkv|mp4|avi)/i, // 01.mkv, 01v2.mkv (Unlimited digits)
     ];
 
     for (const pattern of patterns) {

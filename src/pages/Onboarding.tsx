@@ -24,6 +24,10 @@ function Onboarding() {
     // Track if we should auto-advance after login
     const [waitingForLogin, setWaitingForLogin] = useState(false);
 
+    // Manual login state
+    const [showManualLogin, setShowManualLogin] = useState(false);
+    const [manualCode, setManualCode] = useState('');
+
     // Auto-advance logic for login
     useEffect(() => {
         if (waitingForLogin && isAuthenticated && user) {
@@ -144,21 +148,44 @@ function Onboarding() {
                                             <LinkIcon className="w-6 h-6 text-[#7B61FF]" />
                                             {authLoading ? 'Connecting...' : 'Login with AniList'}
                                         </button>
-                                        <div className="flex flex-col items-center gap-2">
-                                            <p className="text-sm text-gray-500">
-                                                Don't have an account? You can skip this step, but features will be limited.
-                                            </p>
-                                            <button
-                                                onClick={() => {
-                                                    const code = window.prompt("Paste the 'code' from the AniList URL here:");
-                                                    if (code) {
-                                                        loginWithCode(code);
-                                                    }
-                                                }}
-                                                className="text-xs text-white/40 hover:text-white/80 transition-colors"
-                                            >
-                                                Trouble logging in? Paste code manually
-                                            </button>
+                                        <div className="flex flex-col items-center gap-3 w-full max-w-xs transition-all duration-300">
+                                            {!showManualLogin ? (
+                                                <button
+                                                    onClick={() => setShowManualLogin(true)}
+                                                    className="text-xs text-white/40 hover:text-white/80 transition-colors underline-offset-2 hover:underline"
+                                                >
+                                                    Trouble logging in? Enter code manually
+                                                </button>
+                                            ) : (
+                                                <div className="flex flex-col gap-2 w-full animate-in slide-in-from-top-2 fade-in duration-300">
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={manualCode}
+                                                            onChange={(e) => setManualCode(e.target.value)}
+                                                            placeholder="Paste AniList code here..."
+                                                            className="flex-1 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#7B61FF]/50 focus:bg-white/15 transition-all"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                if (manualCode.trim()) {
+                                                                    loginWithCode(manualCode.trim());
+                                                                }
+                                                            }}
+                                                            disabled={!manualCode.trim()}
+                                                            className="px-3 py-2 bg-[#7B61FF] hover:bg-[#6a51e6] disabled:opacity-50 disabled:hover:bg-[#7B61FF] text-white rounded-lg text-sm font-bold transition-colors"
+                                                        >
+                                                            →
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setShowManualLogin(false)}
+                                                        className="text-[10px] text-white/30 hover:text-white/60"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -182,7 +209,7 @@ function Onboarding() {
                                             value={localName}
                                             onChange={(e) => setLocalName(e.target.value)}
                                             placeholder="Guest User"
-                                            className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-center focus:outline-none focus:border-purple-500 transition-colors"
+                                            className="px-4 py-2 bg-white/10 rounded-full text-white text-center focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors"
                                         />
                                     </div>
                                 )}

@@ -13,6 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ExtensionManager, Manga } from '../services/ExtensionManager';
 import { SearchIcon } from '../components/ui/Icons';
 import { Dropdown } from '../components/ui/Dropdown';
+import { useRecentSearches } from '../hooks/useRecentSearches';
 import './MangaBrowse.css';
 
 function MangaBrowse() {
@@ -61,6 +62,9 @@ function MangaBrowse() {
     const [hasMore, setHasMore] = useState(false);
     const [page, setPage] = useState(1);
 
+    // Recent searches
+    const { recentSearches, addSearch, removeSearch } = useRecentSearches('recent_manga_searches');
+
     // Search when source or query changes
     useEffect(() => {
         if (!currentSource) return;
@@ -74,6 +78,7 @@ function MangaBrowse() {
 
             setLoading(true);
             setError(null);
+            addSearch(query.trim());
 
             try {
                 const result = await currentSource.search({
@@ -136,19 +141,60 @@ function MangaBrowse() {
             {/* Controls */}
             <div className="browse-controls">
                 {/* Search Bar */}
-                <div className="search-bar" style={{ flex: 1 }}>
-                    <SearchIcon size={20} />
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder={`Search on ${currentSource?.name || 'source'}...`}
-                    />
-                    {query && (
-                        <button className="clear-btn" onClick={() => setQuery('')}>
-                            ×
-                        </button>
-                    )}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <input
+                            type="text"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder={`Search on ${currentSource?.name || 'source'}...`}
+                            style={{
+                                width: '100%',
+                                height: '48px',
+                                borderRadius: '100px',
+                                padding: '0 24px',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                border: '1px solid rgba(180, 162, 246, 0.4)', // Matching the purple tint from image
+                                color: 'var(--theme-text-main)',
+                                outline: 'none',
+                                fontFamily: 'var(--font-rounded)',
+                                fontSize: '1rem'
+                            }}
+                        />
+                        {query && (
+                            <button
+                                className="clear-btn"
+                                onClick={() => setQuery('')}
+                                style={{
+                                    position: 'absolute',
+                                    right: '16px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)'
+                                }}
+                            >
+                                ×
+                            </button>
+                        )}
+                    </div>
+
+                    <button
+                        style={{
+                            width: '48px',
+                            height: '48px',
+                            minWidth: '48px',
+                            borderRadius: '50%',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: 'var(--theme-text-muted)',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <SearchIcon size={20} />
+                    </button>
                 </div>
 
                 {/* Source Selector Dropdown */}
@@ -197,8 +243,31 @@ function MangaBrowse() {
                         <div className="empty-icon text-white/20 mb-4">
                             <SearchIcon size={64} />
                         </div>
-                        <h3>Search for manga</h3>
-                        <p>Enter a title to search on {currentSource?.name || 'source'}...</p>
+                        <h3 className="mb-2">Search for manga</h3>
+                        <p className="text-white/40 mb-8">Enter a title to search on {currentSource?.name || 'source'}...</p>
+
+                        {recentSearches.length > 0 && (
+                            <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <div className="text-xs font-bold uppercase tracking-wider text-white/30 mb-3">Recent Searches</div>
+                                <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                                    {recentSearches.map(term => (
+                                        <button
+                                            key={term}
+                                            onClick={() => setQuery(term)}
+                                            className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-sm text-white/70 transition-all group flex items-center gap-2"
+                                        >
+                                            <span>{term}</span>
+                                            <span
+                                                className="opacity-0 group-hover:opacity-100 px-1 hover:text-red-400 transition-opacity"
+                                                onClick={(e) => removeSearch(term, e)}
+                                            >
+                                                ×
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : null}
 

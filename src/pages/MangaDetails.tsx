@@ -23,8 +23,9 @@ import AnimeCard from '../components/ui/AnimeCard';
 import { MediaRelations } from '../components/media/MediaRelations';
 import { ReadMoreText } from '../components/ui/ReadMoreText';
 import ElasticSlider from '../components/ui/ElasticSlider';
-import Loading from '../components/ui/Loading';
+
 import { SearchIcon, BookOpenIcon, ArrowRightIcon, HeartIcon, PlusIcon, CheckIcon } from '../components/ui/Icons';
+import { DetailsSkeleton } from '../components/ui/SkeletonLoader';
 import { motion } from 'framer-motion';
 import { PlayIcon, PauseIcon, XIcon, ClipboardIcon, RotateCwIcon } from '../components/ui/Icons';
 import { useAuth } from '../hooks/useAuth';
@@ -281,7 +282,7 @@ function MangaDetails() {
         }
     };
 
-    if (loading) return <Loading />;
+    if (loading) return <DetailsSkeleton />;
 
     if (!manga) return (
         <div className="flex h-screen items-center justify-center font-mono text-red-400">
@@ -439,66 +440,6 @@ function MangaDetails() {
 
                     {/* Right Column: Progress & Actions */}
                     <div className="lg:col-span-2 flex flex-col gap-4">
-
-                        {/* Action Button - Search or Continue Reading */}
-                        <motion.button
-                            onClick={handleActionClick}
-                            whileHover={{ scale: 1.01, borderColor: mangaMapping ? 'rgba(56, 189, 248, 0.5)' : 'rgba(180, 162, 246, 0.5)' }}
-                            whileTap={{ scale: 0.98 }}
-                            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1e] to-[#121214] border border-white/10 p-4 text-left shadow-lg"
-                        >
-                            {/* Hover Gradient */}
-                            <motion.div
-                                className={`absolute inset-0 bg-gradient-to-r ${mangaMapping ? 'from-mint-tonic/10' : 'from-lavender-mist/10'} to-transparent`}
-                                initial={{ opacity: 0 }}
-                                whileHover={{ opacity: 1 }}
-                                transition={{ duration: 0.3 }}
-                            />
-
-                            <div className="relative flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    {/* Icon Box */}
-                                    <motion.div
-                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${mangaMapping ? 'bg-mint-tonic/10 text-mint-tonic border-mint-tonic/20' : 'bg-lavender-mist/10 text-lavender-mist border-lavender-mist/20'} border`}
-                                        whileHover={{ rotate: 15, scale: 1.1 }}
-                                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                                    >
-                                        {mangaMapping ? (
-                                            <BookOpenIcon size={20} />
-                                        ) : (
-                                            <SearchIcon size={20} />
-                                        )}
-                                    </motion.div>
-
-                                    {/* Text */}
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className={`font-mono text-[10px] uppercase tracking-widest ${mangaMapping ? 'text-mint-tonic' : 'text-lavender-mist'} font-bold`}>
-                                            {mangaMapping ? 'CONTINUE READING' : 'SEARCH THIS MANGA'}
-                                        </span>
-                                        <motion.span
-                                            className="font-bold text-white text-lg truncate max-w-[200px] md:max-w-[300px]"
-                                            whileHover={{ color: mangaMapping ? '#A0E9E5' : '#B4A2F6', x: 2 }}
-                                        >
-                                            {mangaMapping ? mangaMapping.sourceTitle : 'Browse Extensions'}
-                                        </motion.span>
-                                    </div>
-                                </div>
-
-                                {/* Arrow */}
-                                <motion.div
-                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/40"
-                                    whileHover={{
-                                        backgroundColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
-                                        color: '#121214',
-                                        borderColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
-                                        x: 5
-                                    }}
-                                >
-                                    <ArrowRightIcon size={16} />
-                                </motion.div>
-                            </div>
-                        </motion.button>
-
                         {/* Progress Control */}
                         <div className="p-1 rounded-2xl bg-gradient-to-r from-white/10 to-transparent p-[1px]">
                             <div className="bg-[#121214]/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 flex flex-col gap-4">
@@ -585,11 +526,95 @@ function MangaDetails() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Action Button - Search or Continue Reading */}
+                        <motion.button
+                            onClick={handleActionClick}
+                            whileHover={{ scale: 1.01, borderColor: mangaMapping ? 'rgba(56, 189, 248, 0.5)' : 'rgba(180, 162, 246, 0.5)' }}
+                            whileTap={{ scale: 0.98 }}
+                            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1a1e] to-[#121214] border border-white/10 p-4 text-left shadow-lg"
+                        >
+                            {/* Hover Gradient */}
+                            <motion.div
+                                className={`absolute inset-0 bg-gradient-to-r ${mangaMapping ? 'from-mint-tonic/10' : 'from-lavender-mist/10'} to-transparent`}
+                                initial={{ opacity: 0 }}
+                                whileHover={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                            />
+
+                            <div className="relative flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    {/* Icon Box */}
+                                    <motion.div
+                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${mangaMapping ? 'bg-mint-tonic/10 text-mint-tonic border-mint-tonic/20' : 'bg-lavender-mist/10 text-lavender-mist border-lavender-mist/20'} border`}
+                                        whileHover={{ rotate: 15, scale: 1.1 }}
+                                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                    >
+                                        {mangaMapping ? (
+                                            <BookOpenIcon size={20} />
+                                        ) : (
+                                            <SearchIcon size={20} />
+                                        )}
+                                    </motion.div>
+
+                                    {/* Text */}
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className={`font-mono text-[10px] uppercase tracking-widest ${mangaMapping ? 'text-mint-tonic' : 'text-lavender-mist'} font-bold`}>
+                                            {mangaMapping ? 'CONTINUE READING' : 'SEARCH THIS MANGA'}
+                                        </span>
+                                        <motion.span
+                                            className="font-bold text-white text-lg truncate max-w-[200px] md:max-w-[300px]"
+                                            whileHover={{ color: mangaMapping ? '#A0E9E5' : '#B4A2F6', x: 2 }}
+                                        >
+                                            {mangaMapping ? mangaMapping.sourceTitle : 'Browse Extensions'}
+                                        </motion.span>
+                                    </div>
+                                </div>
+
+                                {/* Arrow */}
+                                <motion.div
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-white/5 text-white/40"
+                                    whileHover={{
+                                        backgroundColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
+                                        color: '#121214',
+                                        borderColor: mangaMapping ? '#A0E9E5' : '#B4A2F6',
+                                        x: 5
+                                    }}
+                                >
+                                    <ArrowRightIcon size={16} />
+                                </motion.div>
+                            </div>
+                        </motion.button>
                     </div>
 
                 </div>
                 <div className="max-w-[1400px] mx-auto px-6 md:px-10 -mt-6">
                     <MediaRelations relations={manga.relations} />
+                </div>
+
+                {/* Alternative Titles */}
+                <div className="mt-10 mb-8 border-t border-white/10 pt-8 max-w-[1400px] mx-auto px-6 md:px-10">
+                    <h3 className="text-sm font-mono text-white/40 uppercase tracking-widest mb-4">Alternative Titles</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {manga.title?.romaji && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">Romaji</span>
+                                <span className="text-white/80 font-medium">{manga.title.romaji}</span>
+                            </div>
+                        )}
+                        {manga.title?.english && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">English</span>
+                                <span className="text-white/80 font-medium">{manga.title.english}</span>
+                            </div>
+                        )}
+                        {manga.title?.native && (
+                            <div>
+                                <span className="text-xs text-lavender-mist/70 block mb-1">Native</span>
+                                <span className="text-white/80 font-medium font-jp">{manga.title.native}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Related Manga Section */}

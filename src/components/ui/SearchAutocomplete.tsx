@@ -99,8 +99,8 @@ export function SearchAutocomplete({
                 gap: '8px',
                 padding: '10px 14px',
                 background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '50px',
+                border: 'none',
                 transition: 'all 0.2s ease'
             }}>
                 {/* Search Icon */}

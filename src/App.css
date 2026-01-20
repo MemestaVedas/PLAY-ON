@@ -6,10 +6,8 @@
  */
 
 /* === FONTS === */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&family=Varela+Round&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
-@import url('https://fonts.cdnfonts.com/css/planet-kosmos');
+/* Using only 2 fonts for clean, legible typography */
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round&family=Space+Mono:wght@400;700&display=swap');
 
 /* === THEME IMPORTS === */
 /* The theme files define all --theme-* CSS custom properties */
@@ -36,11 +34,11 @@
   --color-zen-surfacehigh: var(--theme-zen-surface-high);
   --color-zen-accent: var(--theme-accent-primary);
 
-  /* Font families */
+  /* Font families - consolidated to 2 fonts */
   --font-mono: "Space Mono", monospace;
   --font-rounded: "Varela Round", sans-serif;
-  --font-display: "Nunito", sans-serif;
-  --font-heavy: "Anton", sans-serif;
+  --font-display: "Varela Round", sans-serif;
+  --font-heavy: "Varela Round", sans-serif;
 
   /* Legacy color aliases - map to theme */
   --color-lavender-mist: var(--theme-accent-primary);
@@ -77,6 +75,7 @@
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
+  letter-spacing: 0.015em;
 
   color: var(--theme-text-main);
   background-color: var(--theme-bg-main);
@@ -180,11 +179,6 @@ body::after {
 .font-tech {
   font-family: "Space Mono", monospace;
   letter-spacing: -0.02em;
-}
-
-.font-planet {
-  font-family: 'Planet Kosmos', sans-serif;
-  font-weight: 400;
 }
 
 /* === SCROLLBARS === */
@@ -464,11 +458,38 @@ a {
   outline-offset: 2px;
 }
 
-/* Input Focus Glow */
+/* Global Input Styles - Clean & Glassy */
+input,
+textarea,
+select {
+  background: var(--theme-bg-glass);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 100px;
+  /* Fully rounded like search bar */
+  padding: 8px 16px;
+  color: var(--theme-text-main);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+textarea {
+  border-radius: 20px;
+  /* Less rounded for text areas */
+}
+
 input:focus,
 textarea:focus,
 select:focus {
-  box-shadow: 0 0 0 3px rgba(180, 162, 246, 0.15);
+  background: var(--theme-bg-glass-hover);
+  border-color: var(--theme-accent-primary);
+  box-shadow: none;
+  /* No ring */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--theme-text-muted);
+  opacity: 0.7;
 }
 
 /* Smooth Icon Transitions */

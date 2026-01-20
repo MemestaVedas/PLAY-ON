@@ -413,9 +413,9 @@ function MangaSettings() {
                             style={{
                                 flexGrow: 1,
                                 padding: '8px 12px',
-                                borderRadius: '8px',
+                                borderRadius: '50px',
                                 background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.1)',
+                                border: 'none',
                                 color: 'var(--color-text-main)',
                                 fontSize: '13px',
                                 fontFamily: 'var(--font-mono)'
@@ -536,10 +536,10 @@ function MangaSettings() {
                             style={{
                                 width: '100%',
                                 padding: '10px',
-                                borderRadius: '8px',
+                                borderRadius: '50px',
                                 marginBottom: '16px',
                                 backgroundColor: 'var(--theme-input-bg)',
-                                border: '1px solid var(--theme-border-subtle)',
+                                border: 'none',
                                 color: 'var(--theme-text-main)',
                                 outline: 'none'
                             }}
