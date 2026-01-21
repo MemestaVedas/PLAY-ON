@@ -27,7 +27,7 @@ const ElasticSlider: React.FC<ElasticSliderProps> = ({
     onChange
 }) => {
     return (
-        <div className={`flex flex-col items-center justify-center gap-4 w-48 ${className}`}>
+        <div className={`flex flex-col items-center justify-center gap-4 w-full ${className}`}>
             <Slider
                 defaultValue={defaultValue}
                 startingValue={startingValue}
@@ -176,8 +176,8 @@ const Slider: React.FC<SliderProps> = ({
                         }}
                         className="flex flex-grow"
                     >
-                        <div className="relative h-full flex-grow overflow-hidden rounded-full bg-gray-400">
-                            <div className="absolute h-full bg-gray-500 rounded-full" style={{ width: `${getRangePercentage()}%` }} />
+                        <div className="relative h-full flex-grow overflow-hidden rounded-full bg-white/10">
+                            <div className="absolute h-full bg-[var(--theme-accent-primary)] rounded-full" style={{ width: `${getRangePercentage()}%` }} />
                         </div>
                     </motion.div>
                 </div>

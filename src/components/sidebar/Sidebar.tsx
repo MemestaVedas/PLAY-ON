@@ -32,7 +32,9 @@ function Sidebar({ width: _width }: SidebarProps) {
     // Navigation Sections
     const homeItem: SidebarNavItem[] = [
         { label: 'Home', path: '/home', icon: <HomeIcon size={20} /> },
-        { label: 'Statistics', path: '/statistics', icon: <ChartIcon size={20} /> },];
+    ];
+
+    const statisticsItem: SidebarNavItem = { label: 'Statistics', path: '/statistics', icon: <ChartIcon size={20} /> };
 
     const calendarItem: SidebarNavItem = { label: 'Calendar', path: '/calendar', icon: <CalendarIcon size={20} /> };
 
@@ -71,8 +73,8 @@ function Sidebar({ width: _width }: SidebarProps) {
             padding: '0 0.75rem',
             marginBottom: '0.5rem',
             marginTop: '1rem',
-            fontSize: '0.7rem',
-            fontWeight: '800',
+            fontSize: '0.8rem',
+            fontWeight: '700',
             color: 'var(--color-text-secondary)',
             textTransform: 'uppercase',
             letterSpacing: '0.1em',
@@ -113,11 +115,12 @@ function Sidebar({ width: _width }: SidebarProps) {
                     {homeItem.map(renderLink)}
                 </div>
 
-                {/* My List & Calendar */}
+                {/* My List, Calendar & Statistics */}
                 <div style={{ marginBottom: '0.5rem' }}>
                     {/* My List goes HERE above Calendar */}
                     {renderLink({ label: 'My List', path: '/my-list', icon: <LibraryIcon size={20} /> })}
                     {renderLink(calendarItem)}
+                    {renderLink(statisticsItem)}
                 </div>
 
                 {/* Anime Section */}
@@ -136,8 +139,8 @@ function Sidebar({ width: _width }: SidebarProps) {
                     marginTop: '0.5rem',
                 }}>
                     <span style={{
-                        fontSize: '0.65rem',
-                        fontWeight: '700',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
                         color: 'var(--color-text-muted)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
@@ -200,8 +203,8 @@ function Sidebar({ width: _width }: SidebarProps) {
                     marginTop: '0.5rem',
                 }}>
                     <span style={{
-                        fontSize: '0.65rem',
-                        fontWeight: '700',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
                         color: 'var(--color-text-muted)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
@@ -266,7 +269,7 @@ function Sidebar({ width: _width }: SidebarProps) {
                             borderRadius: '14px',
                             background: 'linear-gradient(135deg, var(--color-zen-accent) 0%, #9FA5FE 100%)',
                             color: '#000',
-                            fontWeight: '700',
+                            fontWeight: '600',
                             border: 'none',
                             cursor: 'pointer',
                             fontSize: '0.9rem',

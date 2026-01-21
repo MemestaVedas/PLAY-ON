@@ -187,7 +187,11 @@ export function TasteProfile({ animeGenres, mangaGenres, animeList = [], mangaLi
                     </div>
                 </div>
             ) : (
-                <div className="w-full relative z-10 animate-in fade-in duration-500">
+                // Graph View - Fills the content area
+                <div
+                    className="w-full relative z-10 animate-in fade-in duration-300 -mx-4"
+                    style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}
+                >
                     <GenreNetworkGraph
                         entries={currentList}
                         onNodeClick={(id) => console.log('Node clicked', id)}
@@ -198,7 +202,7 @@ export function TasteProfile({ animeGenres, mangaGenres, animeList = [], mangaLi
             )}
 
             {/* Disclaimer 'i' Button */}
-            <div className="absolute bottom-0 right-0 z-30">
+            <div className="fixed bottom-6 right-6 z-50">
                 <button
                     onClick={() => setShowDisclaimer(!showDisclaimer)}
                     className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 hover:text-white transition-all shadow-lg"
@@ -223,39 +227,73 @@ export function TasteProfile({ animeGenres, mangaGenres, animeList = [], mangaLi
                                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
                                 className="absolute bottom-12 right-0 w-[400px] z-50 p-6 rounded-2xl bg-[#1a1a2e] border border-white/10 shadow-2xl"
                             >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#E0BBE4] to-[#957DAD] flex items-center justify-center shadow-lg shadow-purple-500/20">
-                                        <PuzzleIcon size={20} className="text-white" />
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#E0BBE4] to-[#957DAD] flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                        <PuzzleIcon size={24} className="text-white" />
                                     </div>
                                     <div>
-                                        <h4 className="text-white font-bold">How it Works</h4>
-                                        <p className="text-xs text-white/50">Algorithm Breakdown</p>
+                                        <h4 className="text-white font-bold text-lg">Affinity Score</h4>
+                                        <p className="text-xs text-white/50 font-mono tracking-wider">ALGORITHM V2.0</p>
                                     </div>
                                 </div>
-                                <div className="text-sm text-white/70 leading-relaxed mb-4 space-y-2">
-                                    <p>
-                                        Your taste profile is calculated using a multi-factor scoring system that considers:
-                                    </p>
-                                    <ul className="space-y-2 mt-2">
-                                        <li className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-[#B5EAD7]" />
-                                            <span><span className="text-[#B5EAD7] font-bold">Diversity</span>: Range of genres consumed</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-[#E0BBE4]" />
-                                            <span><span className="text-[#E0BBE4] font-bold">Dedication</span>: Time invested in each</span>
-                                        </li>
-                                        <li className="flex items-center gap-2">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-[#FFB7B2]" />
-                                            <span><span className="text-[#FFB7B2] font-bold">Quality</span>: Your average scores</span>
-                                        </li>
-                                    </ul>
+                                <div className="space-y-6 mb-6">
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 relative overflow-hidden group">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-[#B5EAD7]/10 via-[#E0BBE4]/10 to-[#FFB7B2]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                        <div className="relative text-center">
+                                            <div className="text-xs text-white/40 font-mono mb-2 uppercase tracking-widest">The Formula</div>
+                                            <div className="flex items-baseline justify-center gap-1 font-bold text-lg md:text-xl text-white/90" style={{ fontFamily: 'var(--font-rounded)' }}>
+                                                <span className="text-[#B5EAD7]">45%</span>
+                                                <span className="text-xs mx-1 text-white/30">×</span>
+                                                <span className="text-[#E0BBE4]">35%</span>
+                                                <span className="text-xs mx-1 text-white/30">×</span>
+                                                <span className="text-[#FFB7B2]">20%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#B5EAD7]/20 flex items-center justify-center shrink-0 text-[#B5EAD7]">
+                                                <HashIcon size={16} />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-white mb-0.5">Diversity (Count)</div>
+                                                <div className="text-xs text-white/50 leading-relaxed">
+                                                    How many unique series you've completed in this genre. Rewards exploring new titles.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#E0BBE4]/20 flex items-center justify-center shrink-0 text-[#E0BBE4]">
+                                                <ClockIcon size={16} />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-white mb-0.5">Dedication (Time)</div>
+                                                <div className="text-xs text-white/50 leading-relaxed">
+                                                    Time spent watching/reading. Log-scaled to prevent long-running series from skewing results.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#FFB7B2]/20 flex items-center justify-center shrink-0 text-[#FFB7B2]">
+                                                <StarIcon size={16} />
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-white mb-0.5">Quality (Rating)</div>
+                                                <div className="text-xs text-white/50 leading-relaxed">
+                                                    Your personal average score. We prioritize genres you actually enjoy, not just hate-watch.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={() => setShowDisclaimer(false)}
-                                    className="w-full py-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors"
+                                    className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98] text-xs font-bold text-white transition-all border border-white/5"
                                 >
-                                    GOT IT
+                                    UNDERSTOOD
                                 </button>
                             </motion.div>
                         </>

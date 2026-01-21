@@ -1,5 +1,7 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GenreScore, calculateGenreAffinityScores, GenreStats } from '../../lib/recommendationEngine';
+import ElasticSlider from './ElasticSlider';
 
 interface ListEntry {
     media: {
@@ -16,41 +18,79 @@ interface GenreGraphProps {
     entries: ListEntry[];
     onNodeClick?: (id: string) => void;
     type: 'anime' | 'manga';
-    parentScores?: GenreScore[]; // Optional: Top 6 genres from radar graph
+    parentScores?: GenreScore[];
 }
 
+// Obsidian-style physics configuration
+interface PhysicsConfig {
+    centerForce: number;
+    repelForce: number;
+    linkForce: number;
+    linkDistance: number;
+}
+
+const DEFAULT_PHYSICS: PhysicsConfig = {
+    centerForce: 0.01,
+    repelForce: 500,
+    linkForce: 0.15,
+    linkDistance: 250
+};
+
+// Kawaiicore Pastel Palette 🌸
+const PASTEL_PALETTE = [
+    '#FFB7B2', // Melon
+    '#FFDAC1', // Peach
+    '#E2F0CB', // Pale Green
+    '#B5EAD7', // Mint
+    '#C7CEEA', // Periwinkle
+    '#E0BBE4', // Lavender
+    '#957DAD', // Muted Purple
+    '#FEC8D8', // Light Pink
+    '#D4F0F0', // Pale Cyan
+    '#FF9AA2', // Salmon
+];
+
 const GENRE_COLORS: Record<string, string> = {
-    'Action': '#FF6B6B', 'Adventure': '#4ECDC4', 'Comedy': '#FFE66D',
-    'Drama': '#95E1D3', 'Fantasy': '#DDA0DD', 'Horror': '#8B4563',
-    'Mystery': '#9B59B6', 'Psychological': '#E74C3C', 'Romance': '#FFB7B2',
-    'Sci-Fi': '#00CED1', 'Slice of Life': '#98D8C8', 'Sports': '#F39C12',
-    'Supernatural': '#8E44AD', 'Thriller': '#C0392B', 'Mecha': '#3498DB',
-    'Music': '#1ABC9C', 'Ecchi': '#FF69B4', 'Mahou Shoujo': '#FF1493',
+    'Action': '#FFB7B2',
+    'Adventure': '#B5EAD7',
+    'Comedy': '#FFDAC1',
+    'Drama': '#E0BBE4',
+    'Fantasy': '#C7CEEA',
+    'Horror': '#957DAD',
+    'Mystery': '#D4F0F0',
+    'Psychological': '#FF9AA2',
+    'Romance': '#FEC8D8',
+    'Sci-Fi': '#B5EAD7',
+    'Slice of Life': '#E2F0CB',
+    'Sports': '#FFDAC1',
+    'Supernatural': '#E0BBE4',
+    'Thriller': '#957DAD',
+    'Mecha': '#C7CEEA',
+    'Music': '#D4F0F0',
+    'Ecchi': '#FFB7B2',
+    'Mahou Shoujo': '#FEC8D8',
 };
 
 function getGenreColor(genre: string): string {
     if (GENRE_COLORS[genre]) return GENRE_COLORS[genre];
-    // Procedural color for unknown genres
+    // Hash to palette index for consistent random pastel colors
     let hash = 0;
     for (let i = 0; i < genre.length; i++) {
         hash = genre.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const h = Math.abs(hash) % 360;
-    return `hsl(${h}, 70%, 65%)`;
+    const index = Math.abs(hash) % PASTEL_PALETTE.length;
+    return PASTEL_PALETTE[index];
 }
 
-// Helper to sanitize IDs for SVG url references (handle spaces/special chars)
 const getSafeId = (id: string) => id.replace(/[^a-zA-Z0-9]/g, '_');
 
 interface GraphNode {
-    id: string; // "Action" or "Action-Comedy"
+    id: string;
     genres: string[];
-    type: 'single' | 'multi'; // Parent (single) vs Child (multi)
-    val: number; // score/importance
+    type: 'single' | 'multi';
+    val: number;
     radius: number;
-    color: string; // Solid or ID for gradient
-
-    // Physics
+    color: string;
     x: number; y: number;
     vx: number; vy: number;
     fx?: number | null; fy?: number | null;
@@ -61,41 +101,158 @@ interface GraphLink {
     target: string;
 }
 
-// Bonus points for genre combinations
 const COMBINATION_BONUS: Record<number, number> = {
-    2: 20,
-    3: 30,
-    4: 40,
-    5: 50,
-    6: 60,
+    2: 20, 3: 30, 4: 40, 5: 50, 6: 60,
 };
+
+// Extracted SettingsPanel component to prevent re-mounting on render
+interface SettingsPanelProps {
+    show: boolean;
+    physics: PhysicsConfig;
+    setPhysics: React.Dispatch<React.SetStateAction<PhysicsConfig>>;
+    reheat: (alpha?: number) => void;
+}
+
+const SettingsPanel = ({ show, physics, setPhysics, reheat }: SettingsPanelProps) => (
+    <div
+        className={`absolute top-14 right-4 z-30 bg-[#1a1a24]/95 backdrop-blur-xl rounded-xl p-4 w-52
+        border border-white/10 shadow-2xl transition-all duration-300 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+        onMouseDown={e => e.stopPropagation()}
+        onMouseMove={e => e.stopPropagation()}
+        onWheel={e => e.stopPropagation()}
+    >
+        <div className="text-xs text-white/50 uppercase tracking-wider mb-3 font-medium">Forces</div>
+
+        <div className="space-y-3">
+            {[
+                { label: 'Center force', key: 'centerForce', min: 0, max: 0.1, step: 0.005 },
+                { label: 'Repel force', key: 'repelForce', min: 50, max: 1000, step: 50 },
+                { label: 'Link force', key: 'linkForce', min: 0, max: 1, step: 0.05 },
+                { label: 'Link distance', key: 'linkDistance', min: 30, max: 500, step: 10 },
+            ].map(({ label, key, min, max, step }) => (
+                <div key={key}>
+                    <div className="flex justify-between text-xs text-white/70 mb-1">
+                        <span>{label}</span>
+                        <span className="text-white/40">{(physics as any)[key].toFixed(key.includes('Force') && key !== 'repelForce' ? 2 : 0)}</span>
+                    </div>
+                    <ElasticSlider
+                        defaultValue={(physics as any)[key]}
+                        startingValue={min}
+                        maxValue={max}
+                        stepSize={step}
+                        isStepped={true}
+                        onChange={(val: number) => {
+                            setPhysics(p => ({ ...p, [key]: val }));
+                            reheat(0.5);
+                        }}
+                        className="!w-full !gap-2"
+                        leftIcon={null}
+                        rightIcon={null}
+                    />
+                </div>
+            ))}
+        </div>
+
+        <button
+            onClick={() => { setPhysics(DEFAULT_PHYSICS); reheat(1); }}
+            className="w-full mt-3 py-1.5 text-xs text-white/60 hover:text-white/90 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+        >
+            Reset defaults
+        </button>
+    </div>
+);
 
 export function GenreNetworkGraph({ entries, parentScores: providedParentScores, type }: GenreGraphProps) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [dimensions, setDimensions] = useState({ width: 1000, height: 800 });
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [nodes, setNodes] = useState<GraphNode[]>([]);
     const [links, setLinks] = useState<GraphLink[]>([]);
     const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
     const [dragState, setDragState] = useState<{ id: string | null, startX: number, startY: number } | null>(null);
     const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [physics, setPhysics] = useState<PhysicsConfig>(DEFAULT_PHYSICS);
 
+    // Obsidian-style alpha (simulation energy)
+    const alphaRef = useRef(1);
+    const alphaMinRef = useRef(0.001);
+    const alphaDecayRef = useRef(0.02);
+
+    const navigate = useNavigate();
     const nodesRef = useRef<GraphNode[]>([]);
     const reqRef = useRef<number | null>(null);
+    const isDraggingRef = useRef(false);
+    const hasInitializedRef = useRef(false);
 
+    const physicsRef = useRef<PhysicsConfig>(DEFAULT_PHYSICS);
+
+    // Direct DOM manipulation refs for performance
+    const nodeRefs = useRef<Map<string, SVGGElement>>(new Map());
+    const linkRefs = useRef<Map<number, SVGLineElement>>(new Map());
+
+    // Keep physicsRef in sync with state
     useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setIsFullscreen(false);
-        };
-        window.addEventListener('keydown', handleEsc);
-        return () => window.removeEventListener('keydown', handleEsc);
+        physicsRef.current = physics;
+    }, [physics]);
+
+    // Reheat simulation
+    const reheat = useCallback((alpha = 0.3) => {
+        alphaRef.current = Math.max(alphaRef.current, alpha);
     }, []);
 
-    // -- 1. Data Processing --
+    // Resize observer with delayed initialization
+    useEffect(() => {
+        let animFrame: number;
+
+        const updateDimensions = () => {
+            if (containerRef.current) {
+                const rect = containerRef.current.getBoundingClientRect();
+                if (rect.width > 50 && rect.height > 50) {
+                    setDimensions(prev => {
+                        if (prev.width !== rect.width || prev.height !== rect.height) {
+                            return { width: rect.width, height: rect.height };
+                        }
+                        return prev;
+                    });
+                }
+            }
+        };
+
+        // Delayed initial check for accurate dimensions
+        const checkDimensions = () => {
+            updateDimensions();
+            animFrame = requestAnimationFrame(checkDimensions);
+        };
+
+        // Start checking
+        animFrame = requestAnimationFrame(checkDimensions);
+
+        // Stop after 1 second
+        const timeout = setTimeout(() => {
+            cancelAnimationFrame(animFrame);
+        }, 1000);
+
+        const obs = new ResizeObserver(() => {
+            updateDimensions();
+        });
+
+        if (containerRef.current) obs.observe(containerRef.current);
+
+        window.addEventListener('resize', updateDimensions);
+
+        return () => {
+            cancelAnimationFrame(animFrame);
+            clearTimeout(timeout);
+            obs.disconnect();
+            window.removeEventListener('resize', updateDimensions);
+        };
+    }, []);
+
+    // Data Processing - create nodes only when we have valid dimensions
     useEffect(() => {
         if (!entries.length) return;
+        if (dimensions.width < 100 || dimensions.height < 100) return;
 
-        // Fallback: calculate parent scores if not provided
         let parentScores = providedParentScores;
         if (!parentScores || parentScores.length === 0) {
             const genreStatsMap: Record<string, GenreStats> = {};
@@ -106,7 +263,7 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
                     }
                     genreStatsMap[g].count++;
                     genreStatsMap[g].meanScore += entry.score || entry.media.averageScore || 50;
-                    if (type === 'anime') genreStatsMap[g].minutesWatched! += 24; // Average ep length
+                    if (type === 'anime') genreStatsMap[g].minutesWatched! += 24;
                     else genreStatsMap[g].chaptersRead! += 1;
                 });
             });
@@ -126,24 +283,19 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
         const cx = width / 2;
         const cy = height / 2;
 
-        // Get the top 6 parent genres from radar scores
         const top6Parents = parentScores.slice(0, 6);
         const parentGenreSet = new Set(top6Parents.map(p => p.genre));
-
-        // Calculate max parent score for sizing normalization
         const maxParentScore = Math.max(...top6Parents.map(p => p.score));
 
-        // Create parent nodes (6 big nodes in the center)
         const newNodes: GraphNode[] = [];
 
-        // Position parents in a hexagonal pattern around center
+        // Position parents in hexagonal pattern
+        const orbitRadius = Math.min(width, height) * 0.18;
+
         top6Parents.forEach((parent, i) => {
             const angle = (Math.PI * 2 * i) / top6Parents.length - Math.PI / 2;
-            const orbitRadius = 180; // Increased distance from center for better spacing
-
-            // Size proportional to radar score (min 35, max 60)
             const normalizedScore = parent.score / maxParentScore;
-            const radius = 35 + normalizedScore * 25;
+            const radius = 22 + normalizedScore * 18;
 
             newNodes.push({
                 id: parent.genre,
@@ -158,18 +310,16 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
             });
         });
 
-        // Analyze entries for combinations
+        // Analyze combinations
         const combinationStats: Record<string, { count: number, genres: string[] }> = {};
 
         entries.forEach(entry => {
             const genres = [...(entry.media.genres || [])].sort();
             if (!genres.length) return;
 
-            // Only consider genres that are in our parent set
             const relevantGenres = genres.filter(g => parentGenreSet.has(g));
-            if (relevantGenres.length < 2) return; // Need at least 2 to form a combo
+            if (relevantGenres.length < 2) return;
 
-            // Create combinations (up to 3 genres for visual clarity)
             const subset = relevantGenres.slice(0, 3);
             const key = subset.join('-');
 
@@ -179,34 +329,27 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
             combinationStats[key].count++;
         });
 
-        // Calculate combination scores with bonus system
         const combinations = Object.values(combinationStats)
             .filter(c => c.count >= 1)
             .map(c => {
                 const numGenres = c.genres.length;
                 const bonus = COMBINATION_BONUS[numGenres] || 0;
-                return {
-                    ...c,
-                    score: c.count + bonus
-                };
+                return { ...c, score: c.count + bonus };
             })
             .sort((a, b) => b.score - a.score)
-            .slice(0, 25); // Limit to top 25 combinations
+            .slice(0, 25);
 
-        // Find max combination score for sizing
         const maxComboScore = combinations.length > 0
             ? Math.max(...combinations.map(c => c.score))
             : 1;
 
-        // Create combination (child) nodes
-        combinations.forEach(combo => {
-            // Size based on score (min 12, max 28)
-            const normalizedScore = combo.score / maxComboScore;
-            const radius = 12 + normalizedScore * 16;
+        // Position combos in outer ring
+        const comboOrbitRadius = Math.min(width, height) * 0.32;
 
-            // Random position starting in outer ring
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 300 + Math.random() * 100; // Push children further out
+        combinations.forEach((combo, i) => {
+            const normalizedScore = combo.score / maxComboScore;
+            const radius = 7 + normalizedScore * 10;
+            const angle = (Math.PI * 2 * i) / Math.max(combinations.length, 1);
 
             newNodes.push({
                 id: combo.genres.join('-'),
@@ -215,18 +358,16 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
                 val: combo.score,
                 radius,
                 color: 'gradient',
-                x: cx + dist * Math.cos(angle),
-                y: cy + dist * Math.sin(angle),
+                x: cx + comboOrbitRadius * Math.cos(angle) + (Math.random() - 0.5) * 20,
+                y: cy + comboOrbitRadius * Math.sin(angle) + (Math.random() - 0.5) * 20,
                 vx: 0, vy: 0
             });
         });
 
-        // Create Links: ONLY Parent -> Child
+        // Create Links
         const newLinks: GraphLink[] = [];
-
         newNodes.forEach(node => {
             if (node.type === 'multi') {
-                // Connect this child node to its parent (single-genre) nodes
                 node.genres.forEach(g => {
                     const parentNode = newNodes.find(n => n.type === 'single' && n.id === g);
                     if (parentNode) {
@@ -237,121 +378,181 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
         });
 
         nodesRef.current = newNodes;
-        setNodes(newNodes);
+        setNodes([...newNodes]);
         setLinks(newLinks);
+
+        // Reset view and simulation
         setTransform({ x: 0, y: 0, k: 1 });
+        alphaRef.current = 1;
+        hasInitializedRef.current = true;
 
-    }, [entries, providedParentScores, dimensions]);
+    }, [entries, providedParentScores, dimensions, type]);
 
-    // -- 2. Physics Engine --
+    // Physics Engine
     useEffect(() => {
         const updatePhysics = () => {
             const nodes = nodesRef.current;
+            if (!nodes.length) {
+                reqRef.current = requestAnimationFrame(updatePhysics);
+                return;
+            }
+
+            const alpha = alphaRef.current;
+            if (alpha < alphaMinRef.current) {
+                reqRef.current = requestAnimationFrame(updatePhysics);
+                return;
+            }
+
             const w = dimensions.width;
             const h = dimensions.height;
+            if (w < 100 || h < 100) {
+                reqRef.current = requestAnimationFrame(updatePhysics);
+                return;
+            }
+
             const cx = w / 2;
             const cy = h / 2;
 
-            const repulse = 8000;
-            const spring = 0.02; // Looser springs
-            const centerStrength = 0.002;
-            const parentCenterStrength = 0.008; // Weaker pull to center for parents
+            const { centerForce, repelForce, linkForce, linkDistance } = physicsRef.current;
 
-            // 1. Repulsion between all nodes
+            // 1. Repulsion + Hard Collision
             for (let i = 0; i < nodes.length; i++) {
                 for (let j = i + 1; j < nodes.length; j++) {
                     const a = nodes[i];
                     const b = nodes[j];
+
                     let dx = a.x - b.x;
                     let dy = a.y - b.y;
                     let distSq = dx * dx + dy * dy;
-                    if (distSq === 0) { dx = 0.1; distSq = 0.01; }
 
-                    const dist = Math.sqrt(distSq);
-
-                    // Extra repulsion for parent nodes interaction
-                    let force = repulse / (distSq + 100);
-                    if (a.type === 'single' && b.type === 'single') {
-                        force *= 3.0; // Stronger repulsion between parents
+                    if (distSq < 1) {
+                        dx = (Math.random() - 0.5) * 10;
+                        dy = (Math.random() - 0.5) * 10;
+                        distSq = dx * dx + dy * dy;
                     }
 
-                    const fx = (dx / dist) * force;
-                    const fy = (dy / dist) * force;
+                    const dist = Math.sqrt(distSq);
+                    const minDist = a.radius + b.radius + 40; // Larger minimum gap
 
-                    if (!a.fx) { a.vx += fx; a.vy += fy; }
-                    if (!b.fx) { b.vx -= fx; b.vy -= fy; }
+                    // Standard repulsion
+                    let force = repelForce / (distSq + 50);
+
+                    // Hard collision - strong push when overlapping
+                    if (dist < minDist) {
+                        const overlap = minDist - dist;
+                        force = Math.max(force, overlap * 2); // Strong push proportional to overlap
+                    }
+
+                    // Extra repulsion between parent nodes
+                    if (a.type === 'single' && b.type === 'single') {
+                        force *= 3;
+                    }
+
+                    const fx = (dx / dist) * force * alpha;
+                    const fy = (dy / dist) * force * alpha;
+
+                    if (a.fx == null) { a.vx += fx; a.vy += fy; }
+                    if (b.fx == null) { b.vx -= fx; b.vy -= fy; }
                 }
             }
 
-            // 2. Center Gravity
+            // 2. Center Force
             nodes.forEach(n => {
-                if (!n.fx) {
-                    const strength = n.type === 'single' ? parentCenterStrength : centerStrength;
-                    n.vx -= (n.x - cx) * strength;
-                    n.vy -= (n.y - cy) * strength;
+                if (n.fx == null) {
+                    const dx = cx - n.x;
+                    const dy = cy - n.y;
+                    const strength = n.type === 'single' ? centerForce * 0.3 : centerForce;
+                    n.vx += dx * strength * alpha;
+                    n.vy += dy * strength * alpha;
                 }
             });
 
-            // 3. Spring forces for links
+            // 3. Link Force
             links.forEach(l => {
                 const s = nodes.find(n => n.id === l.source);
                 const t = nodes.find(n => n.id === l.target);
-                if (s && t) {
-                    const dx = t.x - s.x;
-                    const dy = t.y - s.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const targetDist = 160; // Longer links
+                if (!s || !t) return;
 
-                    const diff = dist - targetDist;
-                    const f = diff * spring;
+                const dx = t.x - s.x;
+                const dy = t.y - s.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-                    const fx = (dx / dist) * f;
-                    const fy = (dy / dist) * f;
+                const diff = (dist - linkDistance) / dist;
+                const force = diff * linkForce * alpha;
 
-                    if (!s.fx) { s.vx += fx * 0.2; s.vy += fy * 0.2; } // Parents move less
-                    if (!t.fx) { t.vx -= fx; t.vy -= fy; }
-                }
+                const fx = dx * force;
+                const fy = dy * force;
+
+                if (s.fx == null) { s.vx += fx * 0.2; s.vy += fy * 0.2; }
+                if (t.fx == null) { t.vx -= fx; t.vy -= fy; }
             });
 
             // 4. Update positions
-            const dt = 1;
-            const damp = 0.88;
-            let maxV = 0;
+            const damping = 0.7;
 
             nodes.forEach(n => {
                 if (n.fx != null) {
                     n.x = n.fx;
                     n.y = n.fy!;
-                    n.vx = 0; n.vy = 0;
+                    n.vx = 0;
+                    n.vy = 0;
                 } else {
-                    n.vx *= damp;
-                    n.vy *= damp;
-                    n.x += n.vx * dt;
-                    n.y += n.vy * dt;
+                    n.vx *= damping;
+                    n.vy *= damping;
+                    n.x += n.vx;
+                    n.y += n.vy;
 
-                    // Bound checks
-                    if (n.x < -w) n.x = -w; if (n.x > w * 2) n.x = w * 2;
-                    if (n.y < -h) n.y = -h; if (n.y > h * 2) n.y = h * 2;
+                    // Keep nodes in bounds
+                    const margin = 50;
+                    n.x = Math.max(margin, Math.min(w - margin, n.x));
+                    n.y = Math.max(margin, Math.min(h - margin, n.y));
                 }
-                maxV = Math.max(maxV, Math.abs(n.vx), Math.abs(n.vy));
+
+                // Direct DOM update for node
+                const el = nodeRefs.current.get(n.id);
+                if (el) {
+                    el.setAttribute('transform', `translate(${n.x},${n.y})`);
+                }
             });
 
-            if (maxV > 0.1) {
-                setNodes([...nodes]);
-                reqRef.current = requestAnimationFrame(updatePhysics);
-            }
+            // Direct DOM update for links
+            links.forEach((l, i) => {
+                const s = nodes.find(n => n.id === l.source);
+                const t = nodes.find(n => n.id === l.target);
+                const el = linkRefs.current.get(i);
+
+                if (s && t && el) {
+                    el.setAttribute('x1', String(s.x));
+                    el.setAttribute('y1', String(s.y));
+                    el.setAttribute('x2', String(t.x));
+                    el.setAttribute('y2', String(t.y));
+                }
+            });
+
+            // Alpha decay
+            alphaRef.current *= (1 - alphaDecayRef.current);
+
+            // setNodes removed to prevent re-render loop
+            reqRef.current = requestAnimationFrame(updatePhysics);
         };
 
-        if (nodesRef.current.length) {
-            cancelAnimationFrame(reqRef.current || 0);
-            reqRef.current = requestAnimationFrame(updatePhysics);
-        }
+        // Always run physics loop
+        cancelAnimationFrame(reqRef.current || 0);
+        reqRef.current = requestAnimationFrame(updatePhysics);
+
         return () => cancelAnimationFrame(reqRef.current || 0);
     }, [links, dimensions]);
 
-    // -- 3. Interaction Handlers --
+    // Reheat simulation when physics config changes
+    useEffect(() => {
+        if (hasInitializedRef.current) {
+            reheat(0.5);
+        }
+    }, [physics, reheat]);
 
+    // Interaction Handlers
     const handleWheel = (e: React.WheelEvent) => {
+        e.preventDefault();
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
 
@@ -359,7 +560,7 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
         const delta = -e.deltaY * zoomSensitivity;
 
         const oldK = transform.k;
-        const newK = Math.min(Math.max(0.2, oldK + delta), 8);
+        const newK = Math.min(Math.max(0.3, oldK + delta), 4);
 
         if (newK === oldK) return;
 
@@ -376,6 +577,8 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        isDraggingRef.current = false;
+
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
         const mx = e.clientX - rect.left;
@@ -387,14 +590,14 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
         const hit = nodesRef.current.slice().reverse().find(n => {
             const dx = n.x - wx;
             const dy = n.y - wy;
-            return dx * dx + dy * dy <= n.radius * n.radius;
+            return dx * dx + dy * dy <= (n.radius * n.radius * 1.5);
         });
 
         if (hit) {
             setDragState({ id: hit.id, startX: wx, startY: wy });
             hit.fx = hit.x;
             hit.fy = hit.y;
-            cancelAnimationFrame(reqRef.current || 0);
+            reheat(0.3);
         } else {
             setDragState({ id: null, startX: e.clientX, startY: e.clientY });
         }
@@ -402,6 +605,8 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!dragState) return;
+
+        isDraggingRef.current = true;
 
         if (dragState.id) {
             const rect = containerRef.current?.getBoundingClientRect();
@@ -413,6 +618,7 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
             if (node) {
                 node.fx = mx;
                 node.fy = my;
+                reheat(0.05);
                 setNodes([...nodesRef.current]);
             }
         } else {
@@ -426,26 +632,23 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
     const handleMouseUp = () => {
         if (dragState?.id) {
             const node = nodesRef.current.find(n => n.id === dragState.id);
-            if (node) { node.fx = null; node.fy = null; }
-            if (nodesRef.current.length) {
-                reqRef.current = requestAnimationFrame(() => {
-                    setNodes([...nodesRef.current]);
-                });
+            if (node) {
+                node.fx = null;
+                node.fy = null;
             }
+            reheat(0.3);
         }
         setDragState(null);
     };
 
-    // Resize observer
-    useEffect(() => {
-        const obs = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                setDimensions({ width: entry.contentRect.width, height: entry.contentRect.height });
-            }
-        });
-        if (containerRef.current) obs.observe(containerRef.current);
-        return () => obs.disconnect();
-    }, []);
+    const handleNodeClick = (e: React.MouseEvent, node: GraphNode) => {
+        e.stopPropagation();
+        if (isDraggingRef.current) return;
+
+        const searchType = type === 'anime' ? 'anime-browse' : 'manga-browse';
+        const query = node.genres[0];
+        navigate(`/${searchType}?q=${encodeURIComponent(query)}`);
+    };
 
     const getNeighbors = (id: string | null) => {
         if (!id) return new Set<string>();
@@ -463,26 +666,43 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
     const parentCount = nodes.filter(n => n.type === 'single').length;
     const childCount = nodes.filter(n => n.type === 'multi').length;
 
+
+
     return (
         <div
             ref={containerRef}
-            className={`${isFullscreen
-                ? 'fixed inset-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-xl'
-                : 'w-full h-full relative bg-transparent'
-                } cursor-grab active:cursor-grabbing overflow-visible transition-all duration-500`}
-            style={isFullscreen ? {} : { width: '100%', height: '100%', minHeight: '600px' }}
+            className="w-full h-full cursor-grab active:cursor-grabbing overflow-hidden"
+            style={{
+                minHeight: '500px',
+                // background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0d0d12 100%)'
+            }}
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
         >
-            <svg width="100%" height="100%" className="block overflow-visible">
+            {/* Subtle grid background */}
+            <div
+                className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                style={{
+                    backgroundImage: `
+                        linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '40px 40px'
+                }}
+            />
+
+            <svg width="100%" height="100%" className="block" style={{ fontFamily: 'var(--font-rounded)' }}>
                 <defs>
-                    {/* Gradient definitions for multi-genre nodes */}
+                    <filter id="nodeGlow" x="-100%" y="-100%" width="300%" height="300%">
+                        <feGaussianBlur stdDeviation="6" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+
                     {nodes.filter(n => n.type === 'multi').map(n => {
                         const colors = n.genres.map(g => getGenreColor(g));
-                        // Sanitize ID for SVG reference
                         const safeId = getSafeId(n.id);
                         return (
                             <linearGradient key={`grad-${safeId}`} id={`grad-${safeId}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -495,70 +715,81 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
                 </defs>
 
                 <g transform={`translate(${transform.x},${transform.y}) scale(${transform.k})`}>
+                    {/* Links */}
                     {links.map((link, i) => {
                         const s = nodes.find(n => n.id === link.source);
                         const t = nodes.find(n => n.id === link.target);
                         if (!s || !t) return null;
 
                         const isDim = hoveredNode && !activeSet.has(link.source) && !activeSet.has(link.target);
-                        const isHigh = hoveredNode && (link.source === hoveredNode || link.target === hoveredNode);
+                        const isActive = hoveredNode && (link.source === hoveredNode || link.target === hoveredNode);
 
                         return (
                             <line
                                 key={i}
+                                ref={el => { if (el) linkRefs.current.set(i, el); else linkRefs.current.delete(i); }}
                                 x1={s.x} y1={s.y}
                                 x2={t.x} y2={t.y}
-                                stroke="white"
-                                strokeWidth={isHigh ? 2.5 : 1.5}
-                                strokeOpacity={isDim ? 0.03 : isHigh ? 0.7 : 0.15}
-                                style={{ transition: 'stroke-opacity 0.2s' }}
+                                stroke={isActive ? "rgba(168,139,250,0.7)" : "rgba(255,255,255,0.2)"}
+                                strokeWidth={isActive ? 1.5 : 0.5}
+                                strokeOpacity={isDim ? 0.05 : 1}
+                                style={{ transition: 'stroke 0.2s ease-out, stroke-width 0.2s ease-out, stroke-opacity 0.2s ease-out' }}
                             />
                         );
                     })}
 
+                    {/* Nodes */}
                     {nodes.map(node => {
                         const isDim = hoveredNode && !activeSet.has(node.id);
                         const isMulti = node.type === 'multi';
                         const isHovered = hoveredNode === node.id;
                         const safeId = getSafeId(node.id);
+                        const nodeColor = isMulti ? `url(#grad-${safeId})` : node.color;
 
                         return (
                             <g
                                 key={node.id}
+                                ref={el => { if (el) nodeRefs.current.set(node.id, el); else nodeRefs.current.delete(node.id); }}
                                 transform={`translate(${node.x},${node.y})`}
                                 onMouseEnter={() => setHoveredNode(node.id)}
                                 onMouseLeave={() => setHoveredNode(null)}
+                                onClick={(e) => handleNodeClick(e, node)}
                                 style={{ cursor: 'pointer' }}
+                                opacity={isDim ? 0.25 : 1}
                             >
-                                {!isMulti && (
-                                    <circle
-                                        r={node.radius + 8}
-                                        fill={node.color}
-                                        opacity={isDim ? 0 : 0.15}
-                                        style={{ filter: 'blur(8px)', transition: 'opacity 0.2s' }}
-                                    />
-                                )}
-
+                                {/* Outer glow - only active when hovered */}
                                 <circle
-                                    r={node.radius}
-                                    fill={isMulti ? `url(#grad-${safeId})` : node.color}
-                                    opacity={isDim ? 0.15 : 1}
-                                    stroke={isHovered ? "#fff" : "rgba(255,255,255,0.2)"}
-                                    strokeWidth={isHovered ? 3 : 1}
-                                    style={{ transition: 'opacity 0.2s, stroke-width 0.15s' }}
+                                    r={node.radius + (isHovered ? 15 : 0)}
+                                    fill={isMulti ? getGenreColor(node.genres[0]) : node.color}
+                                    opacity={isHovered ? 0.4 : 0}
+                                    filter="url(#nodeGlow)"
+                                    style={{ transition: 'all 0.2s ease-out' }}
                                 />
 
+                                {/* Main circle */}
+                                <circle
+                                    r={node.radius}
+                                    fill={nodeColor}
+                                    opacity={0.9}
+                                    stroke={isHovered ? "rgba(255,255,255,0.7)" : (isMulti ? "rgba(255,255,255,0.15)" : "none")}
+                                    strokeWidth={isHovered ? 2 : 1}
+                                    style={{ transition: 'all 0.15s ease-out' }}
+                                />
+
+                                {/* Label - Visible on zoom > 1.2 OR hover */}
                                 <text
-                                    dy={node.radius + 14}
+                                    dy={isMulti ? node.radius + 14 : 5}
                                     textAnchor="middle"
-                                    fill="white"
-                                    fontSize={isMulti ? 9 : 11}
-                                    fontWeight={isMulti ? "500" : "700"}
-                                    opacity={isDim ? 0.1 : (hoveredNode ? 1 : 0.85)}
+                                    dominantBaseline={isMulti ? "auto" : "middle"}
+                                    fill={isMulti ? "white" : "rgba(0,0,0,0.85)"}
+                                    fontSize={isMulti ? 9 : 12}
+                                    fontWeight={isMulti ? "600" : "800"}
+                                    opacity={(transform.k > 1.2 || isHovered) ? (isDim ? 0.3 : 1) : 0}
                                     style={{
                                         pointerEvents: 'none',
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.9)',
-                                        transition: 'opacity 0.2s'
+                                        textShadow: isMulti ? '0 2px 8px rgba(0,0,0,0.9)' : 'none',
+                                        fontFamily: 'var(--font-rounded)',
+                                        transition: 'opacity 0.2s ease-out'
                                     }}
                                 >
                                     {isMulti
@@ -566,33 +797,32 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
                                         : node.genres[0]
                                     }
                                 </text>
-
-                                {!isMulti && (
-                                    <text
-                                        dy={4}
-                                        textAnchor="middle"
-                                        fill="rgba(0,0,0,0.6)"
-                                        fontSize={10}
-                                        fontWeight="bold"
-                                        style={{ pointerEvents: 'none' }}
-                                    >
-                                        {Math.round(node.val * 100)}
-                                    </text>
-                                )}
                             </g>
                         );
                     })}
                 </g>
             </svg>
 
-            <div className="absolute bottom-4 left-4 pointer-events-none opacity-60 text-[10px] text-white font-mono z-10 transition-opacity duration-300 hover:opacity-100">
-                {parentCount} Parents • {childCount} Combos • Drag nodes • Wheel to Zoom • {isFullscreen ? 'ESC to Exit' : ''}
+            {/* Bottom info */}
+            <div className="absolute bottom-4 left-4 text-[10px] text-white/40 font-mono z-10 bg-black/30 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                {parentCount} genres • {childCount} combinations • {dimensions.width}x{dimensions.height}
             </div>
 
+            {/* Controls */}
             <div className="absolute top-4 right-4 flex gap-2 z-20">
                 <button
-                    onClick={() => setTransform({ x: 0, y: 0, k: 1 })}
-                    className="bg-white/10 hover:bg-white/20 p-2 rounded-full text-white/50 hover:text-white transition-colors"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className={`p-2 rounded-lg transition-all ${showSettings ? 'bg-white/10 text-white/90' : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/90'} border border-white/10`}
+                    title="Settings"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                </button>
+                <button
+                    onClick={() => { setTransform({ x: 0, y: 0, k: 1 }); }}
+                    className="bg-white/5 hover:bg-white/10 p-2 rounded-lg text-white/60 hover:text-white/90 transition-all border border-white/10"
                     title="Reset View"
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -600,30 +830,14 @@ export function GenreNetworkGraph({ entries, parentScores: providedParentScores,
                         <path d="M3 3v5h5" />
                     </svg>
                 </button>
-                <button
-                    onClick={() => setIsFullscreen(!isFullscreen)}
-                    className="bg-white/10 hover:bg-white/20 p-2 rounded-full text-white/50 hover:text-white transition-colors"
-                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        {isFullscreen ? (
-                            <>
-                                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
-                                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
-                                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
-                                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
-                            </>
-                        ) : (
-                            <>
-                                <path d="M15 3h6v6" />
-                                <path d="M9 21H3v-6" />
-                                <path d="M21 3l-7 7" />
-                                <path d="M3 21l7-7" />
-                            </>
-                        )}
-                    </svg>
-                </button>
             </div>
+
+            <SettingsPanel
+                show={showSettings}
+                physics={physics}
+                setPhysics={setPhysics}
+                reheat={reheat}
+            />
         </div>
     );
 }

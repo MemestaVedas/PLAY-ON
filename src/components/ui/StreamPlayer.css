@@ -340,7 +340,7 @@
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
     font-size: clamp(1rem, 2vw, 1.5rem);
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: var(--font-rounded);
     padding: 0.2rem 0.6rem;
     border-radius: 4px;
     margin-bottom: 4rem;

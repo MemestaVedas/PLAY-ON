@@ -392,12 +392,17 @@ function UnifiedList() {
                 </div>
             ) : filteredList.length > 0 ? (
                 viewMode === 'graph' ? (
-                    // Graph View
-                    <GenreNetworkGraph
-                        entries={filteredList}
-                        onNodeClick={handleItemClick}
-                        type={listType}
-                    />
+                    // Graph View - Fills the content area
+                    <div
+                        className="w-full relative -mx-6"
+                        style={{ height: 'calc(100vh - 200px)', minHeight: '400px' }}
+                    >
+                        <GenreNetworkGraph
+                            entries={filteredList}
+                            onNodeClick={handleItemClick}
+                            type={listType}
+                        />
+                    </div>
                 ) : viewMode === 'grid' ? (
                     <VirtuosoGrid
                         customScrollParent={document.getElementById('main-scroll-container') as HTMLElement}

@@ -6,8 +6,8 @@
  */
 
 /* === FONTS === */
-/* Using only 2 fonts for clean, legible typography */
-@import url('https://fonts.googleapis.com/css2?family=Varela+Round&family=Space+Mono:wght@400;700&display=swap');
+/* Using Satoshi (Fontshare) as requested */
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap');
 
 /* === THEME IMPORTS === */
 /* The theme files define all --theme-* CSS custom properties */
@@ -34,11 +34,11 @@
   --color-zen-surfacehigh: var(--theme-zen-surface-high);
   --color-zen-accent: var(--theme-accent-primary);
 
-  /* Font families - consolidated to 2 fonts */
-  --font-mono: "Space Mono", monospace;
-  --font-rounded: "Varela Round", sans-serif;
-  --font-display: "Varela Round", sans-serif;
-  --font-heavy: "Varela Round", sans-serif;
+  /* Font families - consolidated to Satoshi */
+  --font-mono: "Satoshi", sans-serif;
+  --font-rounded: "Satoshi", sans-serif;
+  --font-display: "Satoshi", sans-serif;
+  --font-heavy: "Satoshi", sans-serif;
 
   /* Legacy color aliases - map to theme */
   --color-lavender-mist: var(--theme-accent-primary);
@@ -71,7 +71,7 @@
   --shadow-glass: var(--theme-shadow-glass);
 
   /* Font Settings */
-  font-family: "Varela Round", sans-serif;
+  font-family: "Satoshi", sans-serif;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
@@ -177,7 +177,7 @@ body::after {
 
 /* === TYPOGRAPHY === */
 .font-tech {
-  font-family: "Space Mono", monospace;
+  font-family: "Satoshi", sans-serif;
   letter-spacing: -0.02em;
 }
 

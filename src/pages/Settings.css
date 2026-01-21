@@ -504,7 +504,7 @@
 }
 
 .version-number {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 16px;
     font-weight: 600;
     background: var(--theme-gradient-primary);

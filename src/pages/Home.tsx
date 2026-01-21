@@ -2,7 +2,7 @@ import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AnimeCard from '../components/ui/AnimeCard';
 import RefreshButton from '../components/ui/RefreshButton';
-import { TasteProfile } from '../components/ui/TasteProfile';
+
 import { useAuth } from '../hooks/useAuth';
 import { useQuery } from '@apollo/client';
 import { USER_MANGA_LIST_QUERY, TRENDING_ANIME_QUERY, USER_STATUS_ANIME_COLLECTION_QUERY, GENRE_RECOMMENDATIONS_QUERY, USER_STATS_QUERY, USER_ANIME_COLLECTION_QUERY, MANGA_GENRE_RECOMMENDATIONS_QUERY, USER_MANGA_COLLECTION_QUERY } from '../api/anilistClient';
@@ -540,13 +540,7 @@ function Home() {
                     </div>
                 )}
 
-                {/* Taste Profile Visualization */}
-                {isAuthenticated && userStatsData?.User?.statistics && (
-                    <TasteProfile
-                        animeGenres={userStatsData.User.statistics.anime?.genres || []}
-                        mangaGenres={userStatsData.User.statistics.manga?.genres || []}
-                    />
-                )}
+
 
                 {/* Upcoming Episodes Section */}
                 {isAuthenticated && upcomingEpisodes.length > 0 && (

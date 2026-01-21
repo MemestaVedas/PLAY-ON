@@ -525,7 +525,7 @@
 
 .sync-log {
     font-size: 12px;
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: var(--font-mono);
     padding: 4px 0;
     color: var(--theme-text-muted, #888);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);

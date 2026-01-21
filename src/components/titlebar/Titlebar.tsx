@@ -249,8 +249,8 @@ function Titlebar() {
             WebkitAppRegion: 'no-drag',
         } as React.CSSProperties}>
             <span style={{
-                fontSize: '0.85rem',
-                fontWeight: '800',
+                fontSize: '1.0rem',
+                fontWeight: '900',
                 color: 'var(--color-text-main)',
                 letterSpacing: '1px',
                 textTransform: 'uppercase'

@@ -32,8 +32,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ label, icon, isActive, onClic
                 border: '1px solid transparent', // explicit border width for animation (base style can stay transparent as animate overrides it, but framed prefers matchingtypes. 'rgba(0,0,0,0)' is safer)
                 borderColor: 'rgba(0,0,0,0)',
                 fontFamily: 'var(--font-rounded)',
-                fontSize: '0.9rem',
-                fontWeight: isActive ? '700' : '500',
+                fontSize: '1.0rem',
+                fontWeight: isActive ? '600' : '500',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
