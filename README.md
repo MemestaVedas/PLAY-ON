@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/assets/app-icon.png" alt="PLAY-ON! Logo" width="128" />
+  <img src="public/assets/app-icon-new.png" alt="PLAY-ON! Logo" width="128" />
   <h1>PLAY-ON!</h1>
   <p><strong>The Ultimate Desktop Companion for Anime & Manga</strong></p>
   <p>Seamlessly track local anime playback, sync with AniList, and read manga—all in one beautiful app.</p>
