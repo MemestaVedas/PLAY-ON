@@ -21,6 +21,10 @@ mod cbz_reader;
 mod downloader;
 // Import MyAnimeList module
 mod myanimelist;
+// Import casting module
+mod casting;
+// Import stream server module
+mod stream_server;
 
 // Platform-conditional imports for unified interface
 #[cfg(windows)]
@@ -906,9 +910,18 @@ pub fn run() {
             // Browser window command
             open_browser_window,
             proxy_request,
-            stream_proxy
+            stream_proxy,
+            // Casting
+            casting::cast_discover,
+            casting::cast_load_media,
+            casting::cast_control
         ])
         .setup(|app| {
+            // Initialize the stream server
+            tauri::async_runtime::spawn(async {
+                stream_server::start_server().await;
+            });
+
             // Register deep links at runtime for development mode (Windows/Linux)
             // This is needed because deep links are only registered on install by default
             #[cfg(any(target_os = "linux", windows))]

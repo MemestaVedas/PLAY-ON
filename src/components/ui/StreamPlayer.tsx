@@ -14,6 +14,7 @@ import Hls from 'hls.js';
 import { invoke } from '@tauri-apps/api/core';
 import type { StreamingSource } from '../../services/streamingService';
 import { SkipTime } from '../../services/skipTimes';
+import { CastDialog, CastIcon } from './CastDialog';
 import './StreamPlayer.css';
 
 // Subtitle type
@@ -194,6 +195,10 @@ export default function StreamPlayer({
         return s ? parseFloat(s) : 1.0;
     });
     const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
+    // Casting State
+    const [isCastDialogOpen, setIsCastDialogOpen] = useState(false);
+    const [castingDevice, setCastingDevice] = useState<string | null>(null);
 
     // Get current source
     const currentSource = sources[0] || sources[0]; // Simplified since selectedSourceIdx is unused
@@ -959,6 +964,16 @@ export default function StreamPlayer({
                                 </div>
                             )}
                         </div>
+
+                        {/* Cast Button */}
+                        <button
+                            onClick={() => setIsCastDialogOpen(true)}
+                            className={`control-btn ${isCastDialogOpen ? 'active' : ''}`}
+                            title="Cast to Device"
+                        >
+                            <CastIcon />
+                        </button>
+
                         <button
                             onClick={toggleFullscreen}
                             className="control-btn"
@@ -977,6 +992,26 @@ export default function StreamPlayer({
                     </div>
                 </div>
             </div>
+
+            <CastDialog
+                isOpen={isCastDialogOpen}
+                onClose={() => setIsCastDialogOpen(false)}
+                onConnect={(device) => {
+                    console.log("Connecting to", device);
+                    setCastingDevice(device);
+                    invoke('cast_load_media', {
+                        deviceName: device,
+                        url: currentSource.url,
+                        contentType: 'video/mp4'
+                    }).then(() => {
+                        console.log("Casting started");
+                        if (videoRef.current) videoRef.current.pause();
+                    }).catch(err => {
+                        console.error("Casting error:", err);
+                    });
+                }}
+            />
         </div >
     );
 }
+
