@@ -999,15 +999,17 @@ export default function StreamPlayer({
                 onConnect={(device) => {
                     console.log("Connecting to", device);
                     setCastingDevice(device);
-                    invoke('cast_load_media', {
+                    return invoke('cast_load_media', {
                         deviceName: device,
                         url: currentSource.url,
-                        contentType: 'video/mp4'
+                        contentType: currentSource.isM3U8 ? 'application/x-mpegURL' : 'video/mp4',
+                        headers: headers || null
                     }).then(() => {
                         console.log("Casting started");
                         if (videoRef.current) videoRef.current.pause();
                     }).catch(err => {
                         console.error("Casting error:", err);
+                        throw err; // Re-throw so CastDialog catches it
                     });
                 }}
             />

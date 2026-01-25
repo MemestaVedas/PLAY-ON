@@ -846,6 +846,10 @@ async fn proxy_request(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Fix for rustls 0.23+ crypto provider panic
+    // We explicitly install the ring provider at startup
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_drpc::init())

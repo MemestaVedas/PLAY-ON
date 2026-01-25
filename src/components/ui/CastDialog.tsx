@@ -14,7 +14,7 @@ export const CastIcon = ({ size = 24, className = "" }: { size?: number, classNa
 interface CastDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onConnect: (deviceName: string) => void;
+    onConnect: (deviceName: string) => Promise<void>;
 }
 
 export function CastDialog({ isOpen, onClose, onConnect }: CastDialogProps) {

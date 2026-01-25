@@ -1,59 +1,61 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tokio::net::TcpListener;
-use tracing;
 use warp::Filter;
-// Global state to store the port we are listening on
+
 lazy_static::lazy_static! {
     pub static ref SERVER_PORT: Mutex<u16> = Mutex::new(0);
 }
 
 pub async fn start_server() -> u16 {
-    // Define the proxy route
-    // GET /proxy?url=...
     let proxy_route = warp::path("proxy")
         .and(warp::query::<HashMap<String, String>>())
+        .and(warp::header::optional::<String>("range"))
         .and_then(handle_proxy_request);
 
-    // Cors
     let cors = warp::cors()
         .allow_any_origin()
-        .allow_methods(vec!["GET", "POST", "OPTIONS"]);
+        .allow_methods(vec!["GET", "POST", "OPTIONS", "HEAD"])
+        .allow_headers(vec![
+            "Range",
+            "Content-Type",
+            "Origin",
+            "Accept",
+            "Authorization",
+        ]);
 
     let routes = proxy_route.with(cors);
 
-    // Use explicit TcpListener to bind to ephemeral port (Warp 0.4 bind_ephemeral change)
-    let listener = TcpListener::bind("0.0.0.0:0").await.unwrap();
-    let addr = listener.local_addr().unwrap();
-    let port = addr.port();
+    // Find a free port manually
+    let listener = std::net::TcpListener::bind("0.0.0.0:0").expect("Failed to bind");
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+
+    let addr = ([0, 0, 0, 0], port);
 
     println!("[StreamServer] Starting local server on port {}", port);
 
-    // Store the port
     if let Ok(mut p) = SERVER_PORT.lock() {
         *p = port;
     }
 
-    // Spawn the server
-    tokio::spawn(async move {
-        warp::serve(routes).incoming(tokio_stream::wrappers::TcpListenerStream::new(listener));
-    });
+    tokio::spawn(warp::serve(routes).bind(addr));
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     port
 }
 
 async fn handle_proxy_request(
     params: HashMap<String, String>,
-) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+    range_header: Option<String>,
+) -> Result<warp::http::Response<Vec<u8>>, warp::Rejection> {
     let url = params.get("url").cloned().unwrap_or_default();
     if url.is_empty() {
-        return Ok(Box::new(warp::reply::with_status(
-            "Missing URL".to_string(),
-            warp::http::StatusCode::BAD_REQUEST,
-        )));
+        return Ok(warp::http::Response::builder()
+            .status(warp::http::StatusCode::BAD_REQUEST)
+            .body(b"Missing URL".to_vec())
+            .unwrap());
     }
 
-    // Reconstruct headers from params (excluding 'url')
     let mut headers = reqwest::header::HeaderMap::new();
     for (key, value) in &params {
         if key != "url" {
@@ -65,39 +67,61 @@ async fn handle_proxy_request(
         }
     }
 
+    if let Some(range) = range_header {
+        println!("[StreamServer] Forwarding Range header: {}", range);
+        if let Ok(val) = reqwest::header::HeaderValue::from_str(&range) {
+            headers.insert(reqwest::header::RANGE, val);
+        }
+    }
+
     println!("[StreamServer] Proxying: {}", url);
 
-    // Create client
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(300))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
     let res = client.get(&url).headers(headers).send().await;
 
     match res {
         Ok(response) => {
             let status = response.status();
-            let headers = response.headers().clone();
+            let response_headers = response.headers().clone();
 
-            // Buffer the whole body to Bytes to avoid streaming issues for now
+            println!("[StreamServer] Response status: {}", status);
+
+            // Get bytes from the response
             let bytes = response.bytes().await.map_err(|e| {
-                tracing::error!("Error buffering body: {}", e);
+                tracing::error!("Failed to get bytes: {}", e);
                 warp::reject::reject()
             })?;
 
-            // Build response
-            let mut response_builder = warp::http::Response::builder().status(status);
+            let mut builder = warp::http::Response::builder().status(status);
 
-            if let Some(ct) = headers.get(reqwest::header::CONTENT_TYPE) {
-                response_builder = response_builder.header(reqwest::header::CONTENT_TYPE, ct);
+            if let Some(ct) = response_headers.get(reqwest::header::CONTENT_TYPE) {
+                builder = builder.header(reqwest::header::CONTENT_TYPE, ct);
             }
-            if let Some(cl) = headers.get(reqwest::header::CONTENT_LENGTH) {
-                response_builder = response_builder.header(reqwest::header::CONTENT_LENGTH, cl);
+            if let Some(cl) = response_headers.get(reqwest::header::CONTENT_LENGTH) {
+                builder = builder.header(reqwest::header::CONTENT_LENGTH, cl);
+            }
+            if let Some(cr) = response_headers.get(reqwest::header::CONTENT_RANGE) {
+                builder = builder.header(reqwest::header::CONTENT_RANGE, cr);
+            }
+            if let Some(ar) = response_headers.get(reqwest::header::ACCEPT_RANGES) {
+                builder = builder.header(reqwest::header::ACCEPT_RANGES, ar);
+            } else {
+                builder = builder.header("Accept-Ranges", "bytes");
             }
 
-            Ok(Box::new(response_builder.body(bytes).unwrap()))
+            Ok(builder.body(bytes.to_vec()).unwrap())
         }
-        Err(e) => Ok(Box::new(warp::reply::with_status(
-            format!("Error: {}", e),
-            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-        ))),
+        Err(e) => {
+            tracing::error!("Proxy request failed: {}", e);
+            Ok(warp::http::Response::builder()
+                .status(warp::http::StatusCode::INTERNAL_SERVER_ERROR)
+                .body(format!("Error: {}", Xe).into_bytes())
+                .unwrap())
+        }
     }
 }
 
