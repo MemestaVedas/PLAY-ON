@@ -198,7 +198,7 @@ export default function StreamPlayer({
 
     // Casting State
     const [isCastDialogOpen, setIsCastDialogOpen] = useState(false);
-    const [castingDevice, setCastingDevice] = useState<string | null>(null);
+
 
     // Get current source
     const currentSource = sources[0] || sources[0]; // Simplified since selectedSourceIdx is unused
@@ -998,7 +998,7 @@ export default function StreamPlayer({
                 onClose={() => setIsCastDialogOpen(false)}
                 onConnect={(device) => {
                     console.log("Connecting to", device);
-                    setCastingDevice(device);
+
                     return invoke('cast_load_media', {
                         deviceName: device,
                         url: currentSource.url,

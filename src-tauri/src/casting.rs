@@ -129,8 +129,11 @@ pub async fn cast_load_media(
                     .connect("sender-0")
                     .map_err(|e| format!("Connect sender-0 failed: {:?}", e))?;
 
-                // Give the device plenty of time to set up the session before we ask for status
-                std::thread::sleep(Duration::from_millis(1000));
+                // Send a heartbeat immediately to keep the connection alive
+                device
+                    .heartbeat
+                    .ping()
+                    .map_err(|e| format!("Heartbeat ping failed: {:?}", e))?;
 
                 // Get status to ensure we can talk (wakes up device) and check if app is running
                 println!("[Casting] Checking receiver status...");

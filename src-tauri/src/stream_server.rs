@@ -119,7 +119,7 @@ async fn handle_proxy_request(
             tracing::error!("Proxy request failed: {}", e);
             Ok(warp::http::Response::builder()
                 .status(warp::http::StatusCode::INTERNAL_SERVER_ERROR)
-                .body(format!("Error: {}", Xe).into_bytes())
+                .body(format!("Error: {}", e).into_bytes())
                 .unwrap())
         }
     }

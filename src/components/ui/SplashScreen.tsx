@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/play-on-logo-new.png';
 import Aurora from './Aurora';
 
 interface SplashScreenProps {
@@ -30,8 +30,8 @@ function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenProps) {
                     key="splash"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    exit={{ opacity: 0, scale: 1.05, filter: "blur(20px)" }} // More cinematic exit
+                    transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
                     className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050505] overflow-hidden"
                 >
                     {/* Aurora Background Layer */}
@@ -55,22 +55,37 @@ function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenProps) {
                     >
                         {/* Logo Animation */}
                         <motion.div
-                            initial={{ scale: 0, rotate: -45, opacity: 0 }}
-                            animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                            transition={{
-                                type: "spring",
-                                stiffness: 200,
-                                damping: 20,
-                                delay: 0.2
+                            initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
+                            animate={{
+                                scale: 1,
+                                opacity: 1,
+                                rotate: 0,
+                                transition: {
+                                    type: "spring",
+                                    stiffness: 100,
+                                    damping: 20,
+                                    duration: 1.5
+                                }
                             }}
                             className="relative mb-8"
                         >
-                            <div className="absolute inset-0 bg-[#7B61FF] rounded-full blur-3xl opacity-40 animate-pulse" />
-                            <img
-                                src={logo}
-                                alt="Logo"
-                                className="w-32 h-32 md:w-40 md:h-40 object-contain relative z-10 drop-shadow-[0_0_25px_rgba(123,97,255,0.5)]"
-                            />
+                            {/* Subtle Breathing Animation wrapper */}
+                            <motion.div
+                                animate={{ scale: [1, 1.03, 1] }}
+                                transition={{
+                                    duration: 4,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                    delay: 1.5
+                                }}
+                            >
+                                <div className="absolute inset-0 bg-[#7B61FF] rounded-full blur-3xl opacity-20 animate-pulse" />
+                                <img
+                                    src={logo}
+                                    alt="Logo"
+                                    className="w-32 h-32 md:w-40 md:h-40 object-contain relative z-10 drop-shadow-[0_0_35px_rgba(123,97,255,0.4)]"
+                                />
+                            </motion.div>
                         </motion.div>
 
                         {/* Text Reveal Animation */}
@@ -79,7 +94,7 @@ function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenProps) {
                                 initial={{ y: "100%", opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{
-                                    delay: 0.4,
+                                    delay: 0.3,
                                     duration: 0.8,
                                     ease: [0.22, 1, 0.36, 1]
                                 }}
@@ -99,7 +114,7 @@ function SplashScreen({ onComplete, minDuration = 2500 }: SplashScreenProps) {
                         <motion.div
                             initial={{ width: 0, opacity: 0 }}
                             animate={{ width: "100px", opacity: 0.5 }}
-                            transition={{ delay: 0.8, duration: 1, ease: "circOut" }}
+                            transition={{ delay: 0.6, duration: 1.2, ease: "circOut" }}
                             className="h-[2px] bg-white/50 mt-6 rounded-full"
                         />
                     </motion.div>

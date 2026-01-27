@@ -190,6 +190,7 @@ import SplashScreen from './components/ui/SplashScreen';
 import { ExtensionManager } from './services/ExtensionManager';
 import { AnimeExtensionManager } from './services/AnimeExtensionManager';
 import { useDiscordRPC } from './hooks/useDiscordRPC';
+import { DeepLinkHandler } from './components/DeepLinkHandler';
 
 function GlobalHooks() {
   const { settings } = useSettings();
@@ -286,6 +287,7 @@ function App() {
                             <CursorSpotlight />
                             <GlobalHooks />
                             <BrowserRouter>
+                              <DeepLinkHandler />
                               <Routes>
                                 {/* Root route - checks if onboarding needed */}
                                 <Route path="/" element={<ProtectedRoute />} />
