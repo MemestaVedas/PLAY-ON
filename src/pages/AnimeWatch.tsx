@@ -423,16 +423,12 @@ function AnimeWatch() {
 
     return (
         <div className="anime-watch">
-            {/* Back Button */}
-            <button className="back-btn" onClick={handleBack}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
-            </button>
-
             {/* Video Player - Use iframe for embeds, StreamPlayer for direct sources */}
             {embedUrl ? (
                 <div className="embed-player">
+                    <button className="back-btn-embed" onClick={handleBack} style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 10, background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer' }}>
+                        ← Back
+                    </button>
                     <div className="embed-title">{animeTitle} - Episode {episodeNum}</div>
                     <iframe
                         src={embedUrl}
@@ -472,6 +468,7 @@ function AnimeWatch() {
                     onPrev={prevEpisodeId ? handlePrevEpisode : undefined}
                     hasPrevEpisode={!!prevEpisodeId}
                     skipTimes={skipTimes}
+                    onBack={handleBack}
                 />
             )}
         </div>

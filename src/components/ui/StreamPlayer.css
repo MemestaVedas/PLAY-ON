@@ -68,18 +68,30 @@
 /* Controls Layer */
 .stream-controls {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    inset: 0;
     padding: 1.5rem;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.95));
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.9) 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
+    /* Align bottom controls */
     gap: 0.75rem;
     box-sizing: border-box;
-    /* Fix padding causing overflow */
+    pointer-events: none;
+    /* Let clicks pass through to video */
+}
+
+.stream-controls.visible {
+    opacity: 1;
+    pointer-events: auto;
+    /* Re-enable clicks when visible */
+}
+
+.stream-controls>* {
+    pointer-events: auto;
+    /* Ensure children are clickable */
 }
 
 .stream-controls.visible {
@@ -87,6 +99,14 @@
 }
 
 /* Title */
+.stream-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: auto;
+    /* Push content below to bottom */
+}
+
 .stream-title {
     color: #fff;
     font-size: 1.1rem;
@@ -95,7 +115,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 0.5rem;
 }
 
 /* Progress Bar Container */
@@ -246,33 +265,31 @@
     margin-left: 0.5rem;
 }
 
-.volume-slider {
-    width: 0;
-    height: 4px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-    cursor: pointer;
-    transition: width 0.3s ease;
-    opacity: 0;
-    background-image: linear-gradient(#fff, #fff);
-    background-repeat: no-repeat;
+.volume-elastic-wrapper {
+    width: 160px;
+    /* Base width */
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
 }
 
-.volume-control:hover .volume-slider {
-    width: 80px;
+.volume-elastic-wrapper:hover {
     opacity: 1;
 }
 
-.volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 10px;
-    height: 10px;
-    background: #fff;
+.volume-btn {
+    width: 32px;
+    height: 32px;
+    padding: 6px;
     border-radius: 50%;
-    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
 
 /* Menus (Quality & Subtitles) */
 .control-group {
@@ -297,6 +314,8 @@
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     transform-origin: bottom right;
     animation: menu-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 1000;
+    /* Ensure high z-index above progress bar */
 }
 
 @keyframes menu-pop {
@@ -351,7 +370,8 @@
 /* Skip Button */
 .skip-button {
     position: absolute;
-    bottom: 90px;
+    bottom: 140px;
+    /* Moved up from 90px */
     right: 24px;
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);

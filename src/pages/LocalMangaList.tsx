@@ -177,10 +177,10 @@ function LocalMangaList() {
 
                 {/* 1. Search Island (Left) */}
                 <div
-                    className="absolute left-4 pointer-events-auto group backdrop-blur-2xl rounded-full shadow-2xl h-[52px] flex items-center transition-all duration-300 w-[52px] hover:w-[340px] focus-within:w-[340px] overflow-hidden"
+                    className={`absolute left-4 pointer-events-auto group backdrop-blur-2xl rounded-full shadow-2xl h-[52px] flex items-center transition-all duration-300 overflow-hidden ${searchQuery ? 'w-[340px]' : 'w-[52px] hover:w-[340px] focus-within:w-[340px]'}`}
                     style={{
                         backgroundColor: 'var(--theme-bg-glass)',
-                        border: '1px solid var(--theme-border-highlight)'
+                        // border: '1px solid var(--theme-border-highlight)'
                     }}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
@@ -196,8 +196,8 @@ function LocalMangaList() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search library..."
-                        className="w-full h-full bg-transparent border-none outline-none text-sm font-medium pl-14 pr-4 cursor-pointer focus:cursor-text"
-                        style={{ fontFamily: 'var(--font-rounded)', color: 'var(--theme-text-main)' }}
+                        className={`h-full bg-transparent border-none outline-none text-sm font-medium pr-4 cursor-pointer focus:cursor-text transition-opacity duration-300 ${searchQuery ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+                        style={{ width: 'calc(100% - 52px)', marginLeft: '52px', fontFamily: 'var(--font-rounded)', color: 'var(--theme-text-main)', paddingLeft: '12px' }}
                     />
                 </div>
 

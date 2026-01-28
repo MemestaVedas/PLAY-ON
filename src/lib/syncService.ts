@@ -336,3 +336,55 @@ export async function syncMangaFromAniList(entry: LocalMangaEntry): Promise<bool
         return false;
     }
 }
+
+/**
+ * Sync progress FROM AniList to local Anime DB
+ */
+export async function syncAnimeFromAniList(entry: LocalAnimeEntry): Promise<boolean> {
+    if (!entry.anilistId) return false;
+
+    // Check auth
+    const token = localStorage.getItem('anilist_token') || localStorage.getItem('token');
+    if (!token) return false;
+
+    try {
+        console.log(`[AnimeSync] Fetching progress for "${entry.title}" from AniList...`);
+
+        const { data } = await apolloClient.query({
+            query: gql`
+                query ($id: Int) {
+                    Media(id: $id) {
+                        id
+                        mediaListEntry {
+                            progress
+                            status
+                            updatedAt
+                        }
+                    }
+                }
+            `,
+            variables: { id: entry.anilistId },
+            fetchPolicy: 'network-only'
+        });
+
+        const listEntry = data?.Media?.mediaListEntry;
+        if (listEntry) {
+            import('./localAnimeDb').then(({ updateAnimeProgress }) => {
+                // Update local DB
+                if (listEntry.progress > entry.episode || listEntry.progress !== entry.episode) {
+                    updateAnimeProgress(entry.id, {
+                        title: entry.title,
+                        episode: listEntry.progress,
+                        anilistId: entry.anilistId || undefined,
+                    });
+                    console.log(`[AnimeSync] Updated local "${entry.title}" to Ep ${listEntry.progress}`);
+                }
+            });
+            return true;
+        }
+        return true;
+    } catch (e) {
+        console.error('[AnimeSync] Failed to fetch from AniList:', e);
+        return false;
+    }
+}

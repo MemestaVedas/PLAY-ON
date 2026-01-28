@@ -26,14 +26,21 @@ const SearchBar: React.FC = () => {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Determine expansion state
+    const isExpanded = isFocused || isHovered || searchTerm.length > 0 || showDropdown;
 
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setShowDropdown(false);
+                setIsFocused(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -98,6 +105,8 @@ const SearchBar: React.FC = () => {
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Escape') {
             setShowDropdown(false);
+            setIsFocused(false);
+            if (inputRef.current) inputRef.current.blur();
         }
     };
 
@@ -106,93 +115,89 @@ const SearchBar: React.FC = () => {
     };
 
     return (
-        <div ref={containerRef} className="relative group/search">
-            <div
-                className="glass-panel pl-2 pr-4 py-2 flex items-center gap-3 rounded-full backdrop-blur-md transition-all duration-300 ease-out hover:bg-white/[0.07] focus-within:bg-white/10"
+        <div ref={containerRef} className="relative group/search"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            <motion.div
+                layout
+                className="glass-panel pl-2 pr-4 py-2 flex items-center gap-3 rounded-full backdrop-blur-md"
                 style={{
                     background: 'var(--color-bg-glass)',
                     borderRadius: '100px',
+                    height: '42px',
+                    width: 'auto' // Let motion handle fixed width vs auto
                 }}
+                animate={{
+                    width: isExpanded ? '300px' : '48px',
+                    paddingRight: isExpanded ? '16px' : '8px',
+                    backgroundColor: isExpanded ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-bg-glass)'
+                }}
+                transition={{ type: "spring", bounce: 0, duration: 0.3 }}
             >
-                {/* Mode Toggle */}
-                <button
-                    onClick={toggleMode}
-                    className="flex items-center gap-2 h-8 rounded-full transition-all duration-300 ease-out overflow-hidden hover:bg-white/10 relative"
-                    style={{
-                        background: searchMode === 'anime' ? 'rgba(180, 162, 246, 0.15)' : 'rgba(160, 233, 229, 0.15)',
-                        color: searchMode === 'anime' ? 'var(--color-lavender-mist)' : 'var(--color-mint-tonic)',
-                        border: `1px solid ${searchMode === 'anime' ? 'rgba(180, 162, 246, 0.3)' : 'rgba(160, 233, 229, 0.3)'}`,
-                        width: '32px', // Default width (icon only)
-                        paddingLeft: '0px'
-                    }}
-                >
-                    <AnimatePresence mode="wait">
+                {/* Mode Toggle - Collapsed into icon when closed, reveals on expand */}
+                <div className="relative flex-shrink-0">
+                    <button
+                        onClick={toggleMode}
+                        className="flex items-center justify-center p-0 rounded-full transition-all duration-300 ease-out overflow-hidden hover:bg-white/10 relative"
+                        style={{
+                            background: searchMode === 'anime' ? 'rgba(180, 162, 246, 0.15)' : 'rgba(160, 233, 229, 0.15)',
+                            color: searchMode === 'anime' ? 'var(--color-lavender-mist)' : 'var(--color-mint-tonic)',
+                            border: `1px solid ${searchMode === 'anime' ? 'rgba(180, 162, 246, 0.3)' : 'rgba(160, 233, 229, 0.3)'}`,
+                            width: '28px',
+                            height: '28px',
+                        }}
+                    >
+                        {searchMode === 'anime' ? <FilmIcon size={14} /> : <BookOpenIcon size={14} />}
+                    </button>
+                    {/* Tooltip or Label could go here if needed */}
+                </div>
+
+                <AnimatePresence>
+                    {isExpanded && (
                         <motion.div
-                            key={searchMode}
-                            initial={{ y: 20, opacity: 0, rotateX: -90 }}
-                            animate={{ y: 0, opacity: 1, rotateX: 0 }}
-                            exit={{ y: -20, opacity: 0, rotateX: 90 }}
-                            transition={{ duration: 0.3, ease: "backOut" }}
-                            className="flex items-center justify-center gap-0 w-full h-full absolute inset-0 px-2"
-                            style={{ transformOrigin: "50% 50% -10px" }}
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: 'auto' }}
+                            exit={{ opacity: 0, width: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex-1 flex items-center overflow-hidden"
+                            style={{ gap: '12px' }}
                         >
-                            <div className="flex-shrink-0">
-                                {searchMode === 'anime' ? <FilmIcon size={16} /> : <BookOpenIcon size={16} />}
-                            </div>
+                            <div className="h-4 w-px bg-white/10 flex-shrink-0" />
 
-                            {/* Text Label - Expands on hover/focus */}
-                            <span
-                                className="whitespace-nowrap font-mono text-[10px] uppercase tracking-wider font-bold opacity-0 group-hover/search:opacity-100 group-focus-within/search:opacity-100 transition-opacity duration-300 delay-75 ml-0"
-                                style={{
-                                    maxWidth: '0px',
-                                    transition: 'opacity 0.3s ease, max-width 0.3s ease, margin-left 0.3s ease',
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                placeholder={searchMode === 'anime' ? 'Search anime...' : 'Search manga...'}
+                                value={searchTerm}
+                                onChange={handleSearch}
+                                onKeyDown={handleKeyDown}
+                                onFocus={() => setIsFocused(true)}
+                                onBlur={() => {
+                                    // Delay blur to allow click actions
+                                    setTimeout(() => {
+                                        if (!isHovered) setIsFocused(false);
+                                    }, 200);
                                 }}
-                            >
-                                {searchMode === 'anime' ? 'ANIME' : 'MANGA'}
-                            </span>
+                                className="bg-transparent border-none text-sm w-full font-medium"
+                                style={{
+                                    fontFamily: 'var(--font-rounded)',
+                                    color: 'var(--color-text-main)',
+                                    outline: 'none',
+                                    boxShadow: 'none',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    WebkitAppearance: 'none',
+                                    minWidth: '150px'
+                                }}
+                            />
+                            {isLoading && (
+                                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin flex-shrink-0" style={{ borderColor: 'var(--color-text-muted)', borderTopColor: 'transparent' }}></div>
+                            )}
                         </motion.div>
-                    </AnimatePresence>
-
-                    <style>{`
-                        .group\\/search:hover button,
-                        .group\\/search:focus-within button {
-                            width: 76px !important;
-                            padding-left: 0px !important;
-                        }
-                        .group\\/search:hover button span,
-                        .group\\/search:focus-within button span {
-                            max-width: 60px !important;
-                            margin-left: 8px !important;
-                        }
-                    `}</style>
-                </button>
-
-                <div className="h-4 w-px bg-white/10 mx-1" />
-
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-text-muted)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input
-                    ref={inputRef}
-                    type="text"
-                    placeholder={searchMode === 'anime' ? 'Search anime...' : 'Search manga...'}
-                    value={searchTerm}
-                    onChange={handleSearch}
-                    onKeyDown={handleKeyDown}
-                    onFocus={() => results.length > 0 && setShowDropdown(true)}
-                    className="bg-transparent border-none text-sm w-48 font-medium"
-                    style={{
-                        fontFamily: 'var(--font-rounded)',
-                        color: 'var(--color-text-main)',
-                        outline: 'none',
-                        boxShadow: 'none',
-                        border: 'none',
-                        background: 'transparent',
-                        WebkitAppearance: 'none',
-                    }}
-                />
-                {isLoading && (
-                    <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--color-text-muted)', borderTopColor: 'transparent' }}></div>
-                )}
-            </div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
 
             {/* Dropdown Results */}
             {showDropdown && results.length > 0 && (
@@ -234,4 +239,3 @@ const SearchBar: React.FC = () => {
 };
 
 export default SearchBar;
-

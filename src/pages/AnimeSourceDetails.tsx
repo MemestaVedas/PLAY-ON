@@ -24,6 +24,9 @@ import {
     AnimeLibraryCategory,
     LocalAnimeEntry
 } from '../lib/localAnimeDb';
+import { syncAnimeFromAniList } from '../lib/syncService';
+import { setBrowsingActivity } from '../services/discordRPC';
+import { useAuth } from '../hooks/useAuth';
 import { LinkIcon, PlayIcon } from '../components/ui/Icons';
 import './AnimeSourceDetails.css';
 
@@ -37,6 +40,9 @@ function AnimeSourceDetails() {
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+    // Import sync service
+    // Note: We're doing dynamic import or top-level import. Let's add top-level import.
 
     // Library state
     const [localEntry, setLocalEntry] = useState<LocalAnimeEntry | null>(null);
@@ -66,6 +72,15 @@ function AnimeSourceDetails() {
             setLocalEntry(entry);
         }
     }, [sourceId, animeId, refreshTrigger]);
+
+    // Sync from AniList when linked
+    useEffect(() => {
+        if (localEntry && localEntry.anilistId) {
+            syncAnimeFromAniList(localEntry).then(updated => {
+                if (updated) setRefreshTrigger(prev => prev + 1);
+            });
+        }
+    }, [localEntry?.id, localEntry?.anilistId]);
 
     // Load anime details and episodes
     useEffect(() => {

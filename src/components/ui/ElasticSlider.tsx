@@ -13,6 +13,7 @@ interface ElasticSliderProps {
     leftIcon?: React.ReactNode;
     rightIcon?: React.ReactNode;
     onChange?: (value: number) => void;
+    valuePlacement?: 'top' | 'right';
 }
 
 const ElasticSlider: React.FC<ElasticSliderProps> = ({
@@ -24,7 +25,8 @@ const ElasticSlider: React.FC<ElasticSliderProps> = ({
     stepSize = 1,
     leftIcon = <>-</>,
     rightIcon = <>+</>,
-    onChange
+    onChange,
+    valuePlacement = 'top',
 }) => {
     return (
         <div className={`flex flex-col items-center justify-center gap-4 w-full ${className}`}>
@@ -37,6 +39,7 @@ const ElasticSlider: React.FC<ElasticSliderProps> = ({
                 leftIcon={leftIcon}
                 rightIcon={rightIcon}
                 onChange={onChange}
+                valuePlacement={valuePlacement}
             />
         </div>
     );
@@ -51,6 +54,7 @@ interface SliderProps {
     leftIcon: React.ReactNode;
     rightIcon: React.ReactNode;
     onChange?: (value: number) => void;
+    valuePlacement: 'top' | 'right';
 }
 
 const Slider: React.FC<SliderProps> = ({
@@ -61,7 +65,8 @@ const Slider: React.FC<SliderProps> = ({
     stepSize,
     leftIcon,
     rightIcon,
-    onChange
+    onChange,
+    valuePlacement,
 }) => {
     const [value, setValue] = useState<number>(defaultValue);
     const sliderRef = useRef<HTMLDivElement>(null);
@@ -193,10 +198,18 @@ const Slider: React.FC<SliderProps> = ({
                 >
                     {rightIcon}
                 </motion.div>
+
+                {valuePlacement === 'right' && (
+                    <span className="text-gray-400 text-xs font-medium tracking-wide w-8 text-center tabular-nums">
+                        {Math.round(value)}
+                    </span>
+                )}
             </motion.div>
-            <p className="absolute text-gray-400 transform -translate-y-4 text-xs font-medium tracking-wide">
-                {Math.round(value)}
-            </p>
+            {valuePlacement === 'top' && (
+                <p className="absolute text-gray-400 transform -translate-y-4 text-xs font-medium tracking-wide tabular-nums">
+                    {Math.round(value)}
+                </p>
+            )}
         </>
     );
 };

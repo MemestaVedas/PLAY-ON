@@ -221,10 +221,10 @@ function UnifiedList() {
 
                 {/* Search Island */}
                 <div
-                    className="absolute left-4 pointer-events-auto group backdrop-blur-2xl rounded-full shadow-2xl h-[52px] flex items-center transition-all duration-300 w-[52px] hover:w-[300px] focus-within:w-[300px] overflow-hidden"
+                    className={`absolute left-4 pointer-events-auto group backdrop-blur-2xl rounded-full shadow-2xl h-[52px] flex items-center transition-all duration-300 overflow-hidden ${searchQuery ? 'w-[300px]' : 'w-[52px] hover:w-[300px] focus-within:w-[300px]'}`}
                     style={{
                         backgroundColor: 'var(--theme-bg-glass)',
-                        border: '1px solid var(--theme-border-highlight)'
+                        // border: '1px solid var(--theme-border-highlight)'
                     }}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
@@ -242,11 +242,13 @@ function UnifiedList() {
                         onFocus={() => setIsSearchFocused(true)}
                         onBlur={() => setIsSearchFocused(false)}
                         placeholder={isSearchHovered || isSearchFocused ? `Search ${listType}...` : ''}
-                        className="w-full h-full bg-transparent border-none outline-none text-sm font-medium pl-14 pr-4 cursor-pointer focus:cursor-text"
+                        className="bg-transparent border-none outline-none text-sm font-medium pr-4 cursor-pointer focus:cursor-text h-full"
                         style={{
+                            width: 'calc(100% - 52px)',
+                            marginLeft: '52px',
                             fontFamily: 'var(--font-rounded)',
                             color: 'var(--theme-text-main)',
-                            paddingLeft: '3.5rem' // Force padding to prevent icon overlap
+                            paddingLeft: '12px'
                         }}
                     />
                 </div>
