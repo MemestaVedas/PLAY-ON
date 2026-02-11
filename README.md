@@ -13,10 +13,10 @@
 *The next-generation desktop experience for tracking, watching, and reading—engineered for performance, designed for passion.*
 
 <p align="center">
-  <a href="#-quick-links">🚀 Quick Links</a> •
-  <a href="#-experience-play-on">🎬 Experience</a> •
-  <a href="#-the-tech-behind-the-magic">⚡ Tech Stack</a> •
-  <a href="#-dive-deeper">📚 Learn More</a>
+  <a href="#quick-links">🚀 Quick Links</a> •
+  <a href="#experience-play-on">🎬 Experience</a> •
+  <a href="#the-tech-behind-the-magic">⚡ Tech Stack</a> •
+  <a href="#the-fellowship-collaborators">🤝 Collaborators</a>
 </p>
 
 <br />
@@ -48,7 +48,7 @@
 
 <br />
 
-## 🎯 Quick Links
+## <a id="quick-links"></a>🎯 Quick Links
 
 <table>
 <tr>
@@ -58,15 +58,15 @@
 Check out the Android companion app for tracking on the go
 
 </td>
-<td align="center" width="25%">
+<td align="center" width="33%">
 
-### 🛠️ [**Developer Setup**](#-for-developers)
+### 🛠️ [**Developer Setup**](#for-developers)
 Run locally and contribute to the project
 
 </td>
-<td align="center" width="25%">
+<td align="center" width="33%">
 
-### 📖 [**Documentation**](#-configuration--customization)
+### 📖 [**Documentation**](#configuration--customization)
 Configuration, API keys, and customization
 
 </td>
@@ -79,7 +79,7 @@ Configuration, API keys, and customization
 
 <br />
 
-## 🎬 Experience PLAY-ON!
+## <a id="experience-play-on"></a>🎬 Experience PLAY-ON!
 
 <div align="center">
   <h3>🌊 Your Entertainment, Unified</h3>
@@ -231,7 +231,7 @@ GSAP-powered micro-interactions and smooth transitions make every click, hover, 
 ┌─────────────────────────────────────────────────────────────┐
 │  "We don't just track anime. We create an experience        │
 │   that respects your time, your taste, and your desktop."   │
-│                                                              │
+│                                                             │
 │                                    — Built by MemestaVedas  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -244,7 +244,7 @@ GSAP-powered micro-interactions and smooth transitions make every click, hover, 
 
 <br />
 
-## ⚡ The Tech Behind The Magic
+## <a id="the-tech-behind-the-magic"></a>⚡ The Tech Behind The Magic
 
 <div align="center">
 
@@ -306,7 +306,7 @@ PLAY-ON! leverages bleeding-edge technology to deliver desktop-class performance
 | **Category** | **Technologies** |
 |:-------------|:-----------------|
 | **Core Runtime** | Tauri 2.0 • Rust • Tokio Async Runtime |
-| **Frontend Framework** | React 19 • Vite 6 • TypeScript 5 |
+| **Frontend Framework** | React 19 • Vite 7 • TypeScript 5 |
 | **State Management** | Apollo Client • GraphQL • RxJS Streams |
 | **Styling Engine** | Tailwind CSS 4 • CSS Modules • HCT Color System |
 | **Animation** | GSAP 3 • Framer Motion • OGL WebGL |
@@ -329,10 +329,11 @@ PLAY-ON! leverages bleeding-edge technology to deliver desktop-class performance
 - `zustand` - Lightweight state management
 
 **Tauri Plugins:**
-- `tauri-plugin-autostart` - Launch on system boot
-- `tauri-plugin-notification` - Native notifications
-- `tauri-plugin-deep-link` - Protocol handling
-- `tauri-plugin-window-state` - Persistent window positions
+- `@tauri-apps/plugin-autostart` - Launch on system boot
+- `@tauri-apps/plugin-notification` - Native notifications
+- `@tauri-apps/plugin-deep-link` - Protocol handling
+- `@tauri-apps/plugin-fs` - File system operations
+- `tauri-plugin-drpc` - Discord Rich Presence
 
 **Build Tools:**
 - Vite for lightning-fast HMR
@@ -370,7 +371,7 @@ Available for **Windows**, **macOS**, and **Linux**
 
 <br />
 
-### 🛠️ For Developers
+### <a id="for-developers"></a>🛠️ For Developers
 
 <details>
 <summary><b>📋 Click to expand developer setup guide</b></summary>
@@ -414,8 +415,6 @@ VITE_ANILIST_CLIENT_SECRET=your_anilist_client_secret
 # MyAnimeList (Optional)
 VITE_MAL_CLIENT_ID=your_mal_client_id
 
-# Discord RPC (Optional)
-VITE_DISCORD_CLIENT_ID=your_discord_app_id
 ```
 
 <details>
@@ -473,11 +472,12 @@ play-on/
 │   ├── hooks/                # Custom React hooks
 │   ├── lib/                  # Utilities & helpers
 │   └── styles/               # Global styles
-├── src-tauri/                # Rust backend
+├── src-tauri/                # Rust backend & Configuration
 │   ├── src/
-│   │   ├── main.rs           # Entry point
-│   │   ├── commands.rs       # Tauri commands
-│   │   └── services/         # Background services
+│   │   ├── main.rs           # Executable entry point
+│   │   ├── lib.rs            # Core logic & Command registration
+│   │   ├── anilist.rs        # AniList service module
+│   │   └── media_player.rs   # Player detection logic
 │   ├── Cargo.toml            # Rust dependencies
 │   └── tauri.conf.json       # Tauri configuration
 ├── public/                   # Static assets
@@ -492,19 +492,21 @@ play-on/
 
 <br />
 
-## ⚙️ Configuration & Customization
+## <a id="configuration--customization"></a>⚙️ Configuration & Customization
 
 <details>
 <summary><b>🎛️ Media Player Setup</b></summary>
 
 <br />
 
-PLAY-ON! auto-detects the following media players:
+PLAY-ON! auto-detects a wide range of media players:
 
-- **VLC Media Player** (Windows/macOS/Linux)
-- **MPV** (Windows/macOS/Linux)
-- **MPC-HC** (Windows)
-- **MPC-BE** (Windows)
+- **VLC Media Player**
+- **MPV Player**
+- **Media Player Classic** (HC & BE)
+- **PotPlayer** & **KMPlayer**
+- **GOM Player** & **Windows Media Player**
+- **Web Browsers** (YouTube, Netflix, Crunchyroll, HiAnime, etc.)
 
 **Configuration Steps:**
 1. Navigate to **Settings → Tracking**
@@ -625,7 +627,7 @@ playon://settings             # Open settings
 
 <br />
 
-## 🤝 The Fellowship (Collaborators)
+## <a id="the-fellowship-collaborators"></a>🤝 The Fellowship (Collaborators)
 
 The architects and engineers behind the PLAY-ON! universe.
 
@@ -641,21 +643,15 @@ The architects and engineers behind the PLAY-ON! universe.
 
 <br />
 
-## 🤝 Contributing
+## 🤝 Reach Out
 
-We welcome contributions! Whether it's:
-
-- 🐛 Bug reports and fixes
-- ✨ New features and enhancements
-- 📝 Documentation improvements
-- 🎨 UI/UX suggestions
-- 🌍 Translations
+Whether you have questions, suggestions, or just want to chat about the project, feel free to get in touch!
 
 <br />
 
 <div align="center">
 
-**[View Contribution Guidelines](CONTRIBUTING.md)** • **[Code of Conduct](CODE_OF_CONDUCT.md)**
+**Discord:** `@memestavedas`
 
 </div>
 
