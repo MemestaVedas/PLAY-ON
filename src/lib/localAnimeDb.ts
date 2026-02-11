@@ -55,6 +55,8 @@ export interface LocalAnimeEntry {
     subOrDub?: string;
     /** Release date/year */
     releaseDate?: string;
+    /** Per-anime sub/dub preference: 'sub' | 'dub' */
+    subOrDubPref?: 'sub' | 'dub';
 }
 
 export interface AnimeLibraryCategory {
@@ -184,7 +186,7 @@ export function updateAnimeProgress(
         episode: number;
         season?: number;
         totalEpisodes?: number;
-        anilistId?: number;
+        anilistId?: number | null;
         coverImage?: string;
         sourceId?: string;
         sourceAnimeId?: string;
@@ -194,14 +196,16 @@ export function updateAnimeProgress(
         type?: string;
         subOrDub?: string;
         releaseDate?: string;
-    }
+        subOrDubPref?: 'sub' | 'dub';
+    },
+    allowRegress: boolean = false
 ): LocalAnimeEntry {
     const db = getLocalAnimeDb();
     const existing = db[id];
 
-    // Only update if episode is higher than existing (don't regress)
+    // Only update if episode is higher than existing (don't regress) unless allowRegress is true
     const currentEpisode = existing?.episode ?? 0;
-    const newEpisode = Math.max(currentEpisode, data.episode);
+    const newEpisode = allowRegress ? data.episode : Math.max(currentEpisode, data.episode);
 
     const entry: LocalAnimeEntry = {
         id,
@@ -226,6 +230,7 @@ export function updateAnimeProgress(
         type: data.type ?? existing?.type,
         subOrDub: data.subOrDub ?? existing?.subOrDub,
         releaseDate: data.releaseDate ?? existing?.releaseDate,
+        subOrDubPref: data.subOrDubPref ?? existing?.subOrDubPref ?? 'sub',
     };
 
     db[id] = entry;
@@ -268,6 +273,7 @@ export function addAnimeToLibrary(
         subOrDub?: string;
         releaseDate?: string;
         categoryIds?: string[];
+        subOrDubPref?: 'sub' | 'dub';
     }
 ): LocalAnimeEntry {
     const db = getLocalAnimeDb();
@@ -294,6 +300,7 @@ export function addAnimeToLibrary(
         type: data.type ?? existing?.type,
         subOrDub: data.subOrDub ?? existing?.subOrDub,
         releaseDate: data.releaseDate ?? existing?.releaseDate,
+        subOrDubPref: data.subOrDubPref ?? existing?.subOrDubPref ?? 'sub',
     };
 
     db[id] = entry;
@@ -324,6 +331,22 @@ export function setAnimeCategories(id: string, categoryIds: string[]): void {
         saveDb(db);
         console.log('[LocalAnimeDB] Updated categories for:', db[id].title);
     }
+}
+
+/**
+ * Toggle sub/dub preference for an anime
+ */
+export function toggleSubOrDubPref(id: string): 'sub' | 'dub' {
+    const db = getLocalAnimeDb();
+    if (db[id]) {
+        const current = db[id].subOrDubPref || 'sub';
+        const next = current === 'sub' ? 'dub' : 'sub';
+        db[id].subOrDubPref = next;
+        saveDb(db);
+        console.log('[LocalAnimeDB] Toggled sub/dub preference for:', db[id].title, 'to:', next);
+        return next;
+    }
+    return 'sub';
 }
 
 /**
@@ -455,6 +478,7 @@ export function linkAnimeToAniList(
         entry.type = existingBySource.type;
         entry.subOrDub = existingBySource.subOrDub;
         entry.releaseDate = existingBySource.releaseDate;
+        entry.subOrDubPref = existingBySource.subOrDubPref;
     }
 
     saveDb(db);

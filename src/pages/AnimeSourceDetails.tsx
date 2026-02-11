@@ -21,12 +21,12 @@ import {
     linkAnimeToAniList,
     unlinkAnimeFromAniList,
     getAnimeLibraryCategories,
+    toggleSubOrDubPref,
+    updateAnimeProgress,
     AnimeLibraryCategory,
     LocalAnimeEntry
 } from '../lib/localAnimeDb';
 import { syncAnimeFromAniList } from '../lib/syncService';
-import { setBrowsingActivity } from '../services/discordRPC';
-import { useAuth } from '../hooks/useAuth';
 import { LinkIcon, PlayIcon } from '../components/ui/Icons';
 import './AnimeSourceDetails.css';
 
@@ -58,6 +58,11 @@ function AnimeSourceDetails() {
 
     // Refresh trigger
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [anilistMedia, setAnilistMedia] = useState<any>(null);
+
+    const dubPref = useMemo(() => {
+        return localEntry?.subOrDubPref || 'sub';
+    }, [localEntry]);
 
     const source = useMemo(() => {
         return sourceId ? AnimeExtensionManager.getSource(sourceId) : null;
@@ -76,8 +81,13 @@ function AnimeSourceDetails() {
     // Sync from AniList when linked
     useEffect(() => {
         if (localEntry && localEntry.anilistId) {
-            syncAnimeFromAniList(localEntry).then(updated => {
-                if (updated) setRefreshTrigger(prev => prev + 1);
+            syncAnimeFromAniList(localEntry).then(media => {
+                if (media) {
+                    setAnilistMedia(media);
+                    // We don't check a boolean anymore, the sync logic inside syncAnimeFromAniList
+                    // already handles updating the DB. If it returned media, it's a success.
+                    setRefreshTrigger(prev => prev + 1);
+                }
             });
         }
     }, [localEntry?.id, localEntry?.anilistId]);
@@ -97,8 +107,34 @@ function AnimeSourceDetails() {
                     source.getEpisodes(decodedAnimeId),
                 ]);
 
+                // --- HiAnime Scan Logic ---
+                let finalEpisodes = episodesData;
+                if (source.id === 'hianime' && dubPref === 'dub') {
+                    console.log('[HiAnimeScan] Triggering scan for dubs...');
+                    try {
+                        // We use the totalEpisodes or try to find dub count in descriptions
+                        // If the extension returns sub/dub labels in ids (some do), handle here.
+                        // HiAnime specifically: If the info says "Dub: 12" but we have 24 episodes.
+
+                        // Let's try to get more specific count if available in animeData
+                        // HiAnime extension often puts "Dub: X" in the description or somewhere.
+                        const dubMatch = animeData.description?.match(/Dub:\s*(\d+)/i) ||
+                            animeData.title?.match(/\(Dub\)/i);
+
+                        if (dubMatch && dubMatch[1]) {
+                            const dubCount = parseInt(dubMatch[1]);
+                            if (dubCount < episodesData.length) {
+                                console.log(`[HiAnimeScan] Filtering to first ${dubCount} dubbed episodes`);
+                                finalEpisodes = episodesData.slice(0, dubCount);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[HiAnimeScan] Scan failed:', e);
+                    }
+                }
+
                 setAnime(animeData);
-                setEpisodes(episodesData);
+                setEpisodes(finalEpisodes);
             } catch (err) {
                 console.error('Failed to load anime data:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load anime');
@@ -108,7 +144,7 @@ function AnimeSourceDetails() {
         };
 
         loadData();
-    }, [source, animeId]);
+    }, [source, animeId, dubPref]); // Re-fetch when dubPref changes
 
     // Filter and Sort episodes
     const sortedEpisodes = useMemo(() => {
@@ -125,8 +161,19 @@ function AnimeSourceDetails() {
         const sorted = result.sort((a, b) => {
             return sortOrder === 'asc' ? a.number - b.number : b.number - a.number;
         });
+
         return sorted;
-    }, [episodes, sortOrder, searchQuery]);
+    }, [episodes, sortOrder, searchQuery, dubPref]);
+
+    const formatTimeUntilAiring = (seconds: number) => {
+        const days = Math.floor(seconds / (24 * 3600));
+        const hours = Math.floor((seconds % (24 * 3600)) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+
+        if (days > 0) return `${days}d ${hours}h`;
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        return `${minutes}m`;
+    };
 
     const handleEpisodeClick = (episode: Episode) => {
         if (sourceId && anime) {
@@ -146,6 +193,26 @@ function AnimeSourceDetails() {
                 if (nextEp) {
                     handleEpisodeClick(nextEp);
                     return;
+                }
+
+                // If no next episode, and we're at the end (or further), check if we should rewatch
+                if (localEntry.episode >= sorted[sorted.length - 1].number) {
+                    // Check if finished or releasing
+                    const isReleasing = anilistMedia?.status === 'RELEASING';
+                    const hasNextAiring = anilistMedia?.nextAiringEpisode;
+
+                    if (!isReleasing || !hasNextAiring) {
+                        // Rewatch logic: reset to episode 1
+                        if (sorted[0]) {
+                            updateAnimeProgress(localEntry.id, {
+                                ...localEntry,
+                                anilistId: localEntry.anilistId ?? undefined,
+                                episode: 0, // Reset to 0 so Ep 1 is "next"
+                            }, true);
+                            handleEpisodeClick(sorted[0]);
+                            return;
+                        }
+                    }
                 }
             }
 
@@ -317,6 +384,23 @@ function AnimeSourceDetails() {
                             {anime.totalEpisodes && (
                                 <span className="total-eps">{anime.totalEpisodes} Episodes</span>
                             )}
+                            <button
+                                className={`dub-toggle-details ${dubPref === 'dub' ? 'dub' : 'sub'}`}
+                                onClick={() => {
+                                    if (localEntry) {
+                                        toggleSubOrDubPref(localEntry.id);
+                                        setRefreshTrigger(prev => prev + 1);
+                                    } else {
+                                        // If not in library, toggle a local temporary state or just warn
+                                        // For now, let's assume it should work regardless
+                                        const newPref = dubPref === 'sub' ? 'dub' : 'sub';
+                                        localStorage.setItem('anime_dub_pref', (newPref === 'dub').toString());
+                                        setRefreshTrigger(prev => prev + 1);
+                                    }
+                                }}
+                            >
+                                {dubPref === 'dub' ? 'DUB' : 'SUB'}
+                            </button>
                         </div>
                         {anime.genres && anime.genres.length > 0 && (
                             <div className="genres">
@@ -370,10 +454,55 @@ function AnimeSourceDetails() {
                             )}
                         </div>
 
+                        <div className="dub-preference-section" style={{ marginBottom: '1.5rem' }}>
+                            <button
+                                className={`dub-toggle-btn ${dubPref === 'dub' ? 'dub' : 'sub'}`}
+                                onClick={async () => {
+                                    if (localEntry) {
+                                        await toggleSubOrDubPref(localEntry.id);
+                                        setRefreshTrigger(prev => prev + 1);
+                                    }
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    padding: '0.6rem 1rem',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    fontWeight: '500',
+                                    color: 'white',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                <span style={{ opacity: 0.6 }}>Audio:</span>
+                                <strong>{dubPref === 'dub' ? 'DUB' : 'SUB'}</strong>
+                            </button>
+                        </div>
+
                         <div className="action-buttons">
                             <button className="primary-btn" onClick={handleResume}>
                                 <PlayIcon size={20} fill="currentColor" />
-                                {localEntry && localEntry.episode > 0 ? `Continue Ep ${localEntry.episode + 1}` : "Start Watching"}
+                                {(() => {
+                                    if (!localEntry || localEntry.episode === 0) return "Start Watching";
+
+                                    const sorted = [...episodes].sort((a, b) => a.number - b.number);
+                                    const lastEpNumber = sorted.length > 0 ? sorted[sorted.length - 1].number : 0;
+
+                                    if (localEntry.episode >= lastEpNumber && lastEpNumber > 0) {
+                                        // Releasing check
+                                        if (anilistMedia?.status === 'RELEASING' && anilistMedia?.nextAiringEpisode) {
+                                            const airing = anilistMedia.nextAiringEpisode;
+                                            return `Ep ${airing.episode} Airs in ${formatTimeUntilAiring(airing.timeUntilAiring)}`;
+                                        }
+                                        return "Rewatch Episode 1";
+                                    }
+
+                                    return `Continue Ep ${localEntry.episode + 1}`;
+                                })()}
                             </button>
 
                             {/* Library Button */}
@@ -450,7 +579,9 @@ function AnimeSourceDetails() {
 
                 <div className="episode-list">
                     {sortedEpisodes.length === 0 ? (
-                        <div className="no-episodes">No episodes found</div>
+                        <div className="no-episodes">
+                            {dubPref === 'dub' ? 'No dubbed episodes available for this source.' : 'No episodes found'}
+                        </div>
                     ) : (
                         sortedEpisodes.map((episode) => {
                             const isWatched = localEntry && episode.number <= localEntry.episode;

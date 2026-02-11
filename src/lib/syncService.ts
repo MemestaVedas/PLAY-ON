@@ -340,12 +340,12 @@ export async function syncMangaFromAniList(entry: LocalMangaEntry): Promise<bool
 /**
  * Sync progress FROM AniList to local Anime DB
  */
-export async function syncAnimeFromAniList(entry: LocalAnimeEntry): Promise<boolean> {
-    if (!entry.anilistId) return false;
+export async function syncAnimeFromAniList(entry: LocalAnimeEntry): Promise<any | null> {
+    if (!entry.anilistId) return null;
 
     // Check auth
     const token = localStorage.getItem('anilist_token') || localStorage.getItem('token');
-    if (!token) return false;
+    if (!token) return null;
 
     try {
         console.log(`[AnimeSync] Fetching progress for "${entry.title}" from AniList...`);
@@ -355,6 +355,12 @@ export async function syncAnimeFromAniList(entry: LocalAnimeEntry): Promise<bool
                 query ($id: Int) {
                     Media(id: $id) {
                         id
+                        status
+                        episodes
+                        nextAiringEpisode {
+                            episode
+                            timeUntilAiring
+                        }
                         mediaListEntry {
                             progress
                             status
@@ -367,7 +373,9 @@ export async function syncAnimeFromAniList(entry: LocalAnimeEntry): Promise<bool
             fetchPolicy: 'network-only'
         });
 
-        const listEntry = data?.Media?.mediaListEntry;
+        const media = data?.Media;
+        const listEntry = media?.mediaListEntry;
+
         if (listEntry) {
             import('./localAnimeDb').then(({ updateAnimeProgress }) => {
                 // Update local DB
@@ -376,15 +384,15 @@ export async function syncAnimeFromAniList(entry: LocalAnimeEntry): Promise<bool
                         title: entry.title,
                         episode: listEntry.progress,
                         anilistId: entry.anilistId || undefined,
-                    });
+                    }, true);
                     console.log(`[AnimeSync] Updated local "${entry.title}" to Ep ${listEntry.progress}`);
                 }
             });
-            return true;
+            return media;
         }
-        return true;
+        return media || null;
     } catch (e) {
         console.error('[AnimeSync] Failed to fetch from AniList:', e);
-        return false;
+        return null;
     }
 }

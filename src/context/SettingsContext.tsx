@@ -54,7 +54,7 @@ export interface Settings {
 }
 
 export const DEFAULT_KEYBOARD_SHORTCUTS: Record<ShortcutAction, string> = {
-    searchAnime: 'Ctrl+A',
+    searchAnime: '/',
     searchManga: 'Ctrl+M',
     goHome: 'Ctrl+H',
     goAnimeList: 'Ctrl+Shift+A',
@@ -131,6 +131,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     ...DEFAULT_SETTINGS.keyboardShortcuts,
                     ...(parsed.keyboardShortcuts || {})
                 };
+
+                // MIGRATION: Change searchAnime from Ctrl+A to / if it was the old default (case-insensitive)
+                const currentSearchShortcut = mergedShortcuts.searchAnime?.toLowerCase();
+                if (currentSearchShortcut === 'ctrl+a') {
+                    console.log('[Settings] Migrating searchAnime shortcut from Ctrl+A to /');
+                    mergedShortcuts.searchAnime = '/';
+                }
 
                 // Merge with defaults to handle new settings added in updates
                 setSettings({

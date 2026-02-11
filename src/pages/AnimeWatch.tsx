@@ -10,10 +10,11 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { invoke } from '@tauri-apps/api/core';
 import { AnimeExtensionManager, EpisodeSources, VideoSource } from '../services/AnimeExtensionManager';
 import StreamPlayer from '../components/ui/StreamPlayer';
 import type { StreamingSource } from '../services/streamingService';
-import { getAnimeEntryBySourceId, updateAnimeProgress, markAnimeAsSynced } from '../lib/localAnimeDb';
+import { getAnimeEntryBySourceId, updateAnimeProgress, markAnimeAsSynced, LocalAnimeEntry } from '../lib/localAnimeDb';
 import { updateMediaProgress } from '../api/anilistClient';
 import { updateAnimeActivity, setBrowsingActivity } from '../services/discordRPC';
 import { sendDesktopNotification } from '../services/notification';
@@ -38,10 +39,18 @@ function AnimeWatch() {
     const [headers, setHeaders] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isDubUnavailable, setIsDubUnavailable] = useState(false);
 
     const [episodeList, setEpisodeList] = useState<any[]>([]);
     const [nextEpisodeId, setNextEpisodeId] = useState<string | null>(null);
     const [prevEpisodeId, setPrevEpisodeId] = useState<string | null>(null);
+    // Library state
+    const [localEntry, setLocalEntry] = useState<LocalAnimeEntry | null>(null);
+    const [refreshTrigger] = useState(0);
+
+    const dubPref = useMemo(() => {
+        return localEntry?.subOrDubPref || 'sub';
+    }, [localEntry]);
 
     const source = useMemo(() => {
         return sourceId ? AnimeExtensionManager.getSource(sourceId) : null;
@@ -126,7 +135,40 @@ function AnimeWatch() {
                 }
 
                 // --- Step 2: Fetch sources from extension ---
-                const episodeSources = await source.getEpisodeSources(decodedEpisodeId);
+                const isDub = dubPref === 'dub';
+                let serverId: string | undefined = undefined;
+
+                // --- HiAnime Dub Server Discovery ---
+                // If the user wants dub and it's HiAnime, try to find a DUB server explicitly
+                // because old extensions might default to SUB server.
+                if (source.id === 'hianime' && isDub) {
+                    console.log('[AnimeWatch] HiAnime Dub requested. Attempting to discover a DUB server...');
+                    try {
+                        const serversResponse = await invoke<string>('proxy_request', {
+                            method: 'GET',
+                            url: `${source.baseUrl}/ajax/v2/episode/servers?episodeId=${decodedEpisodeId}`,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        const serversData = JSON.parse(serversResponse);
+                        const serversHtml = serversData.data || serversData.html || '';
+
+                        // Look for the dub section and grab the first server ID
+                        const dubSection = serversHtml.split('data-name="dub"')[1] || serversHtml.split('category="dub"')[1];
+                        if (dubSection) {
+                            const idMatch = dubSection.match(/data-id="(\d+)"/);
+                            if (idMatch && idMatch[1]) {
+                                serverId = idMatch[1];
+                                console.log('[AnimeWatch] Found HiAnime DUB server ID:', serverId);
+                            }
+                        } else {
+                            console.warn('[AnimeWatch] No DUB category found in servers HTML.');
+                        }
+                    } catch (err) {
+                        console.error('[AnimeWatch] Failed to discover HiAnime DUB server:', err);
+                    }
+                }
+
+                const episodeSources = await source.getEpisodeSources(decodedEpisodeId, serverId, isDub);
 
                 if (episodeSources.sources.length === 0) {
                     throw new Error('No video sources found');
@@ -138,7 +180,7 @@ function AnimeWatch() {
                 if (convertedSources.length === 0 && convertedEmbed && anilistId) {
                     // Use vidsrc.icu with AniList ID for reliable playback
                     // Format: https://vidsrc.icu/embed/anime/{anilistId}/{episode}/{dub} (0=sub, 1=dub)
-                    const vidsrcUrl = `https://vidsrc.icu/embed/anime/${anilistId}/${epNum || 1}/0`;
+                    const vidsrcUrl = `https://vidsrc.icu/embed/anime/${anilistId}/${epNum || 1}/${dubPref ? 1 : 0}`;
                     console.log(`[AnimeWatch] Using vidsrc.icu with AniList ID: ${vidsrcUrl}`);
                     convertedEmbed = vidsrcUrl;
                 }
@@ -202,7 +244,16 @@ function AnimeWatch() {
         };
 
         fetchSources();
-    }, [source, episodeId, animeId, sourceId]);
+    }, [source, episodeId, animeId, sourceId, dubPref]); // Added dubPref to trigger re-fetch
+
+
+    // Refresh local entry
+    useEffect(() => {
+        if (sourceId && animeId) {
+            const entry = getAnimeEntryBySourceId(sourceId, decodeURIComponent(animeId));
+            setLocalEntry(entry);
+        }
+    }, [sourceId, animeId, refreshTrigger]);
 
     // Fetch Episode List to find Next/Prev
     useEffect(() => {
@@ -210,7 +261,45 @@ function AnimeWatch() {
 
         const fetchEpisodes = async () => {
             try {
-                const episodes = await source.getEpisodes(decodeURIComponent(animeId));
+                let episodes = await source.getEpisodes(decodeURIComponent(animeId));
+
+                // --- HiAnime Scan Logic ---
+                if (source.id === 'hianime' && dubPref === 'dub') {
+                    console.log('[HiAnimeScan] Watch Page: Triggering scan for dubs...');
+                    try {
+                        const responseStr = await invoke<string>('proxy_request', {
+                            method: 'GET',
+                            url: source.baseUrl + '/' + decodeURIComponent(animeId),
+                            headers: {}
+                        });
+                        const data = JSON.parse(responseStr);
+                        const html = data.data;
+                        const dubMatch = html.match(/<div class="tick-item tick-dub">(\d+)<\/div>/i);
+                        if (dubMatch && dubMatch[1]) {
+                            const dubCount = parseInt(dubMatch[1]);
+                            if (dubCount < episodes.length) {
+                                episodes = episodes.slice(0, dubCount);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[HiAnimeScan] Watch Scan failed:', e);
+                    }
+                }
+
+                // Check if current episode is in the filtered list (especially for HiAnime Dub)
+                if (dubPref === 'dub') {
+                    const decodedEpId = decodeURIComponent(episodeId as string);
+                    const isInList = episodes.some(ep => ep.id === decodedEpId);
+                    if (!isInList) {
+                        console.warn('[AnimeWatch] Dub requested but this episode is not in the dubbed list.');
+                        setIsDubUnavailable(true);
+                    } else {
+                        setIsDubUnavailable(false);
+                    }
+                } else {
+                    setIsDubUnavailable(false);
+                }
+
                 console.log('[AnimeWatch] Fetched episodes:', episodes.length);
                 if (episodes && episodes.length > 0) {
                     setEpisodeList(episodes);
@@ -246,7 +335,7 @@ function AnimeWatch() {
             }
         };
         fetchEpisodes();
-    }, [source, animeId, episodeId]);
+    }, [source, animeId, episodeId, dubPref]);
 
     const handleBack = () => {
         if (animeId && sourceId) {
@@ -285,6 +374,7 @@ function AnimeWatch() {
     useEffect(() => {
         accumulatedWatchTime.current = 0;
         lastProgressTime.current = 0;
+        setHasSynced(false);
         // metadata is updated in the data fetching effect
     }, [episodeId, sourceId]);
 
@@ -423,6 +513,33 @@ function AnimeWatch() {
 
     return (
         <div className="anime-watch">
+            {isDubUnavailable && (
+                <div className="dub-warning-overlay" style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 100,
+                    background: 'rgba(255, 68, 68, 0.95)',
+                    color: 'white',
+                    padding: '12px 24px',
+                    borderRadius: '50px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>Dub not available for this episode. Playing Sub instead.</span>
+                    <button
+                        onClick={() => setIsDubUnavailable(false)}
+                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '0 5px', fontSize: '18px' }}
+                    >×</button>
+                </div>
+            )}
             {/* Video Player - Use iframe for embeds, StreamPlayer for direct sources */}
             {embedUrl ? (
                 <div className="embed-player">
@@ -456,20 +573,23 @@ function AnimeWatch() {
                     </div>
                 </div>
             ) : (
-                <StreamPlayer
-                    sources={sources}
-                    subtitles={subtitles}
-                    title={`${animeTitle} - Episode ${episodeNum}`}
-                    onProgress={handleProgress}
-                    onEnded={handleEnded}
-                    headers={headers}
-                    onNext={nextEpisodeId ? handleNextEpisode : undefined}
-                    hasNextEpisode={!!nextEpisodeId}
-                    onPrev={prevEpisodeId ? handlePrevEpisode : undefined}
-                    hasPrevEpisode={!!prevEpisodeId}
-                    skipTimes={skipTimes}
-                    onBack={handleBack}
-                />
+                <>
+
+                    <StreamPlayer
+                        sources={sources}
+                        subtitles={subtitles}
+                        title={`${animeTitle} - Episode ${episodeNum}`}
+                        onProgress={handleProgress}
+                        onEnded={handleEnded}
+                        headers={headers}
+                        onNext={nextEpisodeId ? handleNextEpisode : undefined}
+                        hasNextEpisode={!!nextEpisodeId}
+                        onPrev={prevEpisodeId ? handlePrevEpisode : undefined}
+                        hasPrevEpisode={!!prevEpisodeId}
+                        skipTimes={skipTimes}
+                        onBack={handleBack}
+                    />
+                </>
             )}
         </div>
     );

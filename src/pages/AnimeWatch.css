@@ -182,3 +182,56 @@
     background: #cbbdf8;
     border-color: transparent;
 }
+/* ===================== */
+/* Top Player Controls   */
+/* ===================== */
+.player-top-controls {
+    position: absolute;
+    top: 20px;
+    right: 80px; 
+    z-index: 1000;
+}
+
+.dub-toggle {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.dub-toggle:hover {
+    border-color: var(--color-zen-accent);
+    transform: translateY(-2px);
+}
+
+.dub-toggle .label {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 6px 10px;
+    font-size: 10px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.05em;
+}
+
+.dub-toggle .value {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+}
+
+.dub-toggle.sub .value {
+    background: var(--color-zen-accent);
+    color: #000;
+}
+
+.dub-toggle.dub .value {
+    background: #FFB347; 
+    color: #000;
+}

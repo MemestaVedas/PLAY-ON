@@ -57,6 +57,9 @@ export interface Episode {
     url?: string;
     /** Whether this episode has been watched */
     isFiller?: boolean;
+    /** Sub/Dub availability flags (if known) */
+    hasSub?: boolean;
+    hasDub?: boolean;
 }
 
 /**
@@ -157,9 +160,17 @@ export interface AnimeSource {
      * Get the streaming sources for an episode.
      * @param episodeId - The episode's unique ID within this source
      * @param server - Optional server preference
+     * @param dub - Whether to favor dub sources
      * @returns Promise resolving to episode sources
      */
-    getEpisodeSources(episodeId: string, server?: string): Promise<EpisodeSources>;
+    getEpisodeSources(episodeId: string, server?: string, dub?: boolean): Promise<EpisodeSources>;
+
+    /**
+     * Get available servers for an episode.
+     * @param episodeId - The episode's unique ID within this source
+     * @returns Promise resolving to an array of servers
+     */
+    getEpisodeServers?(episodeId: string): Promise<any[]>;
 }
 
 /**
@@ -177,7 +188,7 @@ export abstract class BaseAnimeSource implements AnimeSource {
     abstract search(filter: AnimeSearchFilter): Promise<AnimeSearchResult>;
     abstract getAnimeInfo(animeId: string): Promise<Anime>;
     abstract getEpisodes(animeId: string): Promise<Episode[]>;
-    abstract getEpisodeSources(episodeId: string, server?: string): Promise<EpisodeSources>;
+    abstract getEpisodeSources(episodeId: string, server?: string, dub?: boolean): Promise<EpisodeSources>;
 
     /**
      * Helper to make HTTP requests.

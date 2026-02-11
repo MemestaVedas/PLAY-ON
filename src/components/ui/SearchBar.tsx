@@ -21,7 +21,7 @@ interface SearchResult {
 
 const SearchBar: React.FC = () => {
     const navigate = useNavigate();
-    const { inputRef, searchMode, setSearchMode } = useSearchBar();
+    const { inputRef, searchMode, setSearchMode, isExpanded: contextExpanded, setIsExpanded: setContextExpanded } = useSearchBar();
     const [searchTerm, setSearchTerm] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +32,8 @@ const SearchBar: React.FC = () => {
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Determine expansion state
-    const isExpanded = isFocused || isHovered || searchTerm.length > 0 || showDropdown;
+    // Determine expansion state - now includes contextExpanded
+    const isExpanded = contextExpanded || isFocused || isHovered || searchTerm.length > 0 || showDropdown;
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -41,11 +41,12 @@ const SearchBar: React.FC = () => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setShowDropdown(false);
                 setIsFocused(false);
+                setContextExpanded(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [setContextExpanded]);
 
     // Re-search when mode changes (if there's a search term)
     useEffect(() => {
@@ -106,6 +107,7 @@ const SearchBar: React.FC = () => {
         if (e.key === 'Escape') {
             setShowDropdown(false);
             setIsFocused(false);
+            setContextExpanded(false);
             if (inputRef.current) inputRef.current.blur();
         }
     };
@@ -176,7 +178,10 @@ const SearchBar: React.FC = () => {
                                 onBlur={() => {
                                     // Delay blur to allow click actions
                                     setTimeout(() => {
-                                        if (!isHovered) setIsFocused(false);
+                                        if (!isHovered) {
+                                            setIsFocused(false);
+                                            setContextExpanded(false);
+                                        }
                                     }, 200);
                                 }}
                                 className="bg-transparent border-none text-sm w-full font-medium"

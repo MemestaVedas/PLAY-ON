@@ -114,6 +114,31 @@
     color: rgba(255, 255, 255, 0.7);
 }
 
+.dub-toggle-details {
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.dub-toggle-details.sub {
+    background: var(--color-zen-accent);
+    color: #000;
+}
+
+.dub-toggle-details.dub {
+    background: #FFB347;
+    color: #000;
+}
+
+.dub-toggle-details:hover {
+    filter: brightness(1.2);
+    transform: scale(1.05);
+}
+
 .meta .status {
     padding: 0.25rem 0.6rem;
     border-radius: 6px;

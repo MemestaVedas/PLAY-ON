@@ -175,7 +175,7 @@ export default function StreamPlayer({
 
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
-    // const [selectedSourceIdx, setSelectedSourceIdx] = useState(0); // Unused
+    const [selectedSourceIdx, setSelectedSourceIdx] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -204,7 +204,15 @@ export default function StreamPlayer({
 
 
     // Get current source
-    const currentSource = sources[0] || sources[0]; // Simplified since selectedSourceIdx is unused
+    const currentSource = sources[selectedSourceIdx] || sources[0];
+
+    // Handle source change
+    const handleSourceChange = useCallback((idx: number) => {
+        setSelectedSourceIdx(idx);
+        setActiveMenu('none');
+        setIsLoading(true);
+        // The useEffect for sources/episodeId will handle reloading
+    }, []);
 
     // Handle quality change
     const handleQualityChange = useCallback((levelIndex: number) => {
@@ -497,19 +505,6 @@ export default function StreamPlayer({
         setCurrentTime(time);
     }, []);
 
-    const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const vol = parseFloat(e.target.value);
-        video.volume = vol;
-        setVolume(vol);
-        const muted = vol === 0;
-        setIsMuted(muted);
-
-        localStorage.setItem('player_volume', vol.toString());
-        localStorage.setItem('player_muted', muted.toString());
-    }, []);
 
     const toggleMute = useCallback(() => {
         const video = videoRef.current;
@@ -826,7 +821,15 @@ export default function StreamPlayer({
                 )
             }
 
-            <div className={`stream-controls ${showControls ? 'visible' : ''}`}>
+            <div
+                className={`stream-controls ${showControls ? 'visible' : ''}`}
+                onClick={(e) => {
+                    // Only toggle if clicking the overlay itself, not children
+                    if (e.target === e.currentTarget) {
+                        togglePlay();
+                    }
+                }}
+            >
                 <div className="stream-header">
                     {onBack && (
                         <button onClick={onBack} className="control-btn back-btn" title="Go Back">
@@ -1014,6 +1017,35 @@ export default function StreamPlayer({
                                 </div>
                             )}
                         </div>
+
+                        {/* Sources */}
+                        {sources.length > 1 && (
+                            <div className="control-group">
+                                <button
+                                    className={`control-btn ${activeMenu === 'source' ? 'active' : ''}`}
+                                    onClick={() => setActiveMenu(activeMenu === 'source' ? 'none' : 'source')}
+                                    title="Switch Source"
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+                                        <path d="M4 17L10 11L4 5" />
+                                        <path d="M12 17L18 11L12 5" />
+                                    </svg>
+                                </button>
+                                {activeMenu === 'source' && (
+                                    <div className="settings-menu">
+                                        {sources.map((src, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`menu-item ${selectedSourceIdx === idx ? 'selected' : ''}`}
+                                                onClick={() => handleSourceChange(idx)}
+                                            >
+                                                Source {idx + 1} ({src.quality})
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Cast Button */}
                         <button

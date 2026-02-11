@@ -35,12 +35,18 @@ function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean {
     const keyMatches =
         eventKey === parsed.key ||
         (parsed.key === ',' && eventKey === ',') ||
+        (parsed.key === '/' && eventKey === '/') ||
+        (parsed.key === 'divide' && eventKey === '/') ||
         (parsed.key === 'escape' && eventKey === 'escape');
+
+    // For single-character symbol shortcuts (like '/'), allow shift key to be true
+    // because on some keyboard layouts, symbol keys require shift (e.g., '?' or '/' on some layouts)
+    const isSingleCharSymbol = parsed.key.length === 1 && !/[a-z0-9]/.test(parsed.key);
 
     return (
         keyMatches &&
         event.ctrlKey === parsed.ctrl &&
-        event.shiftKey === parsed.shift &&
+        (parsed.shift ? event.shiftKey : (isSingleCharSymbol ? true : !event.shiftKey)) &&
         event.altKey === parsed.alt &&
         event.metaKey === parsed.meta
     );
@@ -66,7 +72,20 @@ export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
         const shortcuts = settings.keyboardShortcuts;
 
-        // Check each shortcut - ALL shortcuts work regardless of input focus (state-agnostic)
+        // Skip shortcuts if user is typing in an input/textarea
+        // unless it's a modifier shortcut (like Ctrl+H) or Escape
+        const target = event.target as HTMLElement;
+        const isInput = target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.isContentEditable;
+
+        const hasModifiers = event.ctrlKey || event.metaKey || event.altKey;
+
+        if (isInput && !hasModifiers && event.key !== 'Escape') {
+            return;
+        }
+
+        // Check each shortcut
         for (const [action, binding] of Object.entries(shortcuts) as [ShortcutAction, string][]) {
             if (matchesShortcut(event, binding)) {
                 event.preventDefault();
