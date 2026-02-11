@@ -680,7 +680,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 Special thanks to:
 - 🎨 The **Tauri** team for the incredible framework
 - 📊 **AniList** for their comprehensive GraphQL API
-- 🌐 The **WeebCentral** community for manga sources
 - 🎭 Every contributor and supporter of this project
 
 <br />
