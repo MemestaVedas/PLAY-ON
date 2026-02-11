@@ -32,7 +32,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Windows_|_macOS_|_Linux-gray?style=for-the-badge" alt="Cross-Platform" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License" />
-  <img src="https://img.shields.io/github/stars/yourusername/play-on?style=for-the-badge&color=gold" alt="GitHub Stars" />
 </p>
 
 <br />
@@ -682,13 +681,6 @@ Special thanks to:
 - 📊 **AniList** for their comprehensive GraphQL API
 - 🎭 Every contributor and supporter of this project
 
-<br />
-
-### ⭐ Star History
-
-If you find PLAY-ON! useful, consider starring the repo!
-
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/play-on&type=Date)](https://star-history.com/#yourusername/play-on&Date)
 
 <br />
 
