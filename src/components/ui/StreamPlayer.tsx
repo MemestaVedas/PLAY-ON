@@ -201,7 +201,36 @@ export default function StreamPlayer({
 
     // Casting State
     const [isCastDialogOpen, setIsCastDialogOpen] = useState(false);
+    const [isCastingTo, setIsCastingTo] = useState<string | null>(null);
+    const [castingStatus, setCastingStatus] = useState<string>('Ready');
+    const [castingLogs, setCastingLogs] = useState<string[]>([]);
 
+    const addCastingLog = useCallback((msg: string) => {
+        console.log(`[CastLog] ${msg}`);
+        // Only add if last log is different
+        setCastingLogs(prev => {
+            if (prev[0] === msg) return prev;
+            return [msg, ...prev].slice(0, 15);
+        });
+    }, []);
+
+    useEffect(() => {
+        if (!isCastingTo) return;
+
+        const checkStatus = async () => {
+            try {
+                const status = await invoke<string>('get_proxy_status');
+                addCastingLog(`Proxy Live: ${status}`);
+            } catch (err) {
+                addCastingLog(`Proxy Error: ${err}`);
+            }
+        };
+
+        const interval = setInterval(checkStatus, 3000);
+        checkStatus();
+
+        return () => clearInterval(interval);
+    }, [isCastingTo, addCastingLog]);
 
     // Get current source
     const currentSource = sources[selectedSourceIdx] || sources[0];
@@ -751,43 +780,137 @@ export default function StreamPlayer({
             />
 
             {/* Autoplay Overlay */}
-            {showAutoplayOverlay && (
+            {showAutoplayOverlay && hasNextEpisode && (
                 <div className="autoplay-overlay">
                     <div className="autoplay-content">
                         <h3>Next Episode</h3>
                         <div className="autoplay-timer">
-                            <svg width="60" height="60" viewBox="0 0 60 60">
-                                <circle cx="30" cy="30" r="28" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="4" />
-                                <circle cx="30" cy="30" r="28" fill="none" stroke="var(--color-zen-accent, #B4A2F6)" strokeWidth="4"
-                                    strokeDasharray="176"
-                                    strokeDashoffset={176 - (176 * autoplayTimer / 5)}
-                                    transform="rotate(-90 30 30)"
-                                    style={{ transition: 'stroke-dashoffset 1s linear' }}
-                                />
-                                <text x="50%" y="50%" textAnchor="middle" dy=".3em" fill="#fff" fontSize="20px" fontWeight="bold">
-                                    {autoplayTimer}
-                                </text>
-                            </svg>
+                            <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-40 animate-fade-in">
+                                <div className="text-white text-xl mb-4 text-center">
+                                    <p className="opacity-70 text-sm mb-1">Next Episode playing in</p>
+                                    <span className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-lavender-mist to-lavender-light">
+                                        {autoplayTimer}s
+                                    </span>
+                                </div>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => {
+                                            setShowAutoplayOverlay(false);
+                                            if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
+                                        }}
+                                        className="px-6 py-2 rounded-full border border-white/20 text-white hover:bg-white/10 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowAutoplayOverlay(false);
+                                            if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
+                                            onNext();
+                                        }}
+                                        className="px-6 py-2 rounded-full bg-lavender-mist text-space-dark hover:bg-lavender-light transition-colors font-medium"
+                                    >
+                                        Play Now
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div className="autoplay-actions">
-                            <button
-                                className="autoplay-btn cancel"
-                                onClick={() => {
-                                    setShowAutoplayOverlay(false);
-                                    if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
-                                }}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="autoplay-btn play-now"
-                                onClick={() => {
-                                    if (onNext) onNext();
-                                }}
-                            >
-                                Play Now
-                            </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Casting Background (Video Area) */}
+            {isCastingTo && (
+                <div className="absolute inset-0 bg-black z-40 flex flex-col justify-end pb-24 px-8">
+                    <div className="flex items-center gap-4 bg-[#121214]/80 w-fit px-5 py-3 rounded-2xl backdrop-blur-md border border-white/5 shadow-2xl animate-fade-in">
+                        <CastIcon size={28} className="text-lavender-mist animate-pulse" />
+                        <span className="text-white/90 text-xl font-medium tracking-wide">Playing on {isCastingTo}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Chrome-like Media Control Popup - Top Right */}
+            {isCastingTo && (
+                <div className="absolute top-4 right-4 z-50 w-[360px] bg-[#202124] rounded-2xl shadow-2xl border border-white/10 overflow-hidden font-sans flex flex-col animate-fade-in drop-shadow-2xl text-white">
+                    {/* Header (Origin) */}
+                    <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-white rounded flex items-center justify-center text-black font-extrabold text-[10px] tracking-tighter">PO</div>
+                            <span className="text-[12px] font-medium text-white/70">PLAY-ON!</span>
                         </div>
+                        <CastIcon size={18} className="text-[#8ab4f8]" />
+                    </div>
+
+                    {/* Media Info */}
+                    <div className="px-4 py-2 flex items-start gap-4">
+                        {/* Thumbnail */}
+                        <div className="w-[72px] h-[72px] rounded-xl bg-[#3c4043] flex-shrink-0 flex items-center justify-center overflow-hidden relative shadow-inner">
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20" />
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                        </div>
+                        {/* Title / Subtitle */}
+                        <div className="flex-1 min-w-0 flex flex-col pt-1">
+                            <h3 className="text-[#e8eaed] font-medium text-[15px] leading-tight line-clamp-2">{title || "Casting Media..."}</h3>
+                            <p className="text-[#9aa0a6] text-[13px] truncate mt-1">Anime Source</p>
+                        </div>
+                    </div>
+
+                    {/* Scrub Bar */}
+                    <div className="px-4 py-2 flex items-center gap-3">
+                        <span className="text-[#9aa0a6] text-[11px] font-medium tabular-nums">{formatTime(currentTime)}</span>
+                        <div className="flex-1 h-[3px] bg-[#3c4043] rounded-full relative overflow-hidden group/scrub">
+                            <div className="absolute left-0 top-0 h-full bg-[#8ab4f8] rounded-full transition-all duration-300" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }} />
+                        </div>
+                        <span className="text-[#9aa0a6] text-[11px] font-medium tabular-nums">{formatTime(duration)}</span>
+                    </div>
+
+                    {/* Play Controls */}
+                    <div className="px-4 pb-4 pt-1 flex items-center justify-center gap-6">
+                        <button
+                            onClick={hasPrevEpisode ? onPrev : undefined}
+                            disabled={!hasPrevEpisode}
+                            className="text-white/70 hover:text-white disabled:opacity-30 disabled:hover:text-white/70 transition-colors"
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" /></svg>
+                        </button>
+                        <button onClick={togglePlay} className="w-[52px] h-[52px] flex items-center justify-center rounded-full bg-[#8ab4f8] text-[#202124] hover:bg-[#aecbfa] hover:scale-105 active:scale-95 transition-all shadow-md">
+                            {isPlaying ? (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                            ) : (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="ml-1"><path d="M8 5v14l11-7z" /></svg>
+                            )}
+                        </button>
+                        <button
+                            onClick={hasNextEpisode ? onNext : undefined}
+                            disabled={!hasNextEpisode}
+                            className="text-white/70 hover:text-white disabled:opacity-30 disabled:hover:text-white/70 transition-colors"
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+                        </button>
+                    </div>
+
+                    {/* Cast Target Route */}
+                    <div className="px-4 py-3 bg-[#292a2d] border-t border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#8ab4f8]/10 flex items-center justify-center">
+                                <CastIcon size={18} className="text-[#8ab4f8]" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[#e8eaed] text-[14px] font-medium">{isCastingTo}</span>
+                                <span className="text-[#8ab4f8] text-[11px] font-medium uppercase tracking-wider">{castingStatus}</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setIsCastingTo(null);
+                                setCastingStatus('Ready');
+                                setCastingLogs([]);
+                                videoRef.current?.play().catch(console.error);
+                            }}
+                            className="px-4 py-1.5 rounded-full border border-[#8ab4f8]/30 text-[#8ab4f8] hover:bg-[#8ab4f8]/10 text-[13px] font-medium transition-colors"
+                        >
+                            Stop casting
+                        </button>
                     </div>
                 </div>
             )}
@@ -1078,20 +1201,43 @@ export default function StreamPlayer({
             <CastDialog
                 isOpen={isCastDialogOpen}
                 onClose={() => setIsCastDialogOpen(false)}
-                onConnect={(device) => {
-                    console.log("Connecting to", device);
+                onConnect={(deviceIp, deviceName) => {
+                    console.log("Connecting to", deviceName, "at", deviceIp);
+                    setCastingStatus('Initializing...');
+                    setCastingLogs([]);
+                    addCastingLog(`Device: ${deviceName} (${deviceIp})`);
+                    setIsCastingTo(deviceName);
 
-                    return invoke('cast_load_media', {
-                        deviceName: device,
+                    const ct = currentSource.isM3U8 ? 'application/x-mpegURL' : 'video/mp4';
+                    addCastingLog(`Media Type: ${ct}`);
+                    addCastingLog(`Original URL: ${currentSource.url.substring(0, 50)}...`);
+
+                    setCastingStatus('Sending LOAD command...');
+                    return invoke<string>('cast_load_media', {
+                        deviceIp: deviceIp,
                         url: currentSource.url,
-                        contentType: currentSource.isM3U8 ? 'application/x-mpegURL' : 'video/mp4',
-                        headers: headers || null
-                    }).then(() => {
-                        console.log("Casting started");
-                        if (videoRef.current) videoRef.current.pause();
+                        contentType: ct,
+                        headers: headers || null,
+                        subtitles: subtitles.length > 0 ? subtitles.map(s => ({
+                            url: s.url,
+                            language: s.lang,
+                            label: s.lang || 'Unknown'
+                        })) : null
+                    }).then((proxyUrl) => {
+                        console.log("Casting started to", deviceName, "Proxy URL:", proxyUrl);
+                        addCastingLog("LOAD command sent successfully");
+                        addCastingLog(`Proxy URL: ${proxyUrl}`);
+                        setCastingStatus('Waiting for TV to fetch media...');
+                        if (videoRef.current) {
+                            videoRef.current.pause();
+                        }
                     }).catch(err => {
                         console.error("Casting error:", err);
-                        throw err; // Re-throw so CastDialog catches it
+                        addCastingLog(`Error: ${err}`);
+                        setCastingStatus('Failed');
+                        // Stay in casting mode for a bit to show error if we want, or reset
+                        setTimeout(() => setIsCastingTo(null), 3000);
+                        throw err;
                     });
                 }}
             />

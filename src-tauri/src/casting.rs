@@ -1,5 +1,5 @@
 use local_ip_address::local_ip;
-use rust_cast::{channels::receiver::CastDeviceApp, CastDevice};
+use rust_cast::{CastDevice, channels::receiver::CastDeviceApp};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Mutex;
@@ -14,8 +14,21 @@ lazy_static::lazy_static! {
     static ref CURRENT_SESSION_ID: Mutex<String> = Mutex::new(String::new());
 }
 
+#[derive(serde::Serialize, Clone, PartialEq, Eq)]
+pub struct CastDeviceInfo {
+    pub name: String,
+    pub ip: String,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct SubtitleTrack {
+    pub url: String,
+    pub language: String,
+    pub label: String,
+}
+
 #[tauri::command]
-pub async fn cast_discover() -> Result<Vec<String>, String> {
+pub async fn cast_discover() -> Result<Vec<CastDeviceInfo>, String> {
     println!("[Casting] Starting discovery...");
     let mdns = mdns_sd::ServiceDaemon::new().map_err(|e| format!("{:?}", e))?;
     let receiver = mdns
@@ -34,9 +47,25 @@ pub async fn cast_discover() -> Result<Vec<String>, String> {
                         info.get_fullname(),
                         info.get_addresses()
                     );
-                    let name = info.get_hostname().trim_end_matches('.').to_string();
-                    if !devices.contains(&name) {
-                        devices.push(name);
+
+                    let name = info
+                        .get_property_val_str("fn")
+                        .unwrap_or_else(|| info.get_fullname())
+                        .to_string();
+
+                    if let Some(ip) = info.get_addresses().iter().find(|ip| ip.is_ipv4()) {
+                        let device_info = CastDeviceInfo {
+                            name,
+                            ip: ip.to_string(),
+                        };
+
+                        // We check uniqueness by IP because friendly names might change or be identical
+                        if !devices
+                            .iter()
+                            .any(|d: &CastDeviceInfo| d.ip == device_info.ip)
+                        {
+                            devices.push(device_info);
+                        }
                     }
                 }
                 _ => {}
@@ -47,67 +76,20 @@ pub async fn cast_discover() -> Result<Vec<String>, String> {
     Ok(devices)
 }
 
-use std::net::ToSocketAddrs;
-
-fn resolve_device_ip(name: &str) -> Option<String> {
-    println!("[Casting] Resolving IP for: {}", name);
-
-    if let Ok(mut addrs) = (name, 8009).to_socket_addrs() {
-        if let Some(addr) = addrs.find(|a| a.is_ipv4()) {
-            println!("[Casting] Resolved via OS (exact): {}", addr.ip());
-            return Some(addr.ip().to_string());
-        }
-    }
-
-    if !name.ends_with(".local") {
-        let name_local = format!("{}.local", name);
-        if let Ok(mut addrs) = (name_local.as_str(), 8009).to_socket_addrs() {
-            if let Some(addr) = addrs.find(|a| a.is_ipv4()) {
-                println!("[Casting] Resolved via OS (.local): {}", addr.ip());
-                return Some(addr.ip().to_string());
-            }
-        }
-    }
-
-    println!("[Casting] OS resolution failed, trying manual mDNS discovery...");
-    let mdns = mdns_sd::ServiceDaemon::new().ok()?;
-    let receiver = mdns.browse("_googlecast._tcp.local.").ok()?;
-
-    let start = std::time::Instant::now();
-    while start.elapsed() < Duration::from_secs(3) {
-        if let Ok(event) = receiver.recv_timeout(Duration::from_millis(100)) {
-            if let mdns_sd::ServiceEvent::ServiceResolved(info) = event {
-                let hostname = info.get_hostname().trim_end_matches('.');
-                if hostname == name || info.get_fullname().contains(name) || name.contains(hostname)
-                {
-                    for ip in info.get_addresses() {
-                        if ip.is_ipv4() {
-                            println!("[Casting] Resolved via mDNS browse: {}", ip);
-                            return Some(ip.to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
 #[tauri::command]
 pub async fn cast_load_media(
-    device_name: String,
+    device_ip: String,
     url: String,
     content_type: String,
     headers: Option<HashMap<String, String>>,
+    subtitles: Option<Vec<SubtitleTrack>>,
 ) -> Result<String, String> {
     // Run the casting logic in a blocking task since rust_cast is synchronous and !Send
     tauri::async_runtime::spawn_blocking(move || {
         println!(
             "[Casting] command received: load_media for device={}, url={}, type={}",
-            device_name, url, content_type
+            device_ip, url, content_type
         );
-
-        let device_ip = resolve_device_ip(&device_name).ok_or("Device not found")?;
 
         let mut last_error = String::new();
 
@@ -126,8 +108,8 @@ pub async fn cast_load_media(
                 // Established TCP/TLS connection
                 device
                     .connection
-                    .connect("sender-0")
-                    .map_err(|e| format!("Connect sender-0 failed: {:?}", e))?;
+                    .connect("receiver-0")
+                    .map_err(|e| format!("Connect receiver-0 failed: {:?}", e))?;
 
                 // Send a heartbeat immediately to keep the connection alive
                 device
@@ -188,14 +170,24 @@ pub async fn cast_load_media(
                 let internal_ip = local_ip().map_err(|e| e.to_string())?;
                 let port = crate::stream_server::get_server_port();
 
+                println!("[Casting] Internal IP: {}, Port: {}", internal_ip, port);
+
                 if port == 0 {
                     return Err("Stream server not started. Port is 0.".to_string());
                 }
 
+                let ext = if content_type.contains("x-mpegURL") || content_type.contains("mpegurl")
+                {
+                    "stream.m3u8"
+                } else {
+                    "stream.mp4"
+                };
+
                 let mut target_proxy_url = format!(
-                    "http://{}:{}/proxy?url={}",
+                    "http://{}:{}/proxy/{}?url={}",
                     internal_ip,
                     port,
+                    ext,
                     urlencoding::encode(&url)
                 );
 
@@ -212,18 +204,49 @@ pub async fn cast_load_media(
 
                 println!("[Casting] Proxy URL: {}", target_proxy_url);
 
-                // Create Media Object
+                let mut tracks = Vec::new();
+                let mut active_track_ids = Vec::new();
+                
+                if let Some(subs) = &subtitles {
+                    for (i, sub) in subs.iter().enumerate() {
+                        let track_id = (i + 1) as u16;
+                        tracks.push(rust_cast::channels::media::Track {
+                            track_id,
+                            typ: "TEXT".to_string(),
+                            track_content_id: Some(sub.url.clone()),
+                            track_content_type: Some("text/vtt".to_string()),
+                            name: Some(sub.label.clone()),
+                            language: Some(sub.language.clone()),
+                            subtype: Some("SUBTITLES".to_string()),
+                        });
+                        if sub.language.to_lowercase() == "en" || sub.language.to_lowercase() == "english" {
+                            active_track_ids.push(track_id);
+                        }
+                    }
+                }
+                
+                // If no english sub is found, just activate the first one
+                if active_track_ids.is_empty() && !tracks.is_empty() {
+                    active_track_ids.push(tracks[0].track_id);
+                }
+
                 let media = rust_cast::channels::media::Media {
-                    content_id: target_proxy_url,
+                    content_id: target_proxy_url.clone(),
                     stream_type: rust_cast::channels::media::StreamType::Buffered,
                     content_type: content_type.clone(),
                     metadata: None,
                     duration: None,
+                    tracks: if tracks.is_empty() { None } else { Some(tracks) },
+                };
+
+                let load_options = rust_cast::channels::media::LoadOptions {
+                    active_track_ids: if active_track_ids.is_empty() { None } else { Some(active_track_ids) },
+                    ..Default::default()
                 };
 
                 device
                     .media
-                    .load(&transport_id, &session_id, &media)
+                    .load_with_opts(&transport_id, &session_id, &media, load_options)
                     .map_err(|e| format!("Load media failed: {:?}", e))?;
 
                 println!("[Casting] Media load command sent successfully");
@@ -240,7 +263,7 @@ pub async fn cast_load_media(
                     *global_session = session_id;
                 }
 
-                Ok("Media Loaded".to_string())
+                Ok(target_proxy_url)
             })();
 
             match result {

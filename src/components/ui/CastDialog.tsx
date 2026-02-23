@@ -11,23 +11,28 @@ export const CastIcon = ({ size = 24, className = "" }: { size?: number, classNa
     </svg>
 );
 
+interface CastDeviceInfo {
+    name: string;
+    ip: string;
+}
+
 interface CastDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onConnect: (deviceName: string) => Promise<void>;
+    onConnect: (deviceIp: string, deviceName: string) => Promise<void>;
 }
 
 export function CastDialog({ isOpen, onClose, onConnect }: CastDialogProps) {
-    const [devices, setDevices] = useState<string[]>([]);
+    const [devices, setDevices] = useState<CastDeviceInfo[]>([]);
     const [scanning, setScanning] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [connecting, setConnecting] = useState<string | null>(null);
+    const [connecting, setConnecting] = useState<string | null>(null); // store IP
 
     const scanDevices = async () => {
         setScanning(true);
         setError(null);
         try {
-            const list = await invoke<string[]>('cast_discover');
+            const list = await invoke<CastDeviceInfo[]>('cast_discover');
             setDevices(list);
             if (list.length === 0) {
                 setError("No devices found. Make sure your device is on the same network.");
@@ -46,14 +51,14 @@ export function CastDialog({ isOpen, onClose, onConnect }: CastDialogProps) {
         }
     }, [isOpen]);
 
-    const handleConnect = async (device: string) => {
-        setConnecting(device);
+    const handleConnect = async (device: CastDeviceInfo) => {
+        setConnecting(device.ip);
         try {
-            await onConnect(device);
+            await onConnect(device.ip, device.name);
             onClose();
         } catch (err) {
             console.error(err);
-            setError(`Failed to connect to ${device}`);
+            setError(`Failed to connect to ${device.name}`);
         } finally {
             setConnecting(null);
         }
@@ -123,7 +128,7 @@ export function CastDialog({ isOpen, onClose, onConnect }: CastDialogProps) {
                             <div className="flex flex-col gap-2">
                                 {devices.map(device => (
                                     <button
-                                        key={device}
+                                        key={device.ip}
                                         onClick={() => handleConnect(device)}
                                         disabled={!!connecting}
                                         className="flex items-center gap-3 w-full p-4 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all group text-left"
@@ -137,11 +142,11 @@ export function CastDialog({ isOpen, onClose, onConnect }: CastDialogProps) {
                                         </div>
                                         <div className="flex-1">
                                             <span className="block font-medium text-white group-hover:text-lavender-mist transition-colors">
-                                                {device}
+                                                {device.name}
                                             </span>
-                                            <span className="text-xs text-white/40">Google Cast</span>
+                                            <span className="text-xs text-white/40">Google Cast ({device.ip})</span>
                                         </div>
-                                        {connecting === device && (
+                                        {connecting === device.ip && (
                                             <RotateCwIcon className="animate-spin text-lavender-mist" size={16} />
                                         )}
                                     </button>

@@ -731,31 +731,61 @@ async fn stream_proxy(
     let url_obj = reqwest::Url::parse(&url).map_err(|e| e.to_string())?;
     let host = url_obj.host_str().ok_or("No host in URL")?;
 
-    let mut client_builder = reqwest::Client::builder();
-    if let Some(ip) = resolve_host(host).await {
-        let port = url_obj.port_or_known_default().unwrap_or(443);
-        let addr = SocketAddr::new(ip, port);
-        client_builder = client_builder.resolve(host, addr);
+    let max_retries = 3;
+    let mut attempt = 0;
+    let mut force_refresh = false;
+
+    loop {
+        attempt += 1;
+
+        let mut client_builder =
+            reqwest::Client::builder().timeout(std::time::Duration::from_secs(30));
+
+        if let Some(ip) = resolve_host(host, force_refresh).await {
+            let port = url_obj.port_or_known_default().unwrap_or(443);
+            let addr = SocketAddr::new(ip, port);
+            client_builder = client_builder.resolve(host, addr);
+        }
+        let client = client_builder.build().map_err(|e| e.to_string())?;
+
+        let mut request = client.get(&url);
+
+        for (key, value) in &headers {
+            request = request.header(key, value);
+        }
+
+        match request.send().await {
+            Ok(response) => match response.bytes().await {
+                Ok(bytes) => return Ok(bytes.to_vec()),
+                Err(e) if attempt < max_retries => {
+                    println!(
+                        "[StreamProxy] Error reading bytes (attempt {}/{}): {}",
+                        attempt, max_retries, e
+                    );
+                    force_refresh = true;
+                }
+                Err(e) => return Err(e.to_string()),
+            },
+            Err(e) if attempt < max_retries => {
+                println!(
+                    "[StreamProxy] Request failed (attempt {}/{}): {}",
+                    attempt, max_retries, e
+                );
+                force_refresh = true;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000 * attempt)).await;
     }
-    let client = client_builder.build().map_err(|e| e.to_string())?;
-
-    let mut request = client.get(&url);
-
-    for (key, value) in headers {
-        request = request.header(&key, &value);
-    }
-
-    let response = request.send().await.map_err(|e| e.to_string())?;
-    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
-    Ok(bytes.to_vec())
 }
 
 lazy_static::lazy_static! {
     static ref DNS_CACHE: Mutex<HashMap<String, IpAddr>> = Mutex::new(HashMap::new());
 }
 
-async fn resolve_host(host: &str) -> Option<IpAddr> {
-    {
+pub(crate) async fn resolve_host(host: &str, force_refresh: bool) -> Option<IpAddr> {
+    if !force_refresh {
         let cache = DNS_CACHE.lock().unwrap();
         if let Some(ip) = cache.get(host) {
             return Some(*ip);
@@ -798,50 +828,81 @@ async fn proxy_request(
     let url_obj = reqwest::Url::parse(&url).map_err(|e| e.to_string())?;
     let host = url_obj.host_str().ok_or("No host in URL")?;
 
-    let mut client_builder = reqwest::Client::builder();
+    let max_retries = 3;
+    let mut attempt = 0;
+    let mut force_refresh = false;
 
-    if let Some(ip) = resolve_host(host).await {
-        let port = url_obj.port_or_known_default().unwrap_or(443);
-        let addr = SocketAddr::new(ip, port);
-        client_builder = client_builder.resolve(host, addr);
+    loop {
+        attempt += 1;
+
+        let mut client_builder =
+            reqwest::Client::builder().timeout(std::time::Duration::from_secs(30));
+
+        if let Some(ip) = resolve_host(host, force_refresh).await {
+            let port = url_obj.port_or_known_default().unwrap_or(443);
+            let addr = SocketAddr::new(ip, port);
+            client_builder = client_builder.resolve(host, addr);
+        }
+
+        let client = client_builder.build().map_err(|e| e.to_string())?;
+
+        let mut req_builder = match method.as_str() {
+            "GET" => client.get(&url),
+            "POST" => client.post(&url),
+            "PUT" => client.put(&url),
+            "DELETE" => client.delete(&url),
+            _ => client.get(&url),
+        };
+
+        for (k, v) in &headers {
+            req_builder = req_builder.header(k, v);
+        }
+
+        if let Some(b) = &body {
+            req_builder = req_builder.body(b.clone());
+        }
+
+        match req_builder.send().await {
+            Ok(res) => {
+                let status = res.status().as_u16();
+                let res_headers: std::collections::HashMap<String, String> = res
+                    .headers()
+                    .iter()
+                    .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+                    .collect();
+
+                match res.text().await {
+                    Ok(text) => {
+                        let response_data = serde_json::json!({
+                            "ok": status >= 200 && status < 300,
+                            "status": status,
+                            "headers": res_headers,
+                            "data": text
+                        });
+                        return Ok(response_data.to_string());
+                    }
+                    Err(e) if attempt < max_retries => {
+                        println!(
+                            "[ProxyRequest] Error reading text (attempt {}/{}): {}",
+                            attempt, max_retries, e
+                        );
+                        force_refresh = true;
+                    }
+                    Err(e) => return Err(e.to_string()),
+                }
+            }
+            Err(e) if attempt < max_retries => {
+                println!(
+                    "[ProxyRequest] Request failed (attempt {}/{}): {}",
+                    attempt, max_retries, e
+                );
+                force_refresh = true;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000 * attempt)).await;
     }
-
-    let client = client_builder.build().map_err(|e| e.to_string())?;
-
-    let mut req_builder = match method.as_str() {
-        "GET" => client.get(&url),
-        "POST" => client.post(&url),
-        "PUT" => client.put(&url),
-        "DELETE" => client.delete(&url),
-        _ => client.get(&url),
-    };
-
-    for (k, v) in headers {
-        req_builder = req_builder.header(&k, &v);
-    }
-
-    if let Some(b) = body {
-        req_builder = req_builder.body(b);
-    }
-
-    let res = req_builder.send().await.map_err(|e| e.to_string())?;
-    let status = res.status().as_u16();
-    let res_headers: std::collections::HashMap<String, String> = res
-        .headers()
-        .iter()
-        .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
-        .collect();
-
-    let text = res.text().await.map_err(|e| e.to_string())?;
-
-    let response_data = serde_json::json!({
-        "ok": status >= 200 && status < 300,
-        "status": status,
-        "headers": res_headers,
-        "data": text
-    });
-
-    Ok(response_data.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -918,7 +979,8 @@ pub fn run() {
             // Casting
             casting::cast_discover,
             casting::cast_load_media,
-            casting::cast_control
+            casting::cast_control,
+            stream_server::get_proxy_status
         ])
         .setup(|app| {
             // Initialize the stream server
