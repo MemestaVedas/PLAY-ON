@@ -203,34 +203,7 @@ export default function StreamPlayer({
     const [isCastDialogOpen, setIsCastDialogOpen] = useState(false);
     const [isCastingTo, setIsCastingTo] = useState<string | null>(null);
     const [castingStatus, setCastingStatus] = useState<string>('Ready');
-    const [castingLogs, setCastingLogs] = useState<string[]>([]);
 
-    const addCastingLog = useCallback((msg: string) => {
-        console.log(`[CastLog] ${msg}`);
-        // Only add if last log is different
-        setCastingLogs(prev => {
-            if (prev[0] === msg) return prev;
-            return [msg, ...prev].slice(0, 15);
-        });
-    }, []);
-
-    useEffect(() => {
-        if (!isCastingTo) return;
-
-        const checkStatus = async () => {
-            try {
-                const status = await invoke<string>('get_proxy_status');
-                addCastingLog(`Proxy Live: ${status}`);
-            } catch (err) {
-                addCastingLog(`Proxy Error: ${err}`);
-            }
-        };
-
-        const interval = setInterval(checkStatus, 3000);
-        checkStatus();
-
-        return () => clearInterval(interval);
-    }, [isCastingTo, addCastingLog]);
 
     // Get current source
     const currentSource = sources[selectedSourceIdx] || sources[0];
@@ -806,7 +779,7 @@ export default function StreamPlayer({
                                         onClick={() => {
                                             setShowAutoplayOverlay(false);
                                             if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
-                                            onNext();
+                                            onNext?.();
                                         }}
                                         className="px-6 py-2 rounded-full bg-lavender-mist text-space-dark hover:bg-lavender-light transition-colors font-medium"
                                     >
@@ -904,7 +877,6 @@ export default function StreamPlayer({
                             onClick={() => {
                                 setIsCastingTo(null);
                                 setCastingStatus('Ready');
-                                setCastingLogs([]);
                                 videoRef.current?.play().catch(console.error);
                             }}
                             className="px-4 py-1.5 rounded-full border border-[#8ab4f8]/30 text-[#8ab4f8] hover:bg-[#8ab4f8]/10 text-[13px] font-medium transition-colors"
@@ -1204,13 +1176,9 @@ export default function StreamPlayer({
                 onConnect={(deviceIp, deviceName) => {
                     console.log("Connecting to", deviceName, "at", deviceIp);
                     setCastingStatus('Initializing...');
-                    setCastingLogs([]);
-                    addCastingLog(`Device: ${deviceName} (${deviceIp})`);
                     setIsCastingTo(deviceName);
 
                     const ct = currentSource.isM3U8 ? 'application/x-mpegURL' : 'video/mp4';
-                    addCastingLog(`Media Type: ${ct}`);
-                    addCastingLog(`Original URL: ${currentSource.url.substring(0, 50)}...`);
 
                     setCastingStatus('Sending LOAD command...');
                     return invoke<string>('cast_load_media', {
@@ -1225,15 +1193,12 @@ export default function StreamPlayer({
                         })) : null
                     }).then((proxyUrl) => {
                         console.log("Casting started to", deviceName, "Proxy URL:", proxyUrl);
-                        addCastingLog("LOAD command sent successfully");
-                        addCastingLog(`Proxy URL: ${proxyUrl}`);
                         setCastingStatus('Waiting for TV to fetch media...');
                         if (videoRef.current) {
                             videoRef.current.pause();
                         }
                     }).catch(err => {
                         console.error("Casting error:", err);
-                        addCastingLog(`Error: ${err}`);
                         setCastingStatus('Failed');
                         // Stay in casting mode for a bit to show error if we want, or reset
                         setTimeout(() => setIsCastingTo(null), 3000);

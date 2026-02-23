@@ -1,6 +1,6 @@
 [package]
 name = "play-on"
-version = "1.0.0"
+version = "1.0.1"
 description = "Local Anime & Manga Player along with tracker"
 authors = ["MemestaVedas"]
 edition = "2021"
