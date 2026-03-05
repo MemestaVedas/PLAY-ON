@@ -192,17 +192,98 @@ import { AnimeExtensionManager } from './services/AnimeExtensionManager';
 import { useDiscordRPC } from './hooks/useDiscordRPC';
 import { DeepLinkHandler } from './components/DeepLinkHandler';
 
-function GlobalHooks() {
+function GlobalHooks({ isVisible }: { isVisible: boolean }) {
   const { settings } = useSettings();
-  useDiscordRPC(settings.discordRpcEnabled, settings.discordPrivacyLevel);
+  useDiscordRPC(settings.discordRpcEnabled, settings.discordPrivacyLevel, !isVisible);
   return null;
+}
+import { useWindowVisibility } from './hooks/useWindowVisibility';
+
+function AppContent() {
+  const isVisible = useWindowVisibility();
+
+  useEffect(() => {
+    if (!isVisible) {
+      document.body.classList.add('app-paused');
+    } else {
+      document.body.classList.remove('app-paused');
+    }
+  }, [isVisible]);
+
+  return (
+    <div style={!isVisible ? { display: 'none' } : undefined}>
+      <CursorSpotlight />
+      <GlobalHooks isVisible={isVisible} />
+      <BrowserRouter>
+
+        <DeepLinkHandler />
+        {/* We wrap the entire route tree. When hidden, we render nothing inside to save resources, 
+            or we can just rely on the display:none above which is very effective for GPU,
+            but unmounting children is even better for CPU. */}
+        {isVisible ? (
+          <Routes>
+            {/* Root route - checks if onboarding needed */}
+            <Route path="/" element={<ProtectedRoute />} />
+
+            {/* Full-screen Manga Reader (outside MainLayout) */}
+            <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
+
+            {/* Full-screen Local File Reader (outside MainLayout) */}
+            <Route path="/read-local" element={<LocalFileReader />} />
+
+            {/* Main App Layout */}
+            <Route element={<MainLayout />}>
+              <Route path="/home" element={<Home />} />
+              <Route path="/my-list" element={<UnifiedList />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/anime-list" element={<AnimeList />} />
+              <Route path="/anime-browse" element={<AnimeBrowse />} />
+              <Route path="/manga-list" element={<MangaList />} />
+              <Route path="/local-anime" element={<LocalAnimeList />} />
+              <Route path="/local-manga" element={<LocalMangaList />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/statistics" element={<Statistics />} />
+
+              {/* Dynamic route for anime details */}
+              <Route path="/anime/:id" element={<AnimeDetails />} />
+              {/* Dynamic route for manga details */}
+              <Route path="/manga-details/:id" element={<MangaDetails />} />
+              <Route path="/counter-demo" element={<CounterDemo />} />
+
+              {/* Settings Route */}
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/user/:username" element={<UserProfile />} />
+
+              {/* Local Folder Route */}
+              <Route path="/local/:folderPath" element={<LocalFolder />} />
+
+              {/* Anime Source Routes */}
+              <Route path="/anime-source/:sourceId/:animeId" element={<AnimeSourceDetails />} />
+
+              {/* Manga Source Routes */}
+              <Route path="/manga-browse" element={<MangaBrowse />} />
+              <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
+            </Route>
+
+            {/* Full-screen Anime Watch (outside MainLayout) */}
+            <Route path="/watch/:sourceId/:episodeId" element={<AnimeWatch />} />
+
+            {/* Full-screen Web Browser for Anime (outside MainLayout) */}
+            <Route path="/browser" element={<WebBrowser />} />
+          </Routes>
+        ) : (
+          <div className="hidden-state-placeholder" />
+        )}
+      </BrowserRouter>
+    </div>
+  );
 }
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   useOfflineSync();
-
-
 
   // Startup cache refresh (v0.3.0) and extension initialization
   useEffect(() => {
@@ -259,13 +340,6 @@ function App() {
     checkStartMinimizedSetting();
   }, []);
 
-  useEffect(() => {
-    // DEV: Clear onboarding status to force onboarding every time
-    // Remove this line when ready for production!
-    // localStorage.removeItem('onboardingCompleted');
-    // localStorage.removeItem('username'); // Commented out to persist login for now
-  }, []);
-
   return (
     <>
       {/* Splash Screen - shows on startup */}
@@ -284,65 +358,7 @@ function App() {
                       <NowPlayingProvider>
                         <SearchBarProvider>
                           <DynamicThemeProvider>
-                            <CursorSpotlight />
-                            <GlobalHooks />
-                            <BrowserRouter>
-                              <DeepLinkHandler />
-                              <Routes>
-                                {/* Root route - checks if onboarding needed */}
-                                <Route path="/" element={<ProtectedRoute />} />
-
-                                {/* Full-screen Manga Reader (outside MainLayout) */}
-                                <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
-
-                                {/* Full-screen Local File Reader (outside MainLayout) */}
-                                <Route path="/read-local" element={<LocalFileReader />} />
-
-
-
-                                {/* Main App Layout */}
-                                <Route element={<MainLayout />}>
-                                  <Route path="/home" element={<Home />} />
-                                  <Route path="/my-list" element={<UnifiedList />} />
-                                  <Route path="/calendar" element={<Calendar />} />
-                                  <Route path="/anime-list" element={<AnimeList />} />
-                                  <Route path="/anime-browse" element={<AnimeBrowse />} />
-                                  <Route path="/manga-list" element={<MangaList />} />
-                                  <Route path="/local-anime" element={<LocalAnimeList />} />
-                                  <Route path="/local-manga" element={<LocalMangaList />} />
-                                  <Route path="/history" element={<History />} />
-                                  <Route path="/notifications" element={<Notifications />} />
-                                  <Route path="/community" element={<Community />} />
-                                  <Route path="/statistics" element={<Statistics />} />
-
-                                  {/* Dynamic route for anime details */}
-                                  <Route path="/anime/:id" element={<AnimeDetails />} />
-                                  {/* Dynamic route for manga details */}
-                                  <Route path="/manga-details/:id" element={<MangaDetails />} />
-                                  <Route path="/counter-demo" element={<CounterDemo />} />
-
-                                  {/* Settings Route */}
-                                  <Route path="/settings" element={<Settings />} />
-                                  <Route path="/user/:username" element={<UserProfile />} />
-
-                                  {/* Local Folder Route */}
-                                  <Route path="/local/:folderPath" element={<LocalFolder />} />
-
-                                  {/* Anime Source Routes */}
-                                  <Route path="/anime-source/:sourceId/:animeId" element={<AnimeSourceDetails />} />
-
-                                  {/* Manga Source Routes */}
-                                  <Route path="/manga-browse" element={<MangaBrowse />} />
-                                  <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
-                                </Route>
-
-                                {/* Full-screen Anime Watch (outside MainLayout) */}
-                                <Route path="/watch/:sourceId/:episodeId" element={<AnimeWatch />} />
-
-                                {/* Full-screen Web Browser for Anime (outside MainLayout) */}
-                                <Route path="/browser" element={<WebBrowser />} />
-                              </Routes>
-                            </BrowserRouter>
+                            <AppContent />
                           </DynamicThemeProvider>
                         </SearchBarProvider>
                       </NowPlayingProvider>

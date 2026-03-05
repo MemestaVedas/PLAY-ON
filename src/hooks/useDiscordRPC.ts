@@ -95,7 +95,7 @@ interface LastDetection {
     genres?: string[];
 }
 
-export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'minimal' | 'hidden' = 'full') {
+export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'minimal' | 'hidden' = 'full', paused: boolean = false) {
     const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const lastDetectionRef = useRef<LastDetection | null>(null);
     const notDetectedCountRef = useRef<number>(0);
@@ -113,11 +113,15 @@ export function useDiscordRPC(enabled: boolean = true, privacyLevel: 'full' | 'm
 
     // Function to check for media and update Discord
     const checkAndUpdateActivity = useCallback(async () => {
+        // Skip polling if paused
+        if (paused) return;
+
         // Skip anime detection when manga is actively being read
         if (isMangaReading()) {
             console.log('[useDiscordRPC] Skipping - manga reading is active');
             return;
         }
+
 
         try {
             // Run detection to get window info (we need this even for manual sessions to parse episode)

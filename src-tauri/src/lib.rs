@@ -1013,7 +1013,9 @@ pub fn run() {
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
+                            let _ = window.unminimize();
                             let _ = window.set_focus();
+                            let _ = window.emit("window-visibility", "visible");
                         }
                     }
                     "quit" => {
@@ -1031,7 +1033,9 @@ pub fn run() {
                     {
                         if let Some(window) = tray.app_handle().get_webview_window("main") {
                             let _ = window.show();
+                            let _ = window.unminimize();
                             let _ = window.set_focus();
+                            let _ = window.emit("window-visibility", "visible");
                         }
                     }
                 })
@@ -1054,6 +1058,20 @@ pub fn run() {
             }
 
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Resized(_) = event {
+                // If the window is minimized (its height/width might be 0, or we can use is_minimized)
+                if let Ok(minimized) = window.is_minimized() {
+                    if minimized {
+                        let _ = window.emit("window-visibility", "hidden");
+                    } else if let Ok(visible) = window.is_visible() {
+                        if visible {
+                            let _ = window.emit("window-visibility", "visible");
+                        }
+                    }
+                }
+            }
         })
         .register_uri_scheme_protocol("manga", |_app, request| {
             let url = request.uri().to_string();

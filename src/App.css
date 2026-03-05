@@ -120,6 +120,11 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+body.app-paused {
+  animation-play-state: paused !important;
+}
+
+
 /* Global Noise Texture Overlay - Enhances glassmorphism */
 body::after {
   content: "";
@@ -555,4 +560,20 @@ a:hover svg {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* 
+ * Mitigate glassmorphism performance issues:
+ * Globally disable backdrop-filter as it heavily impacts GPU performance.
+ * The UI will gracefully fall back to semi-transparent backgrounds without the GPU tax.
+ */
+*,
+::before,
+::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
