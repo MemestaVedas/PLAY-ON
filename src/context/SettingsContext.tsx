@@ -27,6 +27,7 @@ export interface Settings {
     // Player
     autoPlay: boolean;
     subtitleLanguage: string;
+    defaultAudioLanguage: 'sub' | 'dub';
 
     // Integrations
     discordRpcEnabled: boolean;
@@ -75,6 +76,7 @@ const DEFAULT_SETTINGS: Settings = {
     // Player
     autoPlay: true,
     subtitleLanguage: 'English',
+    defaultAudioLanguage: 'sub',
 
     // Integrations
     discordRpcEnabled: true,

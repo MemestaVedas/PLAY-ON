@@ -21,6 +21,7 @@ import { sendDesktopNotification } from '../services/notification';
 import { getSkipTimes, SkipTime } from '../services/skipTimes';
 import { fetchAnimeDetails, searchAnime } from '../api/anilistClient';
 import { trackAnimeSession } from '../services/StatsService';
+import { useSettings } from '../context/SettingsContext';
 import './AnimeWatch.css';
 
 function AnimeWatch() {
@@ -48,9 +49,12 @@ function AnimeWatch() {
     const [localEntry, setLocalEntry] = useState<LocalAnimeEntry | null>(null);
     const [refreshTrigger] = useState(0);
 
+    const { settings } = useSettings();
+
     const dubPref = useMemo(() => {
-        return localEntry?.subOrDubPref || 'sub';
-    }, [localEntry]);
+        // Priority: 1. Per-anime preference, 2. Global setting, 3. Default to 'sub'
+        return localEntry?.subOrDubPref || settings.defaultAudioLanguage || 'sub';
+    }, [localEntry, settings.defaultAudioLanguage]);
 
     const source = useMemo(() => {
         return sourceId ? AnimeExtensionManager.getSource(sourceId) : null;

@@ -162,6 +162,13 @@ export interface AnimeSource {
      * @param server - Optional server preference
      * @param dub - Whether to favor dub sources
      * @returns Promise resolving to episode sources
+     * 
+     * Implementation Notes for Extension Developers:
+     * - Try server-based selection first (most reliable for multi-server sources):
+     *   Fetch /ajax/episode/servers, parse for 'dub'/'sub' sections
+     * - Fallback to parameter-based (for simpler APIs):
+     *   Append ?dub=1 or ?language=dub to API calls
+     * - If dub unavailable, return sub sources (player will show warning)
      */
     getEpisodeSources(episodeId: string, server?: string, dub?: boolean): Promise<EpisodeSources>;
 
@@ -171,6 +178,83 @@ export interface AnimeSource {
      * @returns Promise resolving to an array of servers
      */
     getEpisodeServers?(episodeId: string): Promise<any[]>;
+}
+
+// ============================================================================
+// Dub Support Helpers
+// ============================================================================
+
+export interface ServerInfo {
+    id: string;
+    name: string;
+    category: 'sub' | 'dub' | 'raw';
+}
+
+/**
+ * Select the best server based on dub preference.
+ * Priority: dub (if preferred) → sub → raw → any
+ */
+export function selectServerByCategory(
+    servers: ServerInfo[],
+    preferDub: boolean
+): string | null {
+    if (preferDub) {
+        const dubServer = servers.find(s => s.category === 'dub');
+        if (dubServer) return dubServer.id;
+    }
+
+    const subServer = servers.find(s => s.category === 'sub');
+    if (subServer) return subServer.id;
+
+    const rawServer = servers.find(s => s.category === 'raw');
+    if (rawServer) return rawServer.id;
+
+    return servers[0]?.id || null;
+}
+
+/**
+ * Parse server HTML to extract server information.
+ * Looks for data-name, data-category, or class-based indicators.
+ */
+export function parseServersFromHtml(html: string): ServerInfo[] {
+    const servers: ServerInfo[] = [];
+
+    // Match data-name="dub" or data-name="sub" patterns
+    const serverMatches = html.matchAll(/data-id="(\d+)"[^>]*data-name="(dub|sub|raw)"[^>]*>/gi);
+    for (const match of serverMatches) {
+        servers.push({
+            id: match[1],
+            name: match[2].toUpperCase(),
+            category: match[2].toLowerCase() as 'sub' | 'dub' | 'raw'
+        });
+    }
+
+    // Alternative: category="dub" pattern
+    if (servers.length === 0) {
+        const altMatches = html.matchAll(/data-id="(\d+)"[^>]*category="(dub|sub|raw)"[^>]*>/gi);
+        for (const match of altMatches) {
+            servers.push({
+                id: match[1],
+                name: match[2].toUpperCase(),
+                category: match[2].toLowerCase() as 'sub' | 'dub' | 'raw'
+            });
+        }
+    }
+
+    return servers;
+}
+
+/**
+ * Build API URL with dub parameter for parameter-based sources.
+ */
+export function buildUrlWithDubParam(
+    baseUrl: string,
+    episodeId: string,
+    dub: boolean,
+    paramName: string = 'dub'
+): string {
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}/${episodeId}${separator}${paramName}=${dub ? '1' : '0'}`;
 }
 
 /**

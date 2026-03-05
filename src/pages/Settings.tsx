@@ -240,6 +240,17 @@ function GeneralSettings() {
                         onChange={(value) => updateSetting('defaultSearchMode', value as 'anime' | 'manga')}
                     />
                 </SettingRow>
+
+                <SettingRow label="Default Audio Language" description="Preferred audio language for anime playback">
+                    <Dropdown
+                        value={settings.defaultAudioLanguage}
+                        options={[
+                            { value: 'sub', label: 'Subtitled (Japanese)' },
+                            { value: 'dub', label: 'Dubbed (English)' },
+                        ]}
+                        onChange={(value) => updateSetting('defaultAudioLanguage', value as 'sub' | 'dub')}
+                    />
+                </SettingRow>
             </div>
 
             {/* Window Behavior Section */}
