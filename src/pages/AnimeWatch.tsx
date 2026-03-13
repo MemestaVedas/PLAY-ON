@@ -145,7 +145,7 @@ function AnimeWatch() {
                 // --- HiAnime Dub Server Discovery ---
                 // If the user wants dub and it's HiAnime, try to find a DUB server explicitly
                 // because old extensions might default to SUB server.
-                if (source.id === 'hianime' && isDub) {
+                if ((source.id === 'hianime' || source.id === 'hianimeto') && isDub) {
                     console.log('[AnimeWatch] HiAnime Dub requested. Attempting to discover a DUB server...');
                     try {
                         const serversResponse = await invoke<string>('proxy_request', {

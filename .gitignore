@@ -26,7 +26,7 @@ session_summary.md
 *.njsproj
 *.sln
 *.sw?
-
+PLAY-ON!.code-workspace
 # Sensitive config files (contains API tokens)
 src/config/
 .env

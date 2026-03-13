@@ -109,7 +109,7 @@ function AnimeSourceDetails() {
 
                 // --- HiAnime Scan Logic ---
                 let finalEpisodes = episodesData;
-                if (source.id === 'hianime' && dubPref === 'dub') {
+                if ((source.id === 'hianime' || source.id === 'hianimeto') && dubPref === 'dub') {
                     console.log('[HiAnimeScan] Triggering scan for dubs...');
                     try {
                         // We use the totalEpisodes or try to find dub count in descriptions

@@ -122,6 +122,43 @@ export default function ExtensionsSettings() {
         }
     }, [activeTab]);
 
+    // Refresh repository list and pull latest index data
+    const handleRefreshRepos = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            if (activeTab === 'manga') {
+                const latestRepos = ExtensionRepository.getRepos();
+                setRepos(latestRepos);
+
+                if (latestRepos.length > 0) {
+                    const results = await ExtensionRepository.fetchAllExtensions();
+                    setExtensions(results);
+                } else {
+                    setExtensions([]);
+                }
+            } else {
+                const latestRepos = AnimeExtensionRepository.getRepos();
+                setAnimeRepos(latestRepos);
+
+                if (latestRepos.length > 0) {
+                    const results = await AnimeExtensionRepository.fetchAllExtensions();
+                    setAnimeExtensions(results);
+                } else {
+                    setAnimeExtensions([]);
+                }
+            }
+
+            toast.success('Repositories refreshed');
+        } catch (e) {
+            setError(`Failed to refresh repositories: ${e}`);
+            toast.error(`Failed to refresh repositories: ${e}`);
+        } finally {
+            setLoading(false);
+        }
+    }, [activeTab, toast]);
+
     // Auto-fetch when switching to browse tab
     useEffect(() => {
         if (subTab === 'browse') {
@@ -542,14 +579,25 @@ export default function ExtensionsSettings() {
                 <div className="setting-group">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3 className="setting-group-title" style={{ margin: 0 }}>Repositories ({currentRepos.length})</h3>
-                        <button
-                            className="setting-button primary"
-                            onClick={() => setIsAddRepoOpen(true)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                            <PlusIcon size={14} />
-                            Add Repository
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                                className="setting-button"
+                                onClick={handleRefreshRepos}
+                                disabled={loading}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <RefreshIcon size={14} />
+                                {loading ? 'Refreshing...' : 'Refresh'}
+                            </button>
+                            <button
+                                className="setting-button primary"
+                                onClick={() => setIsAddRepoOpen(true)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                <PlusIcon size={14} />
+                                Add Repository
+                            </button>
+                        </div>
                     </div>
 
                     {currentRepos.length === 0 ? (
