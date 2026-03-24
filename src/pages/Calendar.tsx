@@ -1,16 +1,24 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
 import { useNavigate } from 'react-router-dom';
-import { SEASONAL_ANIME_QUERY } from '../api/anilistClient';
+import { SEASONAL_ANIME_QUERY, updateMediaStatus } from '../api/anilistClient';
 import AnimeCard from '../components/ui/AnimeCard';
 import Loading from '../components/ui/Loading';
 import SeasonPill from '../components/ui/SeasonPill';
+import { useAuthContext } from '../context/AuthContext';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronDown,
     AlertTriangleIcon,
-    CloudIcon
+    CloudIcon,
+    PlusIcon,
+    PlayIcon,
+    CheckIcon,
+    PauseIcon,
+    XIcon,
+    ClipboardIcon,
+    RotateCwIcon
 } from '../components/ui/Icons';
 
 // Season types matching AniList API
@@ -29,6 +37,15 @@ const SORT_OPTIONS: { label: string; value: SortOption }[] = [
     { label: 'Highest Rated', value: 'SCORE_DESC' },
     { label: 'Title (A-Z)', value: 'TITLE_ROMAJI' },
 ];
+
+const STATUS_OPTIONS = [
+    { value: 'CURRENT', label: 'Watching', icon: <PlayIcon size={14} /> },
+    { value: 'COMPLETED', label: 'Completed', icon: <CheckIcon size={14} /> },
+    { value: 'PAUSED', label: 'Paused', icon: <PauseIcon size={14} /> },
+    { value: 'DROPPED', label: 'Dropped', icon: <XIcon size={14} /> },
+    { value: 'PLANNING', label: 'Planning', icon: <ClipboardIcon size={14} /> },
+    { value: 'REPEATING', label: 'Rewatching', icon: <RotateCwIcon size={14} /> },
+] as const;
 
 // Get current season based on month
 function getCurrentSeason(): Season {
@@ -119,12 +136,16 @@ function CustomDropdown<T extends string | number>({
 
 function Calendar() {
     const navigate = useNavigate();
+    const { isAuthenticated } = useAuthContext();
     const currentYear = new Date().getFullYear();
 
     // State
     const [selectedSeason, setSelectedSeason] = useState<Season>(getCurrentSeason());
     const [selectedYear, setSelectedYear] = useState<number>(currentYear);
     const [sortBy, setSortBy] = useState<SortOption>('POPULARITY_DESC');
+    const [openStatusMenuId, setOpenStatusMenuId] = useState<number | null>(null);
+    const [updatingAnimeId, setUpdatingAnimeId] = useState<number | null>(null);
+    const [localStatuses, setLocalStatuses] = useState<Record<number, string>>({});
 
     // Generate year options (current year - 10 to current year + 1)
     const yearOptions = useMemo(() => {
@@ -148,6 +169,51 @@ function Calendar() {
     });
 
     const animeList = data?.Page?.media || [];
+
+    useEffect(() => {
+        const onMouseDown = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest('[data-calendar-status-menu="true"]')) {
+                setOpenStatusMenuId(null);
+            }
+        };
+
+        document.addEventListener('mousedown', onMouseDown);
+        return () => document.removeEventListener('mousedown', onMouseDown);
+    }, []);
+
+    useEffect(() => {
+        if (!animeList.length) return;
+
+        setLocalStatuses((prev) => {
+            const next = { ...prev };
+            animeList.forEach((anime: any) => {
+                if (anime.mediaListEntry?.status && !next[anime.id]) {
+                    next[anime.id] = anime.mediaListEntry.status;
+                }
+            });
+            return next;
+        });
+    }, [animeList]);
+
+    const getStatusForAnime = (anime: any) => {
+        return localStatuses[anime.id] || anime.mediaListEntry?.status || null;
+    };
+
+    const handleQuickStatusChange = async (animeId: number, status: string) => {
+        if (updatingAnimeId === animeId) return;
+
+        setUpdatingAnimeId(animeId);
+        try {
+            await updateMediaStatus(animeId, status);
+            setLocalStatuses((prev) => ({ ...prev, [animeId]: status }));
+            setOpenStatusMenuId(null);
+        } catch (err) {
+            console.error('Failed to update status from calendar:', err);
+        } finally {
+            setUpdatingAnimeId(null);
+        }
+    };
 
     return (
         <div className="min-h-full pb-8" style={{ maxWidth: '1400px', margin: '0 auto' }}>
@@ -229,11 +295,66 @@ function Calendar() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.03 }}
+                                className="relative"
                             >
                                 <AnimeCard
                                     anime={anime}
                                     onClick={() => navigate(`/anime/${anime.id}`)}
                                 />
+
+                                {isAuthenticated && (
+                                    <div
+                                        className="absolute bottom-3 right-3 z-40"
+                                        data-calendar-status-menu="true"
+                                        onClick={(event) => event.stopPropagation()}
+                                    >
+                                        <motion.button
+                                            whileHover={{ scale: 1.08 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className="w-9 h-9 rounded-full bg-black/70 text-white border border-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg"
+                                            aria-label="Add to list"
+                                            title="Add to list"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                setOpenStatusMenuId((prev) => prev === anime.id ? null : anime.id);
+                                            }}
+                                        >
+                                            <PlusIcon size={16} />
+                                        </motion.button>
+
+                                        <AnimatePresence>
+                                            {openStatusMenuId === anime.id && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                                                    transition={{ duration: 0.16 }}
+                                                    className="absolute bottom-11 right-0 w-44 rounded-xl border border-white/15 bg-[#14141d]/95 backdrop-blur-xl shadow-2xl p-1.5"
+                                                >
+                                                    {STATUS_OPTIONS.map((option) => {
+                                                        const currentStatus = getStatusForAnime(anime);
+                                                        const isSelected = currentStatus === option.value;
+
+                                                        return (
+                                                            <button
+                                                                key={option.value}
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    handleQuickStatusChange(anime.id, option.value);
+                                                                }}
+                                                                disabled={updatingAnimeId === anime.id}
+                                                                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm transition-colors ${isSelected ? 'bg-white/15 text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'} ${updatingAnimeId === anime.id ? 'opacity-60 cursor-wait' : ''}`}
+                                                            >
+                                                                <span>{option.icon}</span>
+                                                                <span>{option.label}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
                             </motion.div>
                         ))}
                     </motion.div>

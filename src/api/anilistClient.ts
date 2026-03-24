@@ -339,6 +339,9 @@ query ($season: MediaSeason, $seasonYear: Int, $page: Int, $perPage: Int, $sort:
         episode
         timeUntilAiring
       }
+      mediaListEntry {
+        status
+      }
     }
   }
 }
