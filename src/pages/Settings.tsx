@@ -56,6 +56,16 @@ const DEFAULT_PAGES = [
     { value: 'manga-list', label: 'Manga List' },
 ];
 
+const THEME_FAMILY_OPTIONS = [
+    { value: 'classic', label: 'Classic (Existing Themes)' },
+    { value: 'material-you-3', label: 'Material You 3' },
+];
+
+const DYNAMIC_COLOR_SOURCE_OPTIONS = [
+    { value: 'manual', label: 'Manual Seed Color' },
+    { value: 'cover-art', label: 'Current Cover Art (Dynamic)' },
+];
+
 // ============================================================================
 // COMPONENT: Toggle Switch
 // ============================================================================
@@ -167,7 +177,19 @@ const THEME_PREVIEWS: Record<string, { bg: string; accent: string; text: string;
 
 function GeneralSettings() {
     const { settings, updateSetting } = useSettings();
-    const { theme, setTheme, availableThemes } = useTheme();
+    const {
+        theme,
+        setTheme,
+        availableThemes,
+        themeFamily,
+        dynamicColorEnabled,
+        dynamicColorSource,
+        seedColor,
+        setThemeFamily,
+        setDynamicColorEnabled,
+        setDynamicColorSource,
+        setSeedColor,
+    } = useTheme();
 
     return (
         <div className="settings-section">
@@ -179,6 +201,59 @@ function GeneralSettings() {
             {/* Appearance Section */}
             <div className="setting-group">
                 <h3 className="setting-group-title">Appearance</h3>
+
+                <SettingRow
+                    label="Theme Engine"
+                    description="Choose between classic handcrafted themes and Material runtime-generated themes"
+                >
+                    <Dropdown
+                        value={themeFamily}
+                        options={THEME_FAMILY_OPTIONS}
+                        onChange={(value) => setThemeFamily(value as 'classic' | 'material-you-3')}
+                    />
+                </SettingRow>
+
+                <SettingRow
+                    label="Runtime Dynamic Colors"
+                    description="When enabled, Material theme engines generate opaque runtime tokens from your selected seed source"
+                >
+                    <Toggle
+                        checked={dynamicColorEnabled}
+                        onChange={setDynamicColorEnabled}
+                    />
+                </SettingRow>
+
+                <SettingRow
+                    label="Dynamic Source"
+                    description="Manual seed is stable across sessions. Cover art adapts to the currently focused media image."
+                >
+                    <Dropdown
+                        value={dynamicColorSource}
+                        options={DYNAMIC_COLOR_SOURCE_OPTIONS}
+                        disabled={!dynamicColorEnabled}
+                        onChange={(value) => setDynamicColorSource(value as 'manual' | 'cover-art')}
+                    />
+                </SettingRow>
+
+                <SettingRow
+                    label="Seed Color"
+                    description="Base source color used by Material token generation. Still used as fallback when cover extraction fails."
+                >
+                    <input
+                        type="color"
+                        value={seedColor}
+                        onChange={(event) => setSeedColor(event.target.value)}
+                        style={{
+                            width: '44px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--theme-border-subtle)',
+                            background: 'transparent',
+                            padding: '2px',
+                            cursor: 'pointer',
+                        }}
+                    />
+                </SettingRow>
 
                 <div className="theme-grid">
                     {availableThemes.map((t) => {

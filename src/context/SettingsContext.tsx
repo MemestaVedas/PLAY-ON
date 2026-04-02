@@ -154,17 +154,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setIsLoaded(true);
     }, []);
 
-    // Apply theme when settings change
-    useEffect(() => {
-        if (!isLoaded) return;
-
-        // Apply theme to document
-        // FORCED DARK MODE: User requested removal of white theme option.
-        document.documentElement.setAttribute('data-theme', 'dark');
-
-        // No longer manually setting properties here; handled by CSS variables in App.css based on [data-theme]
-    }, [settings.theme, isLoaded]);
-
     // Save to localStorage when settings change
     useEffect(() => {
         if (!isLoaded) return;

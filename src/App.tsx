@@ -358,21 +358,21 @@ function App() {
       <ErrorBoundary>
         <ApolloProvider client={apolloClient}>
           <ToastProvider>
-            <ThemeProvider>
-              <SettingsProvider>
-                <NotificationProvider>
-                  <LocalMediaProvider>
-                    <NowPlayingProvider>
-                      <SearchBarProvider>
-                        <DynamicThemeProvider>
+            <SettingsProvider>
+              <NotificationProvider>
+                <LocalMediaProvider>
+                  <NowPlayingProvider>
+                    <SearchBarProvider>
+                      <DynamicThemeProvider>
+                        <ThemeProvider>
                           <AppContent />
-                        </DynamicThemeProvider>
-                      </SearchBarProvider>
-                    </NowPlayingProvider>
-                  </LocalMediaProvider>
-                </NotificationProvider>
-              </SettingsProvider>
-            </ThemeProvider>
+                        </ThemeProvider>
+                      </DynamicThemeProvider>
+                    </SearchBarProvider>
+                  </NowPlayingProvider>
+                </LocalMediaProvider>
+              </NotificationProvider>
+            </SettingsProvider>
             <ToastContainer />
             <OfflineIndicator />
           </ToastProvider>

@@ -63,6 +63,15 @@
   --color-text-muted: var(--theme-text-muted);
   --color-text-highlight: var(--theme-text-highlight);
 
+  /* Legacy accent aliases used by older screens */
+  --color-lavender: var(--theme-accent-primary);
+  --color-lavender-mist: var(--theme-accent-primary);
+  --color-sky-blue: var(--theme-accent-secondary);
+  --color-soft-peach: var(--theme-accent-tertiary);
+  --color-mint-tonic: var(--theme-accent-success);
+  --color-star-glow: var(--theme-accent-warning);
+  --color-zen-accent: var(--theme-accent-primary);
+
   /* Border colors */
   --color-border-subtle: var(--theme-border-subtle);
   --color-border-highlight: var(--theme-border-highlight);
