@@ -304,8 +304,9 @@ export default function StreamPlayer({
     const [qualityLevels, setQualityLevels] = useState<QualityLevel[]>([]);
     const [selectedQuality, setSelectedQuality] = useState(() => {
         const s = localStorage.getItem('player_quality');
-        return s ? parseInt(s) : -1;
+        return s && /^-?\d+$/.test(s) ? parseInt(s, 10) : -1;
     });
+    const [qualityPreference, setQualityPreference] = useState(() => localStorage.getItem('player_quality') || 'auto');
 
     // Subtitle state
     const [selectedSubtitle, setSelectedSubtitle] = useState(-1); // -1 = off
@@ -326,6 +327,66 @@ export default function StreamPlayer({
     // Get current source
     const currentSource = sources[selectedSourceIdx] || sources[0];
 
+    const applyPlaybackSettings = useCallback((video: HTMLVideoElement) => {
+        video.volume = isMuted ? 0 : volume;
+        video.muted = isMuted;
+        video.playbackRate = playbackSpeed;
+    }, [isMuted, volume, playbackSpeed]);
+
+    const resolveQualityIndex = useCallback((preference: string, levels: QualityLevel[]) => {
+        if (!levels.length || preference === 'auto') {
+            return -1;
+        }
+
+        const legacyIndex = Number(preference);
+        if (Number.isInteger(legacyIndex)) {
+            const legacyLevel = levels.find(level => level.index === legacyIndex);
+            if (legacyLevel) {
+                return legacyLevel.index;
+            }
+
+            if (legacyIndex >= 0 && legacyIndex < levels.length) {
+                const fallbackLevel = levels[legacyIndex];
+                if (fallbackLevel) {
+                    return fallbackLevel.index;
+                }
+            }
+        }
+
+        const normalizedPreference = preference.toLowerCase();
+        const labelMatch = levels.find(level => level.label.toLowerCase() === normalizedPreference);
+        if (labelMatch) {
+            return labelMatch.index;
+        }
+
+        const heightMatch = Number(preference);
+        if (!Number.isNaN(heightMatch)) {
+            const matchingHeight = levels.find(level => level.height === heightMatch);
+            if (matchingHeight) {
+                return matchingHeight.index;
+            }
+        }
+
+        return -1;
+    }, []);
+
+    const seekTo = useCallback((targetTime: number) => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const durationValue = Number.isFinite(video.duration) ? video.duration : targetTime;
+        const safeTime = Math.max(0, Math.min(targetTime, durationValue));
+
+        const fastSeekVideo = video as HTMLVideoElement & { fastSeek?: (time: number) => void };
+        if (typeof fastSeekVideo.fastSeek === 'function') {
+            fastSeekVideo.fastSeek(safeTime);
+        } else {
+            video.currentTime = safeTime;
+        }
+
+        setCurrentTime(safeTime);
+    }, []);
+
     useEffect(() => {
         onProgressRef.current = onProgress;
     }, [onProgress]);
@@ -345,13 +406,28 @@ export default function StreamPlayer({
     // Handle quality change
     const handleQualityChange = useCallback((levelIndex: number) => {
         if (hlsRef.current) {
-            hlsRef.current.currentLevel = levelIndex;
+            if (levelIndex === -1) {
+                hlsRef.current.currentLevel = -1;
+                hlsRef.current.nextLevel = -1;
+                hlsRef.current.loadLevel = -1;
+                localStorage.setItem('player_quality', 'auto');
+                setQualityPreference('auto');
+            } else {
+                hlsRef.current.currentLevel = levelIndex;
+                hlsRef.current.nextLevel = levelIndex;
+                hlsRef.current.loadLevel = levelIndex;
+
+                const chosenLevel = qualityLevels.find((level) => level.index === levelIndex);
+                const storedPreference = chosenLevel?.label || levelIndex.toString();
+                localStorage.setItem('player_quality', storedPreference);
+                setQualityPreference(storedPreference);
+            }
+
             setSelectedQuality(levelIndex);
-            localStorage.setItem('player_quality', levelIndex.toString());
             console.log('[StreamPlayer] Quality changed to:', levelIndex);
             setActiveMenu('none');
         }
-    }, []);
+    }, [qualityLevels]);
 
     // Handle speed change
     const handleSpeedChange = useCallback((speed: number) => {
@@ -420,10 +496,8 @@ export default function StreamPlayer({
         setQualityLevels([]);
         // Don't reset selectedQuality, use persisted value
 
-        // Apply persisted video settings
-        video.volume = isMuted ? 0 : volume;
-        video.muted = isMuted;
-        video.playbackRate = playbackSpeed;
+        // Apply persisted video settings immediately so reloads and source swaps stay in sync.
+        applyPlaybackSettings(video);
 
         // Cleanup previous HLS instance
         if (hlsRef.current) {
@@ -438,7 +512,7 @@ export default function StreamPlayer({
             const hls = new Hls({
                 loader: createTauriLoader(headers),
                 debug: false,
-                startLevel: selectedQuality // Start with saved quality
+                startLevel: resolveQualityIndex(qualityPreference, []),
             });
 
             hls.loadSource(currentSource.url);
@@ -459,6 +533,31 @@ export default function StreamPlayer({
                 levels.unshift({ index: -1, height: 0, bitrate: 0, label: 'Auto' });
                 setQualityLevels(levels);
 
+                const resolvedQualityIndex = resolveQualityIndex(qualityPreference, levels);
+                setSelectedQuality(resolvedQualityIndex);
+
+                if (resolvedQualityIndex === -1) {
+                    hls.currentLevel = -1;
+                    hls.nextLevel = -1;
+                    hls.loadLevel = -1;
+                    if (qualityPreference !== 'auto') {
+                        localStorage.setItem('player_quality', 'auto');
+                        setQualityPreference('auto');
+                    }
+                } else {
+                    hls.currentLevel = resolvedQualityIndex;
+                    hls.nextLevel = resolvedQualityIndex;
+                    hls.loadLevel = resolvedQualityIndex;
+
+                    const matchedLevel = levels.find((level) => level.index === resolvedQualityIndex);
+                    if (matchedLevel && qualityPreference !== matchedLevel.label) {
+                        localStorage.setItem('player_quality', matchedLevel.label);
+                        setQualityPreference(matchedLevel.label);
+                    }
+                }
+
+                applyPlaybackSettings(video);
+
                 if (startTime > 0) {
                     video.currentTime = startTime;
                 }
@@ -478,13 +577,20 @@ export default function StreamPlayer({
         } else {
             // Native HLS or MP4
             video.src = currentSource.url;
-            video.addEventListener('loadedmetadata', () => {
+            const handleLoadedMetadata = () => {
+                applyPlaybackSettings(video);
                 setIsLoading(false);
                 if (startTime > 0) {
                     video.currentTime = startTime;
                 }
                 video.play().catch(console.error);
-            });
+            };
+
+            video.addEventListener('loadedmetadata', handleLoadedMetadata);
+
+            return () => {
+                video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            };
         }
 
         return () => {
@@ -493,7 +599,15 @@ export default function StreamPlayer({
                 hlsRef.current = null;
             }
         };
-    }, [currentSource, startTime, headers]);
+    }, [currentSource, startTime, headers, qualityPreference, resolveQualityIndex, applyPlaybackSettings]);
+
+    // Re-apply persisted playback settings whenever the user changes speed or volume.
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        applyPlaybackSettings(video);
+    }, [applyPlaybackSettings]);
 
     // Progress tracking
     useEffect(() => {
@@ -629,8 +743,7 @@ export default function StreamPlayer({
         if (!video) return;
 
         const time = parseFloat(e.target.value);
-        video.currentTime = time;
-        setCurrentTime(time);
+        seekTo(time);
     }, []);
 
 
@@ -732,20 +845,17 @@ export default function StreamPlayer({
                 case 'arrowright':
                 case 'd':
                     e.preventDefault();
-                    video.currentTime = Math.min(video.duration, video.currentTime + 5);
-                    setCurrentTime(video.currentTime);
+                    seekTo(video.currentTime + 5);
                     break;
                 case 'arrowleft':
                 case 'a':
                     e.preventDefault();
-                    video.currentTime = Math.max(0, video.currentTime - 5);
-                    setCurrentTime(video.currentTime);
+                    seekTo(video.currentTime - 5);
                     break;
                 case 'arrowup':
                 case 'w':
                     e.preventDefault();
                     const newVolUp = Math.min(1, video.volume + 0.1);
-                    video.volume = newVolUp;
                     video.volume = newVolUp;
                     setVolume(newVolUp);
                     setIsMuted(newVolUp === 0);
@@ -772,8 +882,7 @@ export default function StreamPlayer({
                         e.preventDefault();
                         const video = videoRef.current;
                         if (video) {
-                            video.currentTime = activeSkip.interval.endTime;
-                            setCurrentTime(activeSkip.interval.endTime);
+                            seekTo(activeSkip.interval.endTime);
                             setActiveSkip(null);
                         }
                     } else {
@@ -791,16 +900,14 @@ export default function StreamPlayer({
                     // Next frame (approx 1/24s)
                     e.preventDefault();
                     if (video.paused) {
-                        video.currentTime = Math.min(video.duration, video.currentTime + (1 / 24));
-                        setCurrentTime(video.currentTime);
+                        seekTo(video.currentTime + (1 / 24));
                     }
                     break;
                 case ',':
                     // Prev frame (approx 1/24s)
                     e.preventDefault();
                     if (video.paused) {
-                        video.currentTime = Math.max(0, video.currentTime - (1 / 24));
-                        setCurrentTime(video.currentTime);
+                        seekTo(video.currentTime - (1 / 24));
                     }
                     break;
                 case 'c': // Existing 's' is used for volume down, 'S' could be skip?
@@ -1018,12 +1125,8 @@ export default function StreamPlayer({
                 <button
                     className="skip-button"
                     onClick={() => {
-                        const video = videoRef.current;
-                        if (video) {
-                            video.currentTime = activeSkip.interval.endTime;
-                            setCurrentTime(activeSkip.interval.endTime);
-                            setActiveSkip(null); // Hide immediately
-                        }
+                        seekTo(activeSkip.interval.endTime);
+                        setActiveSkip(null); // Hide immediately
                     }}
                 >
                     Skip {activeSkip.skipType === 'op' ? 'Intro' : 'Outro'}
