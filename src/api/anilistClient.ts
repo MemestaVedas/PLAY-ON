@@ -3,6 +3,7 @@ import { gql } from '@apollo/client';
 import { addToOfflineQueue, registerMutationProcessor } from '../lib/offlineQueue';
 
 const inFlightQueries = new Map<string, Promise<any>>();
+const QUERY_REFRESH_TS_KEY = 'playon_anilist_query_refresh_timestamps';
 
 function dedupeQuery<T>(key: string, queryFn: () => Promise<T>): Promise<T> {
   const existing = inFlightQueries.get(key);
@@ -16,6 +17,31 @@ function dedupeQuery<T>(key: string, queryFn: () => Promise<T>): Promise<T> {
 
   inFlightQueries.set(key, queryPromise as Promise<any>);
   return queryPromise;
+}
+
+function getQueryRefreshTimestamps(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(QUERY_REFRESH_TS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function shouldForceNetworkRefresh(key: string, ttlMs: number): boolean {
+  const timestamps = getQueryRefreshTimestamps();
+  const lastRefresh = timestamps[key] ?? 0;
+  return (Date.now() - lastRefresh) > ttlMs;
+}
+
+function markNetworkRefresh(key: string): void {
+  try {
+    const timestamps = getQueryRefreshTimestamps();
+    timestamps[key] = Date.now();
+    localStorage.setItem(QUERY_REFRESH_TS_KEY, JSON.stringify(timestamps));
+  } catch {
+    // Ignore storage errors; fallback is in-memory Apollo cache behavior.
+  }
 }
 
 // ============================================================================
@@ -893,12 +919,23 @@ export async function fetchTrendingAnime(page = 1, perPage = 20) {
  * Searches anime by title via AniList API.
  */
 export async function searchAnime(search: string, page = 1, perPage = 10) {
-  const result = await apolloClient.query({
-    query: SEARCH_ANIME_QUERY,
-    variables: { search, page, perPage },
-    fetchPolicy: 'network-only' // Always fetch fresh results for search
+  const normalized = search.trim().toLowerCase();
+  const key = `searchAnime:${normalized}:${page}:${perPage}`;
+  const forceNetwork = shouldForceNetworkRefresh(key, 1000 * 60 * 60 * 6); // 6h
+
+  return dedupeQuery(key, async () => {
+    const result = await apolloClient.query({
+      query: SEARCH_ANIME_QUERY,
+      variables: { search, page, perPage },
+      fetchPolicy: forceNetwork ? 'network-only' : 'cache-first',
+    });
+
+    if (forceNetwork) {
+      markNetworkRefresh(key);
+    }
+
+    return result;
   });
-  return result;
 }
 
 /**
@@ -916,12 +953,23 @@ export async function fetchUserMangaCollection(userId: number) {
  * Searches manga by title via AniList API.
  */
 export async function searchManga(search: string, page = 1, perPage = 10) {
-  const result = await apolloClient.query({
-    query: SEARCH_MANGA_QUERY,
-    variables: { search, page, perPage },
-    fetchPolicy: 'network-only'
+  const normalized = search.trim().toLowerCase();
+  const key = `searchManga:${normalized}:${page}:${perPage}`;
+  const forceNetwork = shouldForceNetworkRefresh(key, 1000 * 60 * 60 * 6); // 6h
+
+  return dedupeQuery(key, async () => {
+    const result = await apolloClient.query({
+      query: SEARCH_MANGA_QUERY,
+      variables: { search, page, perPage },
+      fetchPolicy: forceNetwork ? 'network-only' : 'cache-first',
+    });
+
+    if (forceNetwork) {
+      markNetworkRefresh(key);
+    }
+
+    return result;
   });
-  return result;
 }
 
 /**
@@ -1120,9 +1168,20 @@ export async function fetchUserStats() {
     }
   `;
 
-  return apolloClient.query({
-    query: VIEWER_STATS_QUERY,
-    fetchPolicy: 'network-only',
+  const key = 'fetchUserStats';
+  const forceNetwork = shouldForceNetworkRefresh(key, 1000 * 60 * 10); // 10m
+
+  return dedupeQuery(key, async () => {
+    const result = await apolloClient.query({
+      query: VIEWER_STATS_QUERY,
+      fetchPolicy: forceNetwork ? 'network-only' : 'cache-first',
+    });
+
+    if (forceNetwork) {
+      markNetworkRefresh(key);
+    }
+
+    return result;
   });
 }
 
@@ -1371,10 +1430,21 @@ export interface NotificationsResponse {
  * Fetches the authenticated user's notifications.
  */
 export async function fetchNotifications(page = 1, perPage = 20): Promise<NotificationsResponse> {
-  const result = await apolloClient.query({
-    query: NOTIFICATIONS_QUERY,
-    variables: { page, perPage },
-    fetchPolicy: 'network-only', // Always get fresh notifications
+  const key = `fetchNotifications:${page}:${perPage}`;
+  const forceNetwork = shouldForceNetworkRefresh(key, 1000 * 30); // 30s
+
+  const result = await dedupeQuery(key, async () => {
+    const response = await apolloClient.query({
+      query: NOTIFICATIONS_QUERY,
+      variables: { page, perPage },
+      fetchPolicy: forceNetwork ? 'network-only' : 'cache-first',
+    });
+
+    if (forceNetwork) {
+      markNetworkRefresh(key);
+    }
+
+    return response;
   });
 
   return {
@@ -1414,10 +1484,21 @@ export async function markNotificationsAsRead(): Promise<void> {
  * Fetches activity from users the current user follows.
  */
 export async function fetchFollowingActivity(page = 1, perPage = 25) {
-  const result = await apolloClient.query({
-    query: FOLLOWING_ACTIVITY_QUERY,
-    variables: { page, perPage },
-    fetchPolicy: 'network-only',
+  const key = `fetchFollowingActivity:${page}:${perPage}`;
+  const forceNetwork = shouldForceNetworkRefresh(key, 1000 * 60); // 1m
+
+  const result = await dedupeQuery(key, async () => {
+    const response = await apolloClient.query({
+      query: FOLLOWING_ACTIVITY_QUERY,
+      variables: { page, perPage },
+      fetchPolicy: forceNetwork ? 'network-only' : 'cache-first',
+    });
+
+    if (forceNetwork) {
+      markNetworkRefresh(key);
+    }
+
+    return response;
   });
 
   return result.data?.Page?.activities || [];
