@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { fetchNotifications, AniListNotification } from '../api/anilistClient';
 import { sendDesktopNotification } from '../services/notification';
@@ -141,15 +141,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
     }, [isAuthenticated]);
 
+    const value = useMemo(() => ({
+        notifications,
+        unreadCount,
+        loading,
+        error,
+        refetch: fetchAndNotify,
+        markAsRead,
+    }), [notifications, unreadCount, loading, error, fetchAndNotify, markAsRead]);
+
     return (
-        <NotificationContext.Provider value={{
-            notifications,
-            unreadCount,
-            loading,
-            error,
-            refetch: fetchAndNotify,
-            markAsRead
-        }}>
+        <NotificationContext.Provider value={value}>
             {children}
         </NotificationContext.Provider>
     );

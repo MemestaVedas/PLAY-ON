@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 
 export interface LocalFolder {
@@ -51,7 +51,7 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
         localStorage.setItem('local-folders', JSON.stringify(folders));
     }, [folders, isLoaded]);
 
-    const addFolder = async (type: 'anime' | 'manga') => {
+    const addFolder = useCallback(async (type: 'anime' | 'manga') => {
         try {
             const selected = await open({
                 directory: true,
@@ -82,17 +82,25 @@ export function LocalMediaProvider({ children }: { children: React.ReactNode }) 
         } catch (err) {
             console.error("Failed to open dialog", err);
         }
-    };
+    }, [folders]);
 
-    const removeFolder = (path: string) => {
+    const removeFolder = useCallback((path: string) => {
         setFolders(prev => prev.filter(f => f.path !== path));
-    };
+    }, []);
 
-    const animeFolders = folders.filter(f => f.type === 'anime' || !f.type);
-    const mangaFolders = folders.filter(f => f.type === 'manga');
+    const animeFolders = useMemo(() => folders.filter(f => f.type === 'anime' || !f.type), [folders]);
+    const mangaFolders = useMemo(() => folders.filter(f => f.type === 'manga'), [folders]);
+
+    const value = useMemo(() => ({
+        folders,
+        addFolder,
+        removeFolder,
+        animeFolders,
+        mangaFolders,
+    }), [folders, addFolder, removeFolder, animeFolders, mangaFolders]);
 
     return (
-        <LocalMediaContext.Provider value={{ folders, addFolder, removeFolder, animeFolders, mangaFolders }}>
+        <LocalMediaContext.Provider value={value}>
             {children}
         </LocalMediaContext.Provider>
     );

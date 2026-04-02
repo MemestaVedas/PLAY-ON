@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 /**
  * Represents a manually triggered anime session
@@ -36,8 +36,14 @@ export function NowPlayingProvider({ children }: { children: ReactNode }) {
         setManualSession(null);
     }, []);
 
+    const value = useMemo(() => ({
+        manualSession,
+        startManualSession,
+        clearManualSession
+    }), [manualSession, startManualSession, clearManualSession]);
+
     return (
-        <NowPlayingContext.Provider value={{ manualSession, startManualSession, clearManualSession }}>
+        <NowPlayingContext.Provider value={value}>
             {children}
         </NowPlayingContext.Provider>
     );

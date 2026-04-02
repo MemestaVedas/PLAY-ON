@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 interface DynamicThemeContextType {
     /** URL of the cover image for ambient background */
@@ -34,8 +34,14 @@ export function DynamicThemeProvider({ children }: DynamicThemeProviderProps) {
         setCoverImageUrl(null);
     }, []);
 
+    const value = useMemo(() => ({
+        coverImageUrl,
+        setCoverImage,
+        clearTheme
+    }), [coverImageUrl, setCoverImage, clearTheme]);
+
     return (
-        <DynamicThemeContext.Provider value={{ coverImageUrl, setCoverImage, clearTheme }}>
+        <DynamicThemeContext.Provider value={value}>
             {/* Dynamic Ambient Background - Blurred cover art creates immersive atmosphere */}
             {coverImageUrl && (
                 <>

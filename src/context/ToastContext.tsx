@@ -8,7 +8,7 @@
  *        toast.info('Loading...');
  */
 
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -54,15 +54,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, [removeToast]);
 
     // Convenience methods
-    const toast = {
+    const toast = useMemo(() => ({
         success: (message: string, duration?: number) => addToast('success', message, duration),
         error: (message: string, duration?: number) => addToast('error', message, duration ?? 6000),
         info: (message: string, duration?: number) => addToast('info', message, duration),
         warning: (message: string, duration?: number) => addToast('warning', message, duration ?? 5000),
-    };
+    }), [addToast]);
+
+    const value = useMemo(() => ({ toasts, addToast, removeToast, toast }), [toasts, addToast, removeToast, toast]);
 
     return (
-        <ToastContext.Provider value={{ toasts, addToast, removeToast, toast }}>
+        <ToastContext.Provider value={value}>
             {children}
         </ToastContext.Provider>
     );
