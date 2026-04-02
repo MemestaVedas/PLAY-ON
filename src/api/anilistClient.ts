@@ -2,6 +2,22 @@ import { apolloClient } from '../lib/apollo';
 import { gql } from '@apollo/client';
 import { addToOfflineQueue, registerMutationProcessor } from '../lib/offlineQueue';
 
+const inFlightQueries = new Map<string, Promise<any>>();
+
+function dedupeQuery<T>(key: string, queryFn: () => Promise<T>): Promise<T> {
+  const existing = inFlightQueries.get(key);
+  if (existing) {
+    return existing as Promise<T>;
+  }
+
+  const queryPromise = queryFn().finally(() => {
+    inFlightQueries.delete(key);
+  });
+
+  inFlightQueries.set(key, queryPromise as Promise<any>);
+  return queryPromise;
+}
+
 // ============================================================================
 // QUERIES
 // ============================================================================
@@ -866,11 +882,11 @@ export async function fetchUserAnimeCollection(userId: number) {
  * Fetches trending anime data.
  */
 export async function fetchTrendingAnime(page = 1, perPage = 20) {
-  const result = await apolloClient.query({
+  const key = `fetchTrendingAnime:${page}:${perPage}`;
+  return dedupeQuery(key, () => apolloClient.query({
     query: TRENDING_ANIME_QUERY,
     variables: { page, perPage }
-  });
-  return result;
+  }));
 }
 
 /**
@@ -912,22 +928,22 @@ export async function searchManga(search: string, page = 1, perPage = 10) {
  * Fetches specific anime details by ID.
  */
 export async function fetchAnimeDetails(id: number) {
-  const result = await apolloClient.query({
+  const key = `fetchAnimeDetails:${id}`;
+  return dedupeQuery(key, () => apolloClient.query({
     query: ANIME_DETAILS_QUERY,
     variables: { id }
-  });
-  return result;
+  }));
 }
 
 /**
  * Fetches specific manga details by AniList ID.
  */
 export async function fetchMangaDetails(id: number) {
-  const result = await apolloClient.query({
+  const key = `fetchMangaDetails:${id}`;
+  return dedupeQuery(key, () => apolloClient.query({
     query: MANGA_DETAILS_QUERY,
     variables: { id }
-  });
-  return result;
+  }));
 }
 
 /**
@@ -946,11 +962,10 @@ export async function fetchUserActivity(userId: number, page = 1, perPage = 25) 
  */
 export async function fetchCurrentUser() {
   // Auth is handled by Apollo Link in apollo.ts
-  const result = await apolloClient.query({
+  return dedupeQuery('fetchCurrentUser', () => apolloClient.query({
     query: VIEWER_QUERY,
     // fetchPolicy: 'network-only' // Uncomment if we always want fresh user data on app load
-  });
-  return result;
+  }));
 }
 
 // Helper for mutation execution (used by both direct call and offline queue)

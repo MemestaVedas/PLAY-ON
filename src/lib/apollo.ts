@@ -34,7 +34,7 @@ const initCache = async () => {
         await persistCache({
             cache,
             storage: new LocalStorageWrapper(window.localStorage),
-            trigger: 'write', // Persist on every write
+            trigger: 'background', // Avoid blocking critical UI work on every cache write
             maxSize: 1048576 * 5, // 5 MB limit (optional)
         });
         console.log('Apollo Cache persistence initialized');
