@@ -24,10 +24,67 @@ interface SubtitleTrack {
     lang: string;
 }
 
+let proxyStatusPromise: Promise<string | null> | null = null;
+
+const normalizeProxyBaseUrl = (proxyStatus: string): string | null => {
+    const trimmed = proxyStatus.trim();
+    if (!trimmed) {
+        return null;
+    }
+
+    if (/^https?:\/\//i.test(trimmed)) {
+        return trimmed.replace(/\/$/, '');
+    }
+
+    const [host, port] = trimmed.split(':');
+    if (!host || !port) {
+        return null;
+    }
+
+    const safeHost = host === 'Unknown' ? '127.0.0.1' : host;
+    return `http://${safeHost}:${port}`;
+};
+
+const getStreamProxyBaseUrl = async (): Promise<string | null> => {
+    if (!proxyStatusPromise) {
+        proxyStatusPromise = invoke<string>('get_proxy_status')
+            .then((status) => normalizeProxyBaseUrl(status))
+            .catch((error) => {
+                console.warn('[StreamPlayer] Failed to resolve proxy status:', error);
+                return null;
+            })
+            .then((baseUrl) => {
+                if (!baseUrl) {
+                    proxyStatusPromise = null;
+                }
+
+                return baseUrl;
+            });
+    }
+
+    return proxyStatusPromise;
+};
+
+const buildProxyUrl = (baseUrl: string, targetUrl: string, headers: Record<string, string>) => {
+    const proxyUrl = new URL('/proxy/stream', baseUrl);
+    proxyUrl.searchParams.set('url', targetUrl);
+
+    Object.entries(headers).forEach(([key, value]) => {
+        if (!value) {
+            return;
+        }
+
+        proxyUrl.searchParams.set(key, value);
+    });
+
+    return proxyUrl.toString();
+};
+
 // Custom HLS Loader that proxies requests through Tauri
 const createTauriLoader = (headers: Record<string, string> = {}) => {
     return class TauriLoader extends Hls.DefaultConfig.loader {
         private _stats: any;
+        private _abortController: AbortController | null;
 
         constructor(config: any) {
             super(config);
@@ -42,65 +99,124 @@ const createTauriLoader = (headers: Record<string, string> = {}) => {
                 parsing: { start: 0, end: 0 },
                 buffering: { start: 0, first: 0, end: 0 },
             };
+            this._abortController = null;
         }
 
         load(context: any, _config: any, callbacks: any) {
             const { url } = context;
             const isPlaylist = url.includes('.m3u8') || context.type === 'manifest' || context.type === 'level';
+            const requestHeaders = { ...headers };
 
             // Initialize stats timing
             this._stats.loading.start = performance.now();
+            this._abortController = new AbortController();
 
-            // Use Tauri proxy to fetch content
-            invoke<number[]>('stream_proxy', { url, headers })
-                .then((response) => {
-                    const now = performance.now();
-                    this._stats.loading.first = now;
-                    this._stats.loading.end = now;
-                    this._stats.loaded = response.length;
-                    this._stats.total = response.length;
-                    this._stats.parsing.start = now;
-                    this._stats.parsing.end = now;
+            const finishWithData = (data: string | ArrayBuffer, byteLength: number) => {
+                const now = performance.now();
+                this._stats.loading.first = now;
+                this._stats.loading.end = now;
+                this._stats.loaded = byteLength;
+                this._stats.total = byteLength;
+                this._stats.parsing.start = now;
+                this._stats.parsing.end = now;
 
-                    const uint8Array = new Uint8Array(response);
+                callbacks.onSuccess(
+                    {
+                        url,
+                        data,
+                    },
+                    this._stats,
+                    context,
+                    null
+                );
+            };
 
-                    // HLS.js expects string for playlists, ArrayBuffer for segments
-                    let data: string | ArrayBuffer;
-                    if (isPlaylist) {
-                        // Decode as UTF-8 string for playlist files
-                        data = new TextDecoder('utf-8').decode(uint8Array);
-                    } else {
-                        // Keep as ArrayBuffer for media segments
-                        data = uint8Array.buffer;
+            const loadFromProxyServer = async () => {
+                const proxyBaseUrl = await getStreamProxyBaseUrl();
+                if (!proxyBaseUrl) {
+                    throw new Error('Stream proxy server is not available');
+                }
+
+                const proxyUrl = buildProxyUrl(proxyBaseUrl, url, requestHeaders);
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    signal: this._abortController?.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Proxy fetch failed with status ${response.status}`);
+                }
+
+                if (isPlaylist) {
+                    const text = await response.text();
+                    finishWithData(text, new TextEncoder().encode(text).byteLength);
+                    return;
+                }
+
+                const buffer = await response.arrayBuffer();
+                finishWithData(buffer, buffer.byteLength);
+            };
+
+            const loadViaInvoke = async () => {
+                const response = await invoke<number[]>('stream_proxy', { url, headers: requestHeaders });
+                const now = performance.now();
+                this._stats.loading.first = now;
+                this._stats.loading.end = now;
+                this._stats.loaded = response.length;
+                this._stats.total = response.length;
+                this._stats.parsing.start = now;
+                this._stats.parsing.end = now;
+
+                const uint8Array = new Uint8Array(response);
+
+                let data: string | ArrayBuffer;
+                if (isPlaylist) {
+                    data = new TextDecoder('utf-8').decode(uint8Array);
+                } else {
+                    data = uint8Array.buffer;
+                }
+
+                callbacks.onSuccess(
+                    {
+                        url,
+                        data,
+                    },
+                    this._stats,
+                    context,
+                    null
+                );
+            };
+
+            loadFromProxyServer().catch((error) => {
+                if (this._abortController?.signal.aborted || this._stats.aborted) {
+                    return;
+                }
+
+                console.warn('[StreamPlayer] Proxy server fetch failed, falling back to invoke:', error);
+
+                loadViaInvoke().catch((fallbackError) => {
+                    if (this._abortController?.signal.aborted || this._stats.aborted) {
+                        return;
                     }
 
-                    callbacks.onSuccess(
-                        {
-                            url,
-                            data,
-                        },
-                        this._stats,
-                        context,
-                        null // networkDetails
-                    );
-                })
-                .catch((error) => {
-                    console.error('[StreamProxy] Error:', error);
+                    console.error('[StreamProxy] Error:', fallbackError);
                     callbacks.onError(
-                        { code: 404, text: error.toString() },
+                        { code: 404, text: fallbackError.toString() },
                         context,
-                        null, // networkDetails
+                        null,
                         this._stats
                     );
                 });
+            });
         }
 
         abort() {
             this._stats.aborted = true;
+            this._abortController?.abort();
         }
 
         destroy() {
-            // Cleanup if needed
+            this._abortController?.abort();
         }
     };
 };
@@ -150,6 +266,8 @@ export default function StreamPlayer({
     const hlsRef = useRef<Hls | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const onProgressRef = useRef(onProgress);
+    const skipTimesRef = useRef(skipTimes);
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
@@ -207,6 +325,14 @@ export default function StreamPlayer({
 
     // Get current source
     const currentSource = sources[selectedSourceIdx] || sources[0];
+
+    useEffect(() => {
+        onProgressRef.current = onProgress;
+    }, [onProgress]);
+
+    useEffect(() => {
+        skipTimesRef.current = skipTimes;
+    }, [skipTimes]);
 
     // Handle source change
     const handleSourceChange = useCallback((idx: number) => {
@@ -379,13 +505,13 @@ export default function StreamPlayer({
                 setCurrentTime(video.currentTime);
                 setDuration(video.duration || 0);
 
-                if (onProgress && video.duration > 0) {
+                if (onProgressRef.current && video.duration > 0) {
                     const progress = (video.currentTime / video.duration) * 100;
-                    onProgress(progress, video.currentTime, video.duration);
+                    onProgressRef.current(progress, video.currentTime, video.duration);
                 }
 
                 // Check for skip intervals
-                const currentSkip = skipTimes.find(skip =>
+                const currentSkip = skipTimesRef.current.find(skip =>
                     video.currentTime >= skip.interval.startTime &&
                     video.currentTime < skip.interval.endTime
                 );
@@ -396,7 +522,7 @@ export default function StreamPlayer({
         return () => {
             if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
         };
-    }, [onProgress, skipTimes]);
+    }, []);
 
     // Autoplay Logic
     const handleEnded = useCallback(() => {

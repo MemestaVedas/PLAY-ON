@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 PROJECT_STRUCTURE.md
+wiki/
 anilist_integration_summary.md
 session_summary.md
 
