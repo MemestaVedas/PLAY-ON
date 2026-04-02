@@ -7,7 +7,7 @@
  * ====================================================================
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimeExtensionManager, Anime } from '../services/AnimeExtensionManager';
 import { SearchIcon } from '../components/ui/Icons';
@@ -18,6 +18,7 @@ import './AnimeBrowse.css';
 export default function AnimeBrowse() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    const searchRequestIdRef = useRef(0);
 
     // Extension browsing state
     const [sources, setSources] = useState<any[]>(() => AnimeExtensionManager.getAllSources());
@@ -32,6 +33,17 @@ export default function AnimeBrowse() {
     const { recentSearches, addSearch, removeSearch } = useRecentSearches('recent_anime_searches');
 
     // Initialize manager and refresh sources
+    const refreshSources = useCallback(() => {
+        const newSources = AnimeExtensionManager.getAllSources();
+        setSources(newSources);
+
+        // Auto-select first source if none selected
+        if (!selectedSourceId && newSources.length > 0) {
+            const hianime = newSources.find(s => s.id === 'hianime');
+            setSelectedSourceId(hianime ? hianime.id : newSources[0].id);
+        }
+    }, [selectedSourceId]);
+
     useEffect(() => {
         const initAndRefresh = async () => {
             if (!AnimeExtensionManager.isInitialized()) {
@@ -40,25 +52,13 @@ export default function AnimeBrowse() {
             refreshSources();
         };
 
-        const refreshSources = () => {
-            const newSources = AnimeExtensionManager.getAllSources();
-            setSources(newSources);
-
-            // Auto-select first source if none selected
-            if (!selectedSourceId && newSources.length > 0) {
-                // Pre-select HiAnime if available, otherwise first one
-                const hianime = newSources.find(s => s.id === 'hianime');
-                setSelectedSourceId(hianime ? hianime.id : newSources[0].id);
-            }
-        };
-
         // Initial load
         initAndRefresh();
 
-        // Set up a listener for extension changes (polling for now)
-        const interval = setInterval(refreshSources, 2000);
+        // Low-frequency polling keeps source list fresh without constant CPU churn.
+        const interval = setInterval(refreshSources, 30000);
         return () => clearInterval(interval);
-    }, [selectedSourceId]);
+    }, [refreshSources]);
 
     // Get selected source object
     const selectedSource = useMemo(() => {
@@ -67,35 +67,41 @@ export default function AnimeBrowse() {
     }, [selectedSourceId, sources]);
 
     // Auto-search effect when source is ready and we have a query from URL
-    useEffect(() => {
-        if (selectedSource && searchQuery && !hasSearched && !isSearching && searchParams.get('q')) {
-            handleSearch();
-        }
-    }, [selectedSource]); // Only run when source availability changes (initial load)
+    const handleSearch = useCallback(async (explicitQuery?: string) => {
+        const queryToUse = (explicitQuery ?? searchQuery).trim();
+        if (!selectedSource || !queryToUse) return;
 
-    // Handle search
-    const handleSearch = async () => {
-        if (!selectedSource || !searchQuery.trim()) return;
-
+        const requestId = ++searchRequestIdRef.current;
         setIsSearching(true);
         setError(null);
         setHasSearched(true);
-        addSearch(searchQuery.trim());
+        addSearch(queryToUse);
 
-        // Update URL to match query (if user typed manually)
-        setSearchParams({ q: searchQuery.trim() });
+        setSearchParams({ q: queryToUse });
 
         try {
-            const result = await selectedSource.search({ query: searchQuery.trim() });
-            setSearchResults(result.anime);
+            const result = await selectedSource.search({ query: queryToUse });
+            if (requestId === searchRequestIdRef.current) {
+                setSearchResults(result.anime);
+            }
         } catch (err) {
-            console.error('[AnimeBrowse] Search failed:', err);
-            setError(err instanceof Error ? err.message : 'Search failed');
-            setSearchResults([]);
+            if (requestId === searchRequestIdRef.current) {
+                console.error('[AnimeBrowse] Search failed:', err);
+                setError(err instanceof Error ? err.message : 'Search failed');
+                setSearchResults([]);
+            }
         } finally {
-            setIsSearching(false);
+            if (requestId === searchRequestIdRef.current) {
+                setIsSearching(false);
+            }
         }
-    };
+    }, [addSearch, searchQuery, selectedSource, setSearchParams]);
+
+    useEffect(() => {
+        if (selectedSource && searchQuery && !hasSearched && !isSearching && searchParams.get('q')) {
+            void handleSearch();
+        }
+    }, [selectedSource, searchQuery, hasSearched, isSearching, searchParams, handleSearch]);
 
     // Handle anime click
     const handleAnimeClick = (anime: Anime) => {
@@ -144,7 +150,7 @@ export default function AnimeBrowse() {
                                     placeholder={`Search for anime on ${selectedSource?.name || 'source'}...`}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    onKeyDown={(e) => e.key === 'Enter' && void handleSearch()}
                                     style={{
                                         width: '100%',
                                         height: '48px',
@@ -174,7 +180,7 @@ export default function AnimeBrowse() {
                                 )}
                             </div>
                             <button
-                                onClick={handleSearch}
+                                onClick={() => void handleSearch()}
                                 disabled={isSearching || !searchQuery.trim()}
                                 style={{
                                     width: '48px',
@@ -280,23 +286,7 @@ export default function AnimeBrowse() {
                                                     key={term}
                                                     onClick={() => {
                                                         setSearchQuery(term);
-                                                        // Wait for state update is tricky in handlers, but useEffect handles query param
-                                                        // Actually, handleSearch uses state 'searchQuery'. 
-                                                        // We can override it or just set state and let user press enter, or call handleSearch with explicit arg.
-                                                        // But handleSearch reads from state.
-                                                        // Better: Update state AND call search immediately via a wrapper or ref.
-                                                        // Or just set state and let the user click search/enter? 
-                                                        // UX: usually clicking a chip searches immediately.
-                                                        // I'll update state and trigger search.
-                                                        // Since handleSearch uses 'searchQuery' state, I can't call it immediately after setState in same tick easily without a ref or variable.
-                                                        // I will modify handleSearch to accept optional query.
-                                                        // Wait, for now I'll just set query. The user can hit enter or click search.
-                                                        // Actually, I can use a separate function or pass arg.
-                                                        // I'll refactor handleSearch to take an arg or fallback to state.
-                                                        setSearchQuery(term);
-                                                        // Hack: force search in next tick or use a timeout? No.
-                                                        // I'll just set it for now. User clicks button.
-                                                        // Actually, let's just make clicking it fill the bar.
+                                                        void handleSearch(term);
                                                     }}
                                                     className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 text-sm text-white/70 transition-all group flex items-center gap-2"
                                                 >

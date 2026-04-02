@@ -8,7 +8,7 @@
  * ====================================================================
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ExtensionManager, Manga } from '../services/ExtensionManager';
 import { SearchIcon } from '../components/ui/Icons';
@@ -19,6 +19,7 @@ import './MangaBrowse.css';
 function MangaBrowse() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    const searchRequestIdRef = useRef(0);
 
     // Get all available sources - use state so it updates when extensions change
     const [sources, setSources] = useState(() => ExtensionManager.getAllSources());
@@ -41,9 +42,8 @@ function MangaBrowse() {
         // Initial load
         initAndRefresh();
 
-        // Set up a listener for extension changes (polling for now)
-        // In a real app, you'd use an event emitter pattern
-        const interval = setInterval(refreshSources, 2000);
+        // Low-frequency polling keeps source list fresh without constant CPU churn.
+        const interval = setInterval(refreshSources, 30000);
 
         return () => clearInterval(interval);
     }, []);
@@ -76,6 +76,8 @@ function MangaBrowse() {
                 return;
             }
 
+            const requestId = ++searchRequestIdRef.current;
+
             setLoading(true);
             setError(null);
             addSearch(query.trim());
@@ -85,14 +87,20 @@ function MangaBrowse() {
                     query: query.trim(),
                     page: 1,
                 });
-                setResults(result.manga);
-                setHasMore(result.hasNextPage);
-                setPage(1);
+                if (requestId === searchRequestIdRef.current) {
+                    setResults(result.manga);
+                    setHasMore(result.hasNextPage);
+                    setPage(1);
+                }
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Search failed');
-                setResults([]);
+                if (requestId === searchRequestIdRef.current) {
+                    setError(err instanceof Error ? err.message : 'Search failed');
+                    setResults([]);
+                }
             } finally {
-                setLoading(false);
+                if (requestId === searchRequestIdRef.current) {
+                    setLoading(false);
+                }
             }
         };
 

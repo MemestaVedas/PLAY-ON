@@ -1,29 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import Onboarding from './pages/Onboarding';
-import Home from './pages/Home';
-import UnifiedList from './pages/UnifiedList';
-import AnimeList from './pages/AnimeList';
-import AnimeBrowse from './pages/AnimeBrowse';
-import MangaList from './pages/MangaList';
-import LocalAnimeList from './pages/LocalAnimeList';
-import LocalMangaList from './pages/LocalMangaList';
-import MangaBrowse from './pages/MangaBrowse';
-import MangaSourceDetails from './pages/MangaSourceDetails';
-import MangaReader from './pages/MangaReader';
-import LocalFileReader from './pages/LocalFileReader';
-import History from './pages/History';
-import Notifications from './pages/Notifications';
-import Community from './pages/Community';
-import Statistics from './pages/Statistics';
-import AnimeDetails from './pages/AnimeDetails';
-import MangaDetails from './pages/MangaDetails';
-import CounterDemo from './pages/CounterDemo';
-import AnimeWatch from './pages/AnimeWatch';
-import AnimeSourceDetails from './pages/AnimeSourceDetails';
-import WebBrowser from './pages/WebBrowser';
-import MainLayout from './layouts/MainLayout';
-import { AuthProvider } from './context/AuthContext';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { LocalMediaProvider } from './context/LocalMediaContext';
 import { NowPlayingProvider } from './context/NowPlayingContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -33,15 +9,38 @@ import { ToastProvider } from './context/ToastContext';
 import { ToastContainer } from './components/ui/Toast';
 import { OfflineIndicator } from './components/ui/OfflineIndicator';
 import ErrorBoundary from './components/ErrorBoundary';
-import LocalFolder from './pages/LocalFolder';
-import Settings from './pages/Settings';
-
-import UserProfile from './pages/UserProfile';
-import Calendar from './pages/Calendar';
 import { CursorSpotlight } from './components/ui/CursorSpotlight';
 import { DynamicThemeProvider } from './context/DynamicThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
 import "./App.css";
+
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Home = lazy(() => import('./pages/Home'));
+const UnifiedList = lazy(() => import('./pages/UnifiedList'));
+const AnimeList = lazy(() => import('./pages/AnimeList'));
+const AnimeBrowse = lazy(() => import('./pages/AnimeBrowse'));
+const MangaList = lazy(() => import('./pages/MangaList'));
+const LocalAnimeList = lazy(() => import('./pages/LocalAnimeList'));
+const LocalMangaList = lazy(() => import('./pages/LocalMangaList'));
+const MangaBrowse = lazy(() => import('./pages/MangaBrowse'));
+const MangaSourceDetails = lazy(() => import('./pages/MangaSourceDetails'));
+const MangaReader = lazy(() => import('./pages/MangaReader'));
+const LocalFileReader = lazy(() => import('./pages/LocalFileReader'));
+const History = lazy(() => import('./pages/History'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Community = lazy(() => import('./pages/Community'));
+const Statistics = lazy(() => import('./pages/Statistics'));
+const AnimeDetails = lazy(() => import('./pages/AnimeDetails'));
+const MangaDetails = lazy(() => import('./pages/MangaDetails'));
+const CounterDemo = lazy(() => import('./pages/CounterDemo'));
+const AnimeWatch = lazy(() => import('./pages/AnimeWatch'));
+const AnimeSourceDetails = lazy(() => import('./pages/AnimeSourceDetails'));
+const WebBrowser = lazy(() => import('./pages/WebBrowser'));
+const MainLayout = lazy(() => import('./layouts/MainLayout'));
+const LocalFolder = lazy(() => import('./pages/LocalFolder'));
+const Settings = lazy(() => import('./pages/Settings'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
+const Calendar = lazy(() => import('./pages/Calendar'));
 
 /**
  * ====================================================================
@@ -199,6 +198,14 @@ function GlobalHooks({ isVisible }: { isVisible: boolean }) {
 }
 import { useWindowVisibility } from './hooks/useWindowVisibility';
 
+function RouteFallback() {
+  return (
+    <div className="flex items-center justify-center h-full text-text-secondary">
+      <div className="animate-pulse">Loading...</div>
+    </div>
+  );
+}
+
 function AppContent() {
   const isVisible = useWindowVisibility();
 
@@ -221,58 +228,60 @@ function AppContent() {
             or we can just rely on the display:none above which is very effective for GPU,
             but unmounting children is even better for CPU. */}
         {isVisible ? (
-          <Routes>
-            {/* Root route - checks if onboarding needed */}
-            <Route path="/" element={<ProtectedRoute />} />
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              {/* Root route - checks if onboarding needed */}
+              <Route path="/" element={<ProtectedRoute />} />
 
-            {/* Full-screen Manga Reader (outside MainLayout) */}
-            <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
+              {/* Full-screen Manga Reader (outside MainLayout) */}
+              <Route path="/read/:sourceId/:chapterId" element={<MangaReader />} />
 
-            {/* Full-screen Local File Reader (outside MainLayout) */}
-            <Route path="/read-local" element={<LocalFileReader />} />
+              {/* Full-screen Local File Reader (outside MainLayout) */}
+              <Route path="/read-local" element={<LocalFileReader />} />
 
-            {/* Main App Layout */}
-            <Route element={<MainLayout />}>
-              <Route path="/home" element={<Home />} />
-              <Route path="/my-list" element={<UnifiedList />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="/anime-list" element={<AnimeList />} />
-              <Route path="/anime-browse" element={<AnimeBrowse />} />
-              <Route path="/manga-list" element={<MangaList />} />
-              <Route path="/local-anime" element={<LocalAnimeList />} />
-              <Route path="/local-manga" element={<LocalMangaList />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/statistics" element={<Statistics />} />
+              {/* Main App Layout */}
+              <Route element={<MainLayout />}>
+                <Route path="/home" element={<Home />} />
+                <Route path="/my-list" element={<UnifiedList />} />
+                <Route path="/calendar" element={<Calendar />} />
+                <Route path="/anime-list" element={<AnimeList />} />
+                <Route path="/anime-browse" element={<AnimeBrowse />} />
+                <Route path="/manga-list" element={<MangaList />} />
+                <Route path="/local-anime" element={<LocalAnimeList />} />
+                <Route path="/local-manga" element={<LocalMangaList />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/statistics" element={<Statistics />} />
 
-              {/* Dynamic route for anime details */}
-              <Route path="/anime/:id" element={<AnimeDetails />} />
-              {/* Dynamic route for manga details */}
-              <Route path="/manga-details/:id" element={<MangaDetails />} />
-              <Route path="/counter-demo" element={<CounterDemo />} />
+                {/* Dynamic route for anime details */}
+                <Route path="/anime/:id" element={<AnimeDetails />} />
+                {/* Dynamic route for manga details */}
+                <Route path="/manga-details/:id" element={<MangaDetails />} />
+                <Route path="/counter-demo" element={<CounterDemo />} />
 
-              {/* Settings Route */}
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/user/:username" element={<UserProfile />} />
+                {/* Settings Route */}
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/user/:username" element={<UserProfile />} />
 
-              {/* Local Folder Route */}
-              <Route path="/local/:folderPath" element={<LocalFolder />} />
+                {/* Local Folder Route */}
+                <Route path="/local/:folderPath" element={<LocalFolder />} />
 
-              {/* Anime Source Routes */}
-              <Route path="/anime-source/:sourceId/:animeId" element={<AnimeSourceDetails />} />
+                {/* Anime Source Routes */}
+                <Route path="/anime-source/:sourceId/:animeId" element={<AnimeSourceDetails />} />
 
-              {/* Manga Source Routes */}
-              <Route path="/manga-browse" element={<MangaBrowse />} />
-              <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
-            </Route>
+                {/* Manga Source Routes */}
+                <Route path="/manga-browse" element={<MangaBrowse />} />
+                <Route path="/manga/:sourceId/:mangaId" element={<MangaSourceDetails />} />
+              </Route>
 
-            {/* Full-screen Anime Watch (outside MainLayout) */}
-            <Route path="/watch/:sourceId/:episodeId" element={<AnimeWatch />} />
+              {/* Full-screen Anime Watch (outside MainLayout) */}
+              <Route path="/watch/:sourceId/:episodeId" element={<AnimeWatch />} />
 
-            {/* Full-screen Web Browser for Anime (outside MainLayout) */}
-            <Route path="/browser" element={<WebBrowser />} />
-          </Routes>
+              {/* Full-screen Web Browser for Anime (outside MainLayout) */}
+              <Route path="/browser" element={<WebBrowser />} />
+            </Routes>
+          </Suspense>
         ) : (
           <div className="hidden-state-placeholder" />
         )}
@@ -289,34 +298,33 @@ function App() {
   useEffect(() => {
     console.log('=== APP INITIALIZATION STARTING ===');
 
-    // Initialize extension manager (loads installed extensions from storage)
-    ExtensionManager.initialize().then(() => {
-      console.log('[App] Manga extension manager initialized');
-      console.log('[App] Manga sources available:', ExtensionManager.getAllSources().length);
-      ExtensionManager.getAllSources().forEach(s => {
-        console.log(`[App]   - ${s.name} (${s.id})`);
-      });
-    }).catch(err => {
-      console.error('[App] Failed to initialize manga extensions:', err);
-    });
+    const initializeApp = async () => {
+      const [mangaInit, animeInit, cacheRefresh] = await Promise.allSettled([
+        ExtensionManager.initialize(),
+        AnimeExtensionManager.initialize(),
+        checkAndRefreshCache(),
+      ]);
 
-    // Initialize anime extension manager
-    AnimeExtensionManager.initialize().then(() => {
-      console.log('[App] Anime extension manager initialized');
-      console.log('[App] Anime sources available:', AnimeExtensionManager.getAllSources().length);
-      AnimeExtensionManager.getAllSources().forEach(s => {
-        console.log(`[App]   - ${s.name} (${s.id})`);
-      });
-    }).catch(err => {
-      console.error('[App] Failed to initialize anime extensions:', err);
-    });
+      if (mangaInit.status === 'fulfilled') {
+        console.log('[App] Manga extension manager initialized');
+        console.log('[App] Manga sources available:', ExtensionManager.getAllSources().length);
+      } else {
+        console.error('[App] Failed to initialize manga extensions:', mangaInit.reason);
+      }
 
-    // Check if cache needs refresh (6 hour interval)
-    checkAndRefreshCache().then((refreshed) => {
-      if (refreshed) {
+      if (animeInit.status === 'fulfilled') {
+        console.log('[App] Anime extension manager initialized');
+        console.log('[App] Anime sources available:', AnimeExtensionManager.getAllSources().length);
+      } else {
+        console.error('[App] Failed to initialize anime extensions:', animeInit.reason);
+      }
+
+      if (cacheRefresh.status === 'fulfilled' && cacheRefresh.value) {
         console.log('[App] Cache was refreshed on startup');
       }
-    });
+    };
+
+    initializeApp();
 
     // Check if app was started minimized but user has startMinimized disabled
     // Read settings from localStorage and show window if needed
@@ -352,19 +360,17 @@ function App() {
           <ToastProvider>
             <ThemeProvider>
               <SettingsProvider>
-                <AuthProvider>
-                  <NotificationProvider>
-                    <LocalMediaProvider>
-                      <NowPlayingProvider>
-                        <SearchBarProvider>
-                          <DynamicThemeProvider>
-                            <AppContent />
-                          </DynamicThemeProvider>
-                        </SearchBarProvider>
-                      </NowPlayingProvider>
-                    </LocalMediaProvider>
-                  </NotificationProvider>
-                </AuthProvider>
+                <NotificationProvider>
+                  <LocalMediaProvider>
+                    <NowPlayingProvider>
+                      <SearchBarProvider>
+                        <DynamicThemeProvider>
+                          <AppContent />
+                        </DynamicThemeProvider>
+                      </SearchBarProvider>
+                    </NowPlayingProvider>
+                  </LocalMediaProvider>
+                </NotificationProvider>
               </SettingsProvider>
             </ThemeProvider>
             <ToastContainer />
