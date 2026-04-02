@@ -53,6 +53,7 @@ bytes = "1.11.0"
 tokio-stream = { version = "0.1", features = ["net"] }
 tracing = "0.1.44"
 rustls = { version = "0.23", features = ["ring"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "windef"] }
