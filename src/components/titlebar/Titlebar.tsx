@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { exit } from '@tauri-apps/plugin-process';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../hooks/useAuth';
 import { useAniListNotifications } from '../../hooks/useAniListNotifications';
 import { HistoryIcon, BellIcon, SettingsIcon, UsersIcon } from '../ui/Icons';
@@ -20,6 +21,7 @@ const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 function Titlebar() {
     const appWindow = getCurrentWindow();
     const { settings } = useSettings();
+    const { themeFamily, dynamicColorEnabled } = useTheme();
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
     const { unreadCount } = useAniListNotifications();
@@ -56,7 +58,7 @@ function Titlebar() {
         onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => {
             e.currentTarget.style.fontSize = icon === '◻' ? '8px' : '10px';
             e.currentTarget.textContent = icon;
-            e.currentTarget.style.color = 'rgba(0,0,0,0.5)';
+            e.currentTarget.style.color = 'var(--theme-text-inverse)';
             e.currentTarget.style.boxShadow = `0 0 12px 2px ${glowColor}`;
             e.currentTarget.style.transform = 'scale(1.1)';
         },
@@ -68,12 +70,22 @@ function Titlebar() {
         },
     });
 
+    const materialRuntimeActive = themeFamily === 'material-you-3' && dynamicColorEnabled;
+
+    const closeColor = materialRuntimeActive ? 'var(--theme-accent-danger)' : '#ff6991ff';
+    const minimizeColor = materialRuntimeActive ? 'var(--theme-accent-warning)' : '#fbb9dc';
+    const maximizeColor = materialRuntimeActive ? 'var(--theme-accent-success)' : '#6a6a9e';
+
+    const closeGlow = materialRuntimeActive ? 'rgba(var(--theme-accent-danger-rgb), 0.45)' : 'rgba(255, 105, 105, 0.4)';
+    const minimizeGlow = materialRuntimeActive ? 'rgba(var(--theme-accent-warning-rgb), 0.45)' : 'rgba(219, 197, 243, 0.4)';
+    const maximizeGlow = materialRuntimeActive ? 'rgba(var(--theme-accent-success-rgb), 0.45)' : 'rgba(133, 255, 161, 0.4)';
+
     const CloseButton = (
         <button
             onClick={handleClose}
             title="Close"
-            style={buttonStyle('#ff6991ff')}
-            {...createHoverHandlers('×', 'rgba(255, 105, 105, 0.4)')}
+            style={buttonStyle(closeColor)}
+            {...createHoverHandlers('×', closeGlow)}
         />
     );
 
@@ -81,8 +93,8 @@ function Titlebar() {
         <button
             onClick={handleMinimize}
             title="Minimize"
-            style={buttonStyle('#fbb9dc')}
-            {...createHoverHandlers('−', 'rgba(219, 197, 243, 0.4)')}
+            style={buttonStyle(minimizeColor)}
+            {...createHoverHandlers('−', minimizeGlow)}
         />
     );
 
@@ -90,8 +102,8 @@ function Titlebar() {
         <button
             onClick={handleMaximize}
             title="Maximize"
-            style={buttonStyle('#6a6a9e')}
-            {...createHoverHandlers('◻', 'rgba(133, 255, 161, 0.4)')}
+            style={buttonStyle(maximizeColor)}
+            {...createHoverHandlers('◻', maximizeGlow)}
         />
     );
 
